@@ -11,6 +11,17 @@ import { API_BASE } from '../exportDocx.js';
 
 export function renderSettings(container, router) {
   function render() {
+    let backupSizeBytes = 0;
+    try {
+      const backupJson = JSON.stringify(db.exportBackup());
+      backupSizeBytes = new Blob([backupJson]).size;
+    } catch (e) {
+      console.warn('Erro calculando tamaño do backup:', e);
+    }
+    const backupSizeFormatted = backupSizeBytes < 1024 * 1024 
+      ? (backupSizeBytes / 1024).toFixed(1) + ' KB' 
+      : (backupSizeBytes / (1024 * 1024)).toFixed(2) + ' MB';
+
     container.innerHTML = `
       <div class="content-wrapper">
         
@@ -60,6 +71,11 @@ export function renderSettings(container, router) {
                   Restablecer Datos Iniciais
                 </button>
               </div>
+
+              <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed var(--border-light); display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+                <span>Volume de datos almacenados localmente:</span>
+                <span style="font-weight: 700; color: var(--text-main); font-family: monospace;">${backupSizeFormatted}</span>
+              </div>
             </div>
           </div>
 
@@ -107,6 +123,87 @@ export function renderSettings(container, router) {
                   <span class="badge badge-success" style="font-size: 0.75rem;">anta-obra.vercel.app</span>
                 </div>
 
+              </div>
+            </div>
+          </div>
+
+          <!-- Quota & Cost Control Monitoring Card (0 € / mes) -->
+          <div class="card">
+            <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+              <div class="card-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Monitorización de Cuotas e Gastos (0 € / mes)
+              </div>
+              <span class="badge badge-success" style="font-weight: 700; font-size: 0.75rem;">100% GRATUÍTO</span>
+            </div>
+            <div class="card-body">
+              <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
+                A arquitectura de ANTA OBRA opera sobre servizos <strong>Free Tier permanentes</strong> sen tarxeta de crédito vinculada para sobrecustos. Pode consultar o consumo exacto de ancho de banda, disco e horas nos paneis oficiais con acceso directo:
+              </p>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                
+                <!-- Vercel Usage Box -->
+                <div style="padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-sm); display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-main); margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
+                      <span>Vercel (Web & CDN)</span>
+                      <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">Hobby</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem; line-height: 1.45;">
+                      • Límite: <strong>100 GB / mes</strong> de tráfico<br>
+                      • 1.000.000 de peticións Edge/mes<br>
+                      • Despregue automático gratuíto
+                    </div>
+                  </div>
+                  <a href="https://vercel.com/dashboard/usage" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.8rem; text-decoration: none;">
+                    <span>Ver Consumo en Vercel</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+
+                <!-- Supabase Usage Box -->
+                <div style="padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-sm); display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-main); margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
+                      <span>Supabase (BD & Storage)</span>
+                      <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">Free Plan</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem; line-height: 1.45;">
+                      • Límite: <strong>500 MB</strong> Base de Datos<br>
+                      • <strong>1 GB</strong> de almacenamento de fotos<br>
+                      • 2 GB / mes de transferencia
+                    </div>
+                  </div>
+                  <a href="https://supabase.com/dashboard/project/oovkvqrhbxjdxjqpsome/settings/billing/usage" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.8rem; text-decoration: none;">
+                    <span>Ver Consumo en Supabase</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+
+                <!-- Render Usage Box -->
+                <div style="padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-sm); display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-main); margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
+                      <span>Render (Motor PDF/DOCX)</span>
+                      <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">Free Tier</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem; line-height: 1.45;">
+                      • Límite: <strong>750 horas / mes</strong> gratis<br>
+                      • <strong>100 GB / mes</strong> de ancho de banda<br>
+                      • Suspensión automática por inactividade
+                    </div>
+                  </div>
+                  <a href="https://dashboard.render.com" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.8rem; text-decoration: none;">
+                    <span>Ver Métricas en Render</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+
+              </div>
+
+              <div style="padding: 0.75rem 1rem; background: rgba(34, 197, 94, 0.08); border-left: 3px solid #16a34a; border-radius: var(--radius-sm); font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+                <strong>Garantía de Custo Cero:</strong> Ningún dos tres provedores conta con tarxeta de crédito con tarificación automática por uso. No hipotético caso de achegarse a un límite, o servizo notifica por correo electrónico ou limita temporalmente o exceso ata a renovación do mes seguinte, sen sorpresas nin cargos na conta.
               </div>
             </div>
           </div>
