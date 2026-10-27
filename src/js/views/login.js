@@ -38,8 +38,7 @@ export function renderLogin(container, router) {
                   type="text" 
                   id="login-username" 
                   class="form-control" 
-                  placeholder="Ej: Admin" 
-                  value="Admin"
+                  placeholder="Nome de usuario" 
                   required 
                   autocomplete="username"
                   style="padding-left: 2.5rem;"
@@ -51,14 +50,13 @@ export function renderLogin(container, router) {
             </div>
 
             <div class="form-group">
-              <label class="form-label required" for="login-password">Contraseña</label>
+              <label class="form-label required" for="login-password">Contrasinal</label>
               <div style="position: relative;">
                 <input 
                   type="password" 
                   id="login-password" 
                   class="form-control" 
-                  placeholder="••••" 
-                  value="0000"
+                  placeholder="••••••••" 
                   required 
                   autocomplete="current-password"
                   style="padding-left: 2.5rem; padding-right: 2.5rem;"
@@ -80,33 +78,6 @@ export function renderLogin(container, router) {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </button>
           </form>
-
-          <!-- Quick Access Pill -->
-          <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light);">
-            <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.65rem; text-align: center;">
-              Acceso rápido de prueba
-            </div>
-            
-            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-              <button class="btn btn-secondary btn-sm quick-login-btn" data-user="Admin" data-pass="0000" style="justify-content: flex-start; text-align: left; padding: 0.5rem 0.75rem;">
-                <span class="badge badge-primary" style="font-size: 0.7rem;">Admin</span>
-                <span style="font-size: 0.82rem; font-weight: 600;">Admin</span>
-                <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: auto;">pass: 0000 (Total)</span>
-              </button>
-
-              <button class="btn btn-secondary btn-sm quick-login-btn" data-user="rosa.vilas" data-pass="1234" style="justify-content: flex-start; text-align: left; padding: 0.5rem 0.75rem;">
-                <span class="badge badge-info" style="font-size: 0.7rem;">DO</span>
-                <span style="font-size: 0.82rem; font-weight: 600;">Rosa Vilas (Directora Obra)</span>
-                <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: auto;">pass: 1234</span>
-              </button>
-
-              <button class="btn btn-secondary btn-sm quick-login-btn" data-user="ana.gallego" data-pass="1234" style="justify-content: flex-start; text-align: left; padding: 0.5rem 0.75rem;">
-                <span class="badge badge-success" style="font-size: 0.7rem;">DEM</span>
-                <span style="font-size: 0.82rem; font-weight: 600;">Ana Gallego (Dir. Ejecución)</span>
-                <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: auto;">pass: 1234</span>
-              </button>
-            </div>
-          </div>
 
         </div>
 
@@ -137,20 +108,11 @@ export function renderLogin(container, router) {
 
     const res = auth.login(user, pass);
     if (res.success) {
-      showToast(`Bienvenido, ${res.user.name}`, 'success');
+      showToast(`Benvido/a, ${res.user.name}`, 'success');
       router.navigate('dashboard');
     } else {
       errDiv.textContent = res.message;
       errDiv.style.display = 'block';
     }
   };
-
-  // Quick login buttons
-  container.querySelectorAll('.quick-login-btn').forEach(btn => {
-    btn.onclick = () => {
-      container.querySelector('#login-username').value = btn.dataset.user;
-      container.querySelector('#login-password').value = btn.dataset.pass;
-      form.requestSubmit();
-    };
-  });
 }

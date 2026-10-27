@@ -217,6 +217,14 @@ class Database {
       }
     });
     if (notasChanged) this.setCollection(STORAGE_KEYS.NOTAS, notas);
+
+    // Purge mock test users (usr-rosa, usr-ana, etc.) preserving Admin and any user created by Admin
+    const users = this.getCollection(STORAGE_KEYS.USERS);
+    const mockTestUserIds = ['usr-rosa', 'usr-sergio', 'usr-ana', 'usr-juancarlos', 'usr-miguel', 'usr-maria'];
+    const filteredUsers = users.filter(u => !mockTestUserIds.includes(u.id));
+    if (filteredUsers.length !== users.length) {
+      this.setCollection(STORAGE_KEYS.USERS, filteredUsers.length > 0 ? filteredUsers : INITIAL_USERS);
+    }
   }
 
   resetToDefaults() {

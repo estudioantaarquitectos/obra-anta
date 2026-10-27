@@ -74,78 +74,12 @@ export const INITIAL_USERS = [
   {
     id: 'usr-admin',
     username: 'Admin',
-    password: '0000', // Requisito explícito: usuario llamado Admin, con contraseña 0000
+    password: '0000', // Usuario principal Admin con contraseña 0000
     name: 'Administrador General',
     cargo: 'Administrador de Plataforma',
     empresa: 'Dirección de Obra',
     email: 'admin@antaobra.gal',
     role: 'admin',
-    active: true
-  },
-  {
-    id: 'usr-rosa',
-    username: 'rosa.vilas',
-    password: '1234',
-    name: 'Rosa Vilas Romalde',
-    cargo: 'Arquitecta Directora de Obra (DO)',
-    empresa: 'Dirección Facultativa',
-    email: 'rosa.vilas@coag.es',
-    role: 'direccion_obra',
-    active: true
-  },
-  {
-    id: 'usr-sergio',
-    username: 'sergio.beceiro',
-    password: '1234',
-    name: 'Sergio Beceiro Lodeiro',
-    cargo: 'Arquitecto Director de Obra (DO)',
-    empresa: 'Dirección Facultativa',
-    email: 'sergio.beceiro@coag.es',
-    role: 'direccion_obra',
-    active: true
-  },
-  {
-    id: 'usr-ana',
-    username: 'ana.gallego',
-    password: '1234',
-    name: 'Ana Gallego Núñez',
-    cargo: 'Directora de Ejecución (DEM)',
-    empresa: 'Aparelladores Galicia',
-    email: 'ana.gallego@aparelladores.gal',
-    role: 'direccion_ejecucion',
-    active: true
-  },
-  {
-    id: 'usr-juancarlos',
-    username: 'juancarlos.bello',
-    password: '1234',
-    name: 'Juan Carlos Bello Criado',
-    cargo: 'Coordinador de Seguridad y Salud (CSS)',
-    empresa: 'Seguridade & Prevención',
-    email: 'jcbello@prevencion.gal',
-    role: 'seguridad_salud',
-    active: true
-  },
-  {
-    id: 'usr-miguel',
-    username: 'miguel.lopez',
-    password: '1234',
-    name: 'Miguel López Rodríguez',
-    cargo: 'Jefe de Obra (JO)',
-    empresa: 'Cabero Edificaciones, S.A.',
-    email: 'mlopez@cabero.es',
-    role: 'constructora',
-    active: true
-  },
-  {
-    id: 'usr-maria',
-    username: 'mariajose.gonzalez',
-    password: '1234',
-    name: 'María José González Novo',
-    cargo: 'Arquitecta Municipal',
-    empresa: 'Concello de Ferrol',
-    email: 'urbanismo@ferrol.gal',
-    role: 'solo_lectura',
     active: true
   }
 ];
