@@ -1,0 +1,9 @@
+node_modules
+dist
+.vercel
+__pycache__
+*.pyc
+scratch
+dist_actas
+dist_informes
+*.pdf

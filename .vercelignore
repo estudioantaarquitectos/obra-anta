@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.agents
+__pycache__
+*.pyc
+scratch
+dist_actas
+dist_informes
+*.pdf
+*.docx
+Memo

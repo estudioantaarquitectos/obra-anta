@@ -1,0 +1,810 @@
+/* ==========================================================================
+   ANTA OBRA - Official Document View & Print Styles
+   Pixel-perfect match for:
+   - 17 ACTA reunion_ CastilloSanFelipe_09092025.pdf
+   - DT05_INFORMES DE OBRA.pdf
+   ========================================================================== */
+
+.document-preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.document-preview-toolbar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 50;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+
+/* Simulated A4 Paper */
+.document-paper {
+  background: white;
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  padding: 20mm 18mm;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-light);
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  line-height: 1.35;
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   ACTA OFFICIAL FORMAT (Castillo San Felipe)
+   ========================================== */
+.acta-doc-header {
+  border: 1.5px solid #000;
+  margin-bottom: 12px;
+}
+
+.acta-header-logos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1.5px solid #000;
+  gap: 12px;
+}
+
+.acta-header-logos img, .acta-header-logos svg {
+  max-height: 38px;
+  width: auto;
+}
+
+.acta-header-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.acta-header-table td {
+  padding: 5px 8px;
+  border: 1px solid #000;
+  font-size: 9pt;
+  vertical-align: top;
+}
+
+.acta-header-lbl {
+  font-weight: bold;
+  color: #555;
+  font-size: 8.5pt;
+  text-transform: uppercase;
+}
+
+.acta-header-val {
+  font-weight: bold;
+  color: #000;
+}
+
+.acta-title-banner {
+  background: #f3f4f6;
+  border: 1.5px solid #000;
+  padding: 5px 10px;
+  font-weight: bold;
+  font-size: 10pt;
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.acta-asistentes-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+}
+
+.acta-asistentes-table td {
+  border: 1px solid #000;
+  padding: 4px 8px;
+  font-size: 9pt;
+  vertical-align: middle;
+}
+
+.acta-asistentes-table .cell-header {
+  font-weight: bold;
+  background: #f9fafb;
+  width: 110px;
+}
+
+.acta-section-title {
+  font-weight: bold;
+  font-size: 9.5pt;
+  margin: 12px 0 6px;
+  border-bottom: 1px solid #999;
+  padding-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.acta-subtopic-title {
+  font-weight: bold;
+  font-size: 9pt;
+  margin: 8px 0 3px;
+}
+
+.acta-content-text {
+  font-size: 9pt;
+  text-align: justify;
+  margin-bottom: 8px;
+}
+
+.acta-content-text ul {
+  padding-left: 18px;
+  margin: 4px 0 8px;
+}
+
+.acta-content-text li {
+  margin-bottom: 3px;
+}
+
+.acta-firmas-box {
+  margin-top: 25px;
+  border: 1.5px solid #000;
+  page-break-inside: avoid;
+}
+
+.acta-firmas-title {
+  background: #f3f4f6;
+  text-align: center;
+  font-weight: bold;
+  font-size: 9pt;
+  padding: 4px;
+  border-bottom: 1px solid #000;
+  text-transform: uppercase;
+}
+
+.acta-firmas-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.acta-firma-cell {
+  border-right: 1px solid #000;
+  border-bottom: 1px solid #000;
+  padding: 40px 10px 10px;
+  font-size: 8.5pt;
+  min-height: 85px;
+  display: flex;
+  align-items: flex-end;
+}
+.acta-firma-cell:nth-child(2n) {
+  border-right: none;
+}
+.acta-firma-cell:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+/* Document Photos */
+.acta-photos-container {
+  margin-top: 20px;
+  page-break-before: auto;
+}
+
+.acta-photos-grid-print {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.acta-photo-item-print {
+  border: 1px solid #ccc;
+  padding: 6px;
+  page-break-inside: avoid;
+  background: #fff;
+}
+
+.acta-photo-item-print img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  display: block;
+}
+
+.acta-photo-caption {
+  font-size: 8pt;
+  color: #333;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* ==========================================
+   DT-05 INFORME MENSUAL / SEMANAL FORMAT
+   ========================================== */
+.dt05-doc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 1.5rem;
+}
+
+.dt05-logo-left {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.dt05-logo-left img {
+  max-height: 52px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.dt05-header-title {
+  flex: 1;
+  text-align: center;
+  padding: 0 0.75rem;
+  font-size: 8.5pt;
+  color: #1e293b;
+  line-height: 1.35;
+  font-weight: 500;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.dt05-header-meta {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 130px;
+}
+
+.dt05-meta-label {
+  font-weight: 800;
+  font-size: 9pt;
+  text-transform: uppercase;
+  color: #0f172a;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.dt05-meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.dt05-meta-num {
+  font-size: 26pt;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+  font-family: var(--font-heading, inherit);
+}
+
+.dt05-meta-date {
+  font-size: 8.5pt;
+  font-weight: 500;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.dt05-section {
+  margin-bottom: 14px;
+  page-break-inside: avoid;
+}
+
+.dt05-sec-header {
+  font-size: 10pt;
+  font-weight: bold;
+  color: #0f172a;
+  border-bottom: 1.5px solid #0284c7;
+  padding-bottom: 2px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.dt05-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  font-size: 9pt;
+  margin-bottom: 8px;
+}
+
+.dt05-info-row {
+  display: flex;
+  gap: 6px;
+}
+
+.dt05-lbl {
+  font-weight: bold;
+  color: #475569;
+  min-width: 110px;
+}
+
+.dt05-val {
+  color: #0f172a;
+}
+
+.dt05-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 8.5pt;
+  font-weight: bold;
+}
+
+.dt05-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0 10px;
+  font-size: 8.5pt;
+}
+
+.dt05-table th, .dt05-table td {
+  border: 1px solid #cbd5e1;
+  padding: 5px 8px;
+  text-align: left;
+}
+
+.dt05-table th {
+  background: #f1f5f9;
+  font-weight: bold;
+  color: #334155;
+}
+
+/* ==========================================================================
+   WORD TEMPLATE ACTA REPLICA (plantilla_acta_ordinaria.docx)
+   ========================================================================== */
+.word-template-paper {
+  background: white;
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  padding: 18mm 18mm 18mm 18mm;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-light);
+  color: #111;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 10pt;
+  line-height: 1.35;
+  box-sizing: border-box;
+}
+
+.word-template-header {
+  font-size: 8pt;
+  color: #64748b;
+  text-align: right;
+  margin-bottom: 12px;
+  padding-bottom: 4px;
+  border-bottom: 0.5px solid #e2e8f0;
+}
+
+.word-template-banner-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.word-template-banner-table td {
+  border: 1.5px solid #000;
+  text-align: center;
+  font-weight: bold;
+  font-size: 13pt;
+  letter-spacing: 0.05em;
+  padding: 7px 12px;
+  background: #f8fafc;
+  color: #000;
+}
+
+.word-template-meta-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+}
+
+.word-template-meta-table td {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  font-size: 9pt;
+  vertical-align: middle;
+}
+
+.word-template-meta-table .cell-proyecto {
+  width: 58%;
+  vertical-align: top;
+  padding-bottom: 8px;
+}
+
+.word-template-meta-table .meta-label {
+  font-weight: bold;
+  font-size: 9.5pt;
+  margin-bottom: 4px;
+  color: #000;
+}
+
+.word-template-meta-table .meta-title {
+  font-size: 9pt;
+  line-height: 1.35;
+  color: #111;
+}
+
+.word-template-meta-table .cell-label {
+  font-weight: bold;
+  font-size: 9.5pt;
+  width: 20%;
+  color: #000;
+  background: #fafafa;
+}
+
+.word-template-meta-table .cell-val-bold {
+  font-weight: bold;
+  font-size: 10.5pt;
+  width: 22%;
+  color: #000;
+}
+
+.word-template-asistentes-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.word-template-asistentes-table th {
+  border: 1px solid #000;
+  background: #f1f5f9;
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 9.5pt;
+  font-weight: bold;
+  color: #000;
+}
+
+.word-template-asistentes-table td {
+  border: 1px solid #000;
+  padding: 5px 10px;
+  font-size: 9pt;
+}
+
+.word-template-asistentes-table .asist-name {
+  width: 45%;
+  font-weight: bold;
+  color: #000;
+}
+
+.word-template-asistentes-table .asist-role {
+  width: 55%;
+  color: #222;
+}
+
+.word-template-heading-2 {
+  font-size: 11.5pt;
+  font-weight: bold;
+  color: #000;
+  margin-top: 14px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.word-template-heading-3 {
+  font-size: 10pt;
+  font-weight: bold;
+  color: #111;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.word-template-p {
+  font-size: 9.5pt;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  color: #222;
+  text-align: justify;
+}
+
+.word-template-rich-text {
+  font-size: 9.5pt;
+  line-height: 1.4;
+  color: #222;
+  margin-bottom: 6px;
+}
+
+.word-template-rich-text p {
+  margin: 0 0 4px 0;
+}
+
+.word-template-rich-text ul,
+.word-template-rich-text ol {
+  margin: 4px 0 6px 20px;
+  padding: 0;
+  text-align: left;
+}
+
+.word-template-rich-text li {
+  margin-bottom: 2px;
+  text-align: left;
+}
+
+.word-template-rich-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0 10px 0;
+  font-size: 8.5pt;
+}
+
+.word-template-rich-text th,
+.word-template-rich-text td {
+  border: 1px solid #000;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.word-template-rich-text th {
+  background: #f1f5f9;
+  font-weight: bold;
+}
+
+.word-template-rich-text img {
+  max-width: 100%;
+  height: auto;
+  margin: 6px 0;
+}
+
+.word-template-firmas {
+  margin-top: 20px;
+}
+
+.word-template-firmas .heading-firmas {
+  font-size: 11.5pt;
+  font-weight: bold;
+  color: #000;
+  margin-bottom: 4px;
+}
+
+.word-template-firmas .lugar-fecha {
+  font-size: 9.5pt;
+  color: #222;
+  margin-bottom: 12px;
+}
+
+.word-template-firmantes-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 18px;
+}
+
+.word-template-firmantes-table td {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  font-size: 9pt;
+}
+
+.word-template-firmantes-table .firmante-name {
+  width: 60%;
+  font-weight: bold;
+  color: #000;
+}
+
+.word-template-firmantes-table .firmante-role {
+  width: 40%;
+  color: #333;
+}
+
+.word-template-annex {
+  margin-top: 24px;
+  border-top: 2px solid #000;
+  padding-top: 14px;
+}
+
+.word-template-annex .annex-title {
+  font-size: 12.5pt;
+  font-weight: bold;
+  color: #000;
+  margin-bottom: 14px;
+}
+
+.word-template-annex .annex-photo-item {
+  margin-bottom: 18px;
+  text-align: center;
+  break-inside: avoid;
+}
+
+.word-template-annex .annex-photo-item img {
+  max-width: 100%;
+  max-height: 400px;
+  border: 1px solid #cbd5e1;
+  border-radius: 2px;
+}
+
+.word-template-annex .annex-photo-caption {
+  font-size: 8.5pt;
+  font-style: italic;
+  color: #475569;
+  margin-top: 5px;
+}
+
+.word-template-footer {
+  font-size: 8pt;
+  color: #64748b;
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 6px;
+  border-top: 0.5px solid #e2e8f0;
+}
+
+/* ==========================================
+   PLANTILLA MODERNA DE ACTAS (ESTILO DT-05)
+   ========================================== */
+.acta-photos-grid-modern {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 10px;
+  page-break-inside: auto;
+}
+
+.acta-photo-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  page-break-inside: avoid;
+  break-inside: avoid;
+  height: 255px;
+  box-sizing: border-box;
+}
+
+.acta-photo-img-wrapper {
+  flex: 1;
+  min-height: 175px;
+  max-height: 185px;
+  width: 100%;
+  background: #f8fafc;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+}
+
+.acta-photo-img-wrapper img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.acta-photo-caption {
+  margin-top: 6px;
+  font-size: 8pt;
+  color: #334155;
+  line-height: 1.3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acta-photo-badge {
+  font-weight: 700;
+  color: #0284c7;
+  font-size: 8pt;
+}
+
+.acta-modern-firmas-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 12px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.acta-modern-firma-card {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 110px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.acta-modern-firma-space {
+  height: 45px;
+  border-bottom: 1px dashed #94a3b8;
+  margin-bottom: 8px;
+}
+
+.acta-modern-firma-name {
+  font-weight: 700;
+  font-size: 9pt;
+  color: #0f172a;
+}
+
+.acta-modern-firma-role {
+  font-size: 8pt;
+  color: #64748b;
+}
+
+/* ==========================================
+   NATIVE PRINT MEDIA QUERIES (@media print)
+   ========================================== */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 9.5pt !important;
+  }
+
+  /* Hide app chrome, sidebar, topbar, buttons */
+  .app-sidebar,
+  .app-topbar,
+  .document-preview-toolbar,
+  .modal-backdrop,
+  .toast-container,
+  .batch-action-bar,
+  .btn,
+  .mobile-nav-toggle {
+    display: none !important;
+  }
+
+  #app, .app-container, .app-main, .content-wrapper, .document-preview-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    display: block !important;
+    background: white !important;
+  }
+
+  .document-paper {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .acta-photo-item-print {
+    break-inside: avoid;
+  }
+
+  .acta-firmas-box {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 15mm 15mm 15mm 15mm;
+  }
+}
