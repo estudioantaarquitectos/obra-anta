@@ -24,7 +24,7 @@ export function renderLogin(container, router) {
           </div>
           <h1 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.35rem;">ANTA OBRA</h1>
           <p style="font-size: 0.85rem; opacity: 0.9; max-width: 300px; margin: 0 auto; line-height: 1.4;">
-            Gestión de Actas de Obra, Informes DT-05 y Dirección Facultativa
+            Gestión de Actas de Obra, Informes Mensuales y Dirección Facultativa
           </p>
         </div>
 

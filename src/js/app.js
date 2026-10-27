@@ -164,11 +164,6 @@ class AppRouter {
                 <span>Notas</span>
                 <span class="nav-badge">${notasCount}</span>
               </a>
-
-              <a href="javascript:void(0)" class="nav-item ${isExpedienteActive && currentTab === 'ficha' ? 'active' : ''}" data-route="expediente" data-tab="ficha" data-id="${activeObra.id}">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                <span>Ficha del Expediente</span>
-              </a>
             ` : ''}
 
             ${canManageUsers ? `

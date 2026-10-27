@@ -788,7 +788,7 @@ export function renderInformeEditor(container, router, params = {}) {
                 </div>
 
                 <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
-                  <label class="form-label">Outras observacións de anexos (Texto explicativo no DT-05):</label>
+                  <label class="form-label">Outras observacións de anexos (Texto explicativo no informe mensual):</label>
                   <input type="text" id="anexo-outros" class="form-control" value="${escapeHtml(infData.anexos?.outrosAnexos || '')}" placeholder="Fichas técnicas, planos CAD, ensaios..." />
                 </div>
               </div>

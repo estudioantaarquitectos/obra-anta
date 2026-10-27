@@ -570,7 +570,7 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
       modal.confirmTextVerification({
         title: 'Eliminar Expediente Definitivamente',
         message: `¿Está seguro de que desea eliminar el expediente <strong>${escapeHtml(defaultData.expediente || defaultData.titulo)}</strong>?<br><span style="font-size: 0.86rem; color: var(--text-muted); display: block; margin-top: 0.35rem;">«${escapeHtml(defaultData.titulo || '')}»</span>`,
-        details: 'Se eliminarán también de forma permanente todas las actas de obra, informes mensuales DT-05 y notas de bitácora vinculadas a este expediente.',
+        details: 'Se eliminarán también de forma permanente todas las actas de obra, informes mensuales y notas de bitácora vinculadas a este expediente.',
         verificationKeyword: 'ELIMINAR',
         confirmText: 'Eliminar Expediente Definitivamente',
         onConfirm: () => {

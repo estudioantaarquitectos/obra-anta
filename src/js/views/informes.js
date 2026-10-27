@@ -143,7 +143,7 @@ export function renderInformes(container, router) {
 
                       <td class="col-actions">
                         <div class="table-row-actions">
-                          <button class="table-action-btn btn-view-informe" data-id="${inf.id}" title="Ver e Imprimir Informe Oficial DT-05">
+                          <button class="table-action-btn btn-view-informe" data-id="${inf.id}" title="Ver e Imprimir Informe Mensual Oficial">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                           </button>
 

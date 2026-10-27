@@ -408,10 +408,10 @@ export function renderExpedienteView(container, router, params = {}) {
         <div class="dashboard-toolbar" style="margin-bottom: 1.25rem;">
           <div>
             <span style="font-weight: 700; color: var(--text-main); font-size: 1.05rem;">
-              Informes de Seguimento Mensual (DT-05 Xestur)
+              Informes de Seguimento Mensual
             </span>
             <div style="font-size: 0.8rem; color: var(--text-muted);">
-              Achegados coa certificación periódica conforme ao prego e directrices autonómicas.
+              Achegados coa certificación periódica conforme ao prego e directrices institucionais.
             </div>
           </div>
 
@@ -1018,9 +1018,9 @@ export function renderExpedienteView(container, router, params = {}) {
         const id = btn.dataset.id;
         const num = btn.dataset.num;
         modal.confirmDelete({
-          title: 'Eliminar Informe DT-05',
+          title: 'Eliminar Informe Mensual',
           message: `¿Está seguro de que desea eliminar el informe "${num}"?`,
-          itemName: `Informe DT-05 ${num}`,
+          itemName: `Informe Mensual ${num}`,
           confirmText: 'Sí, Eliminar Informe',
           onConfirm: () => {
             db.deleteInforme(id);

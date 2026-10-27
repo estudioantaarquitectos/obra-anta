@@ -16,11 +16,11 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'actas:delete', label: 'Eliminar Actas', module: 'Actas' },
   { id: 'actas:export', label: 'Imprimir / Exportar PDF e DOCX de Actas', module: 'Actas' },
 
-  { id: 'informes:view', label: 'Ver Informes DT-05', module: 'Informes DT-05' },
-  { id: 'informes:create', label: 'Crear nuevos Informes DT-05', module: 'Informes DT-05' },
-  { id: 'informes:edit', label: 'Editar Informes DT-05', module: 'Informes DT-05' },
-  { id: 'informes:delete', label: 'Eliminar Informes DT-05', module: 'Informes DT-05' },
-  { id: 'informes:export', label: 'Imprimir / Exportar PDF e DOCX de Informes', module: 'Informes DT-05' },
+  { id: 'informes:view', label: 'Ver Informes Mensuais', module: 'Informes Mensuais' },
+  { id: 'informes:create', label: 'Crear novos Informes Mensuais', module: 'Informes Mensuais' },
+  { id: 'informes:edit', label: 'Editar Informes Mensuais', module: 'Informes Mensuais' },
+  { id: 'informes:delete', label: 'Eliminar Informes Mensuais', module: 'Informes Mensuais' },
+  { id: 'informes:export', label: 'Imprimir / Exportar PDF e DOCX de Informes', module: 'Informes Mensuais' },
 
   { id: 'notas:view', label: 'Ver Notas de Bitácora', module: 'Notas de Obra' },
   { id: 'notas:create', label: 'Crear Notas de Obra', module: 'Notas de Obra' },
