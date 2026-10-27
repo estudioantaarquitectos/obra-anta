@@ -155,12 +155,12 @@ export function renderObrasList(container, router) {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 170px;">Expediente</th>
-                  <th>Título da Obra e Situación</th>
-                  <th style="width: 240px;">Axentes Intervinientes</th>
-                  <th style="width: 230px; text-align: center;">Documentos</th>
-                  <th style="width: 130px; text-align: center;">Estado</th>
-                  <th class="col-actions" style="width: 190px; text-align: right;">Accións</th>
+                  <th style="width: 135px;">Expediente</th>
+                  <th style="min-width: 320px;">Título da Obra e Situación</th>
+                  <th style="width: 200px;">Axentes Intervinientes</th>
+                  <th style="width: 110px; text-align: center;">Documentos</th>
+                  <th style="width: 100px; text-align: center;">Estado</th>
+                  <th class="col-actions" style="width: 155px; text-align: right;">Accións</th>
                 </tr>
               </thead>
               <tbody>
@@ -169,19 +169,19 @@ export function renderObrasList(container, router) {
                   const informesCount = db.getInformes(obra.id).length;
                   const notasCount = db.getNotas(obra.id).length;
                   
-                  let statusBadge = `<span class="badge badge-success"><span class="status-dot status-dot-green"></span> En execución</span>`;
+                  let statusBadge = `<span class="badge badge-success" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-green"></span> En execución</span>`;
                   if (obra.estado === 'con_desviacions') {
-                    statusBadge = `<span class="badge badge-warning"><span class="status-dot status-dot-yellow"></span> Con desviacións</span>`;
+                    statusBadge = `<span class="badge badge-warning" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-yellow"></span> Con desviacións</span>`;
                   } else if (obra.estado === 'comprometida') {
-                    statusBadge = `<span class="badge badge-danger"><span class="status-dot status-dot-red"></span> Comprometida</span>`;
+                    statusBadge = `<span class="badge badge-danger" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-red"></span> Comprometida</span>`;
                   } else if (obra.estado === 'finalizada') {
-                    statusBadge = `<span class="badge badge-neutral">Finalizada</span>`;
+                    statusBadge = `<span class="badge badge-neutral" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;">Finalizada</span>`;
                   }
 
                   return `
                     <tr class="obra-table-row">
-                      <td>
-                        <span class="badge badge-info" style="font-weight: 700; font-family: monospace; font-size: 0.82rem; letter-spacing: 0.02em;">
+                      <td style="white-space: nowrap;">
+                        <span class="badge badge-info" style="font-weight: 700; font-family: monospace; font-size: 0.8rem; letter-spacing: 0.02em;">
                           ${escapeHtml(obra.expediente || 'AVS 03007 25/05')}
                         </span>
                         <div style="font-size: 0.78rem; color: var(--color-success); font-weight: 700; margin-top: 0.25rem;">
@@ -190,47 +190,47 @@ export function renderObrasList(container, router) {
                       </td>
 
                       <td>
-                        <a href="javascript:void(0)" class="btn-enter-obra" data-id="${obra.id}" style="font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--text-main); text-decoration: none; line-height: 1.35; display: block;">
+                        <a href="javascript:void(0)" class="btn-enter-obra" data-id="${obra.id}" style="font-family: var(--font-heading); font-size: 0.98rem; font-weight: 700; color: var(--text-main); text-decoration: none; line-height: 1.35; display: block;">
                           ${escapeHtml(obra.titulo)}
                         </a>
-                        <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; color: var(--primary);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                          <span>
                             ${escapeHtml(obra.situacion || 'Castillo de San Felipe, 15591. Concello de Ferrol')}
                           </span>
                         </div>
                       </td>
 
                       <td>
-                        <div style="font-size: 0.82rem; margin-bottom: 0.2rem;">
-                          <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Contrata:</span>
+                        <div style="font-size: 0.8rem; margin-bottom: 0.2rem; line-height: 1.3;">
+                          <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Contrata:</span>
                           <strong style="color: var(--text-main); margin-left: 0.2rem;">${escapeHtml(obra.contratista || 'Cabero Edificaciones')}</strong>
                         </div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(obra.direccionObra || '')}">
-                          <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">DO:</span>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.3;" title="${escapeHtml(obra.direccionObra || '')}">
+                          <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">DO:</span>
                           <span style="margin-left: 0.2rem;">${escapeHtml(obra.direccionObra || 'Rosa Vilas / Sergio Beceiro')}</span>
                         </div>
                       </td>
 
-                      <td style="text-align: center;">
-                        <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
-                          <span class="badge badge-neutral" title="Actas Semanais" style="font-size: 0.76rem; padding: 0.25rem 0.5rem;">
+                      <td style="text-align: center; vertical-align: middle;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                          <span class="badge badge-neutral" title="Actas Semanais" style="font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 96px; justify-content: center; white-space: nowrap;">
                             📝 <strong>${actasCount}</strong> actas
                           </span>
-                          <span class="badge badge-neutral" title="Informes Mensuais" style="font-size: 0.76rem; padding: 0.25rem 0.5rem;">
+                          <span class="badge badge-neutral" title="Informes Mensuais" style="font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 96px; justify-content: center; white-space: nowrap;">
                             📊 <strong>${informesCount}</strong> informes
                           </span>
-                          <span class="badge badge-neutral" title="Notas de bitácora" style="font-size: 0.76rem; padding: 0.25rem 0.5rem;">
+                          <span class="badge badge-neutral" title="Notas de bitácora" style="font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 96px; justify-content: center; white-space: nowrap;">
                             📌 <strong>${notasCount}</strong> notas
                           </span>
                         </div>
                       </td>
 
-                      <td style="text-align: center;">
+                      <td style="text-align: center; vertical-align: middle;">
                         ${statusBadge}
                       </td>
 
-                      <td class="col-actions">
+                      <td class="col-actions" style="text-align: right; vertical-align: middle;">
                         <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem;">
                           <button class="btn btn-secondary btn-sm btn-edit-obra" data-id="${obra.id}" title="Editar expediente">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
