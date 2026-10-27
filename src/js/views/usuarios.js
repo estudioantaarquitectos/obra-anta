@@ -222,10 +222,22 @@ export function renderUsuarios(container, router) {
                     </div>
 
                     ${!isAdminGroup ? `
-                      <button class="btn btn-danger btn-sm" id="btn-delete-group" data-id="${currentGroup.id}">
-                        Eliminar Grupo
-                      </button>
-                    ` : ''}
+                      <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-secondary btn-sm" id="btn-edit-group" data-id="${currentGroup.id}" title="Editar nome e descrición do grupo">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                          <span>Editar Nome</span>
+                        </button>
+
+                        <button class="btn btn-danger btn-sm" id="btn-delete-group" data-id="${currentGroup.id}" title="Eliminar este grupo">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                          <span>Eliminar Grupo</span>
+                        </button>
+                      </div>
+                    ` : `
+                      <span class="badge badge-primary" style="font-size: 0.75rem; padding: 0.4rem 0.65rem;">
+                        Administrador por Defecto (Inmutable)
+                      </span>
+                    `}
                   </div>
 
                   <div class="card-body">
@@ -409,20 +421,30 @@ export function renderUsuarios(container, router) {
     };
   }
 
-  function openGroupModal() {
+  function openGroupModal(existing = null) {
+    const isEdit = Boolean(existing);
     const contentHtml = `
       <form id="grp-modal-form">
         <div class="form-group">
-          <label class="form-label required">Nombre del Grupo</label>
-          <input type="text" id="grp-modal-name" class="form-control" placeholder="Ej: Laboratorio de Control de Calidad" required />
+          <label class="form-label required">Nome do Grupo</label>
+          <input type="text" id="grp-modal-name" class="form-control" placeholder="Ex: Laboratorio de Control de Calidade" value="${escapeHtml(existing?.name || '')}" required />
         </div>
-        <div class="form-group">
-          <label class="form-label">Identificador único (ID)</label>
-          <input type="text" id="grp-modal-id" class="form-control" placeholder="Ej: laboratorio_cc" />
-        </div>
+        ${!isEdit ? `
+          <div class="form-group">
+            <label class="form-label">Identificador único (ID)</label>
+            <input type="text" id="grp-modal-id" class="form-control" placeholder="Ex: laboratorio_cc" />
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Xérase automaticamente a partir do nome se se deixa baleiro.</div>
+          </div>
+        ` : `
+          <div class="form-group">
+            <label class="form-label">Identificador único (ID)</label>
+            <input type="text" id="grp-modal-id" class="form-control" value="${escapeHtml(existing.id)}" disabled style="background: var(--bg-surface); opacity: 0.7;" />
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">O identificador técnico interno non se modifica para manter a integridade dos usuarios.</div>
+          </div>
+        `}
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Descripción</label>
-          <textarea id="grp-modal-desc" class="form-control" rows="2" placeholder="Operativa permitida para los integrantes de este grupo..."></textarea>
+          <label class="form-label">Descrición</label>
+          <textarea id="grp-modal-desc" class="form-control" rows="2" placeholder="Operativa e competencias permitidas para os integrantes deste grupo...">${escapeHtml(existing?.description || '')}</textarea>
         </div>
       </form>
     `;
@@ -430,12 +452,12 @@ export function renderUsuarios(container, router) {
     const footerHtml = `
       <button class="btn btn-secondary" id="modal-grp-cancel">Cancelar</button>
       <button class="btn btn-primary" id="modal-grp-save">
-        Crear Grupo
+        ${isEdit ? 'Gardar Cambios' : 'Crear Grupo'}
       </button>
     `;
 
     const { close } = modal.open({
-      title: 'Crear Nuevo Grupo de Usuarios',
+      title: isEdit ? `Editar Grupo: ${existing.name}` : 'Crear Novo Grupo de Usuarios',
       contentHtml,
       footerHtml
     });
@@ -443,35 +465,39 @@ export function renderUsuarios(container, router) {
     document.getElementById('modal-grp-cancel').onclick = close;
     document.getElementById('modal-grp-save').onclick = () => {
       const name = document.getElementById('grp-modal-name').value.trim();
-      let id = document.getElementById('grp-modal-id').value.trim();
+      let id = isEdit ? existing.id : document.getElementById('grp-modal-id').value.trim();
       const description = document.getElementById('grp-modal-desc').value.trim();
 
       if (!name) {
-        showToast('Indique un nombre para el grupo', 'error');
+        showToast('Indique un nome para o grupo', 'error');
         return;
       }
 
       if (!id) {
-        id = name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 20);
+        id = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_').substring(0, 25);
       }
 
       modal.confirmSave({
-        title: 'Confirmar Creación de Grupo',
-        message: `¿Desea crear el grupo de operativa "${name}"?`,
+        title: isEdit ? 'Confirmar Modificación de Grupo' : 'Confirmar Creación de Grupo',
+        message: isEdit ? `¿Desexa actualizar os datos do grupo "${name}"?` : `¿Desexa crear o grupo de operativa "${name}"?`,
         onConfirm: () => {
           close();
-          const newGrp = {
+          const targetGrp = isEdit ? {
+            ...existing,
+            name,
+            description
+          } : {
             id,
             name,
             description,
             permissions: ['actas:view', 'informes:view', 'notas:view']
           };
-          db.saveGroup(newGrp);
+          db.saveGroup(targetGrp);
           groups = db.getGroups();
-          selectedGroupId = id;
+          selectedGroupId = targetGrp.id;
           activeTab = 'groups';
           render();
-          showToast(`Grupo "${name}" creado con permisos base`, 'success');
+          showToast(isEdit ? `Grupo "${name}" actualizado con éxito` : `Grupo "${name}" creado con permisos base`, 'success');
         }
       });
     };
@@ -533,6 +559,15 @@ export function renderUsuarios(container, router) {
         render();
       };
     });
+
+    // Edit group
+    const editGrpBtn = container.querySelector('#btn-edit-group');
+    if (editGrpBtn) {
+      editGrpBtn.onclick = () => {
+        const grp = db.getGroupById(editGrpBtn.dataset.id);
+        if (grp) openGroupModal(grp);
+      };
+    }
 
     // Delete group
     const delGrpBtn = container.querySelector('#btn-delete-group');

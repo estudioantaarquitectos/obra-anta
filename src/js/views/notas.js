@@ -111,6 +111,11 @@ export function renderNotas(container, router) {
                     </span>
 
                     <div style="display: flex; gap: 0.35rem;">
+                      ${canCreate ? `
+                        <button class="table-action-btn btn-duplicate-nota" data-id="${nota.id}" title="Duplicar nota">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        </button>
+                      ` : ''}
                       ${canEdit ? `
                         <button class="table-action-btn btn-edit-nota" data-id="${nota.id}" title="Editar nota">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -259,6 +264,31 @@ export function renderNotas(container, router) {
         const id = btn.dataset.id;
         const nota = db.getNotaById(id);
         if (nota) openNotaModal(nota);
+      };
+    });
+
+    container.querySelectorAll('.btn-duplicate-nota').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        const src = db.getNotaById(id);
+        if (!src) return;
+
+        modal.confirmSave({
+          title: 'Duplicar Nota',
+          message: `¿Desexa duplicar a nota "${src.titulo}"?`,
+          onConfirm: () => {
+            const newNota = {
+              ...JSON.parse(JSON.stringify(src)),
+              id: `not-${Date.now()}`,
+              titulo: `${src.titulo} (Copia)`,
+              fecha: new Date().toISOString().split('T')[0]
+            };
+            db.saveNota(newNota);
+            notas = db.getNotas();
+            render();
+            showToast('Nota duplicada con éxito', 'success');
+          }
+        });
       };
     });
 

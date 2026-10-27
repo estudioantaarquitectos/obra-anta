@@ -704,6 +704,20 @@ class Database {
     let groups = this.getGroups();
     groups = groups.filter(g => String(g.id) !== String(id));
     this.setCollection(STORAGE_KEYS.GROUPS, groups);
+
+    // Reasignar usuarios vinculados al grupo eliminado hacia admin
+    let users = this.getUsers();
+    let updated = false;
+    users = users.map(u => {
+      if (u.role === id) {
+        updated = true;
+        return { ...u, role: 'admin' };
+      }
+      return u;
+    });
+    if (updated) {
+      this.setCollection(STORAGE_KEYS.USERS, users);
+    }
     return true;
   }
 

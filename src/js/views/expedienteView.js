@@ -125,11 +125,6 @@ export function renderExpedienteView(container, router, params = {}) {
             <span>Notas</span>
             <span class="tab-count-badge">${notas.length}</span>
           </button>
-
-          <button class="tab-btn ${activeTab === 'ficha' ? 'active' : ''}" data-tab="ficha">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span>Ficha del Expediente</span>
-          </button>
         </div>
 
         <!-- Tab Body Content -->
@@ -151,8 +146,6 @@ export function renderExpedienteView(container, router, params = {}) {
         return renderInformesSection({ obra, informes, canCreateInforme });
       case 'notas':
         return renderNotasSection({ obra, notas, canCreateNota });
-      case 'ficha':
-        return renderFichaSection({ obra });
       default:
         return renderActasSection({ obra, actas, canCreateActa });
     }
@@ -222,7 +215,7 @@ export function renderExpedienteView(container, router, params = {}) {
             <div style="min-width: 140px;">Acta / Data</div>
             <div style="flex: 1; padding: 0 0.75rem;">Asistentes</div>
             <div style="min-width: 110px; text-align: center;">Estado</div>
-            <div style="min-width: 160px; text-align: right; padding-right: 36px;">Accións</div>
+            <div style="min-width: 220px; text-align: right; padding-right: 36px;">Accións</div>
           </div>
 
           <!-- Contenedor Acordeón de Actas -->
@@ -269,11 +262,16 @@ export function renderExpedienteView(container, router, params = {}) {
                       `}
                     </div>
 
-                    <!-- Botóns colapsados: Editar e Borrar + Botón de despliegue -->
-                    <div style="min-width: 160px; display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem;">
+                    <!-- Botóns colapsados: Editar, Copiar e Borrar + Botón de despliegue -->
+                    <div style="min-width: 220px; display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem;">
                       <button class="btn btn-secondary btn-sm btn-edit-acta" data-id="${acta.id}" title="Editar contido da acta">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         <span>Editar</span>
+                      </button>
+
+                      <button class="btn btn-secondary btn-sm btn-duplicate-acta" data-id="${acta.id}" title="Copiar e crear nova acta a partir desta">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span>Copiar</span>
                       </button>
 
                       <button class="btn btn-secondary btn-sm btn-delete-acta" data-id="${acta.id}" data-num="${acta.numero}" title="Eliminar acta" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35);">
@@ -378,6 +376,11 @@ export function renderExpedienteView(container, router, params = {}) {
                           <button class="btn btn-secondary btn-sm btn-export-acta-pdf" data-id="${acta.id}" title="Descargar directamente o arquivo PDF Oficial (.pdf)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                             <span>Descargar PDF</span>
+                          </button>
+
+                          <button class="btn btn-secondary btn-sm btn-duplicate-acta" data-id="${acta.id}" title="Duplicar e crear nova acta a partir desta">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            <span>Copiar</span>
                           </button>
 
                           <button class="btn btn-secondary btn-sm btn-delete-acta" data-id="${acta.id}" data-num="${acta.numero}" title="Eliminar acta" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35);">
@@ -517,6 +520,11 @@ export function renderExpedienteView(container, router, params = {}) {
                             <span>Editar</span>
                           </button>
 
+                          <button class="btn btn-secondary btn-sm btn-duplicate-informe" data-id="${inf.id}" title="Copiar e crear novo informe a partir deste">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            <span>Copiar</span>
+                          </button>
+
                           <button class="btn btn-secondary btn-sm btn-delete-informe" data-id="${inf.id}" data-num="Nº ${inf.numero || inf.id}" title="Eliminar informe" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35);">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             <span>Eliminar</span>
@@ -607,10 +615,13 @@ export function renderExpedienteView(container, router, params = {}) {
                     </div>
 
                     <div style="display: flex; gap: 0.35rem;">
-                      <button class="btn btn-ghost btn-sm btn-edit-nota" data-id="${nota.id}">
+                      <button class="btn btn-ghost btn-sm btn-duplicate-nota" data-id="${nota.id}" title="Duplicar nota">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      </button>
+                      <button class="btn btn-ghost btn-sm btn-edit-nota" data-id="${nota.id}" title="Editar nota">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                       </button>
-                      <button class="btn btn-ghost btn-sm btn-delete-nota" data-id="${nota.id}" style="color: var(--color-danger);">
+                      <button class="btn btn-ghost btn-sm btn-delete-nota" data-id="${nota.id}" style="color: var(--color-danger);" title="Eliminar nota">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                       </button>
                     </div>
@@ -904,6 +915,39 @@ export function renderExpedienteView(container, router, params = {}) {
       };
     });
 
+    container.querySelectorAll('.btn-duplicate-acta').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const src = db.getActaById(id);
+        if (!src) return;
+
+        const allActas = db.getActas(obra.id);
+        const maxNum = allActas.reduce((m, a) => Math.max(m, parseInt(a.numero, 10) || 0), 0);
+        const nextNum = maxNum + 1;
+
+        modal.confirmSave({
+          title: 'Duplicar Acta de Obra',
+          message: `¿Desexa crear a Acta nº ${nextNum} copiando o contido, apartados e asistentes da Acta nº ${src.numero}?`,
+          onConfirm: () => {
+            const newActa = {
+              ...JSON.parse(JSON.stringify(src)),
+              id: `acta-${Date.now()}`,
+              obraId: obra.id,
+              numero: nextNum,
+              fecha: new Date().toISOString().split('T')[0],
+              estado: 'borrador',
+              firmas: [],
+              asistentes: (src.asistentes || []).map(a => ({ ...a, firmo: false, firmaBase64: null }))
+            };
+            db.saveActa(newActa);
+            showToast(`Acta nº ${nextNum} creada con éxito`, 'success');
+            router.navigate('acta-editor', { id: newActa.id, obraId: obra.id });
+          }
+        });
+      };
+    });
+
     // --- Wire Tab 2 (Informes) ---
     const createInfBtn = container.querySelector('#btn-create-informe');
     if (createInfBtn) {
@@ -982,6 +1026,39 @@ export function renderExpedienteView(container, router, params = {}) {
             db.deleteInforme(id);
             showToast(`Informe eliminado correctamente`, 'info');
             render();
+          }
+        });
+      };
+    });
+
+    container.querySelectorAll('.btn-duplicate-informe').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const src = db.getInformeById(id);
+        if (!src) return;
+
+        const allInfs = db.getInformes(obra.id);
+        const maxNum = allInfs.reduce((m, i) => Math.max(m, parseInt(i.numero, 10) || 0), 0);
+        const nextNum = maxNum + 1;
+
+        modal.confirmSave({
+          title: 'Duplicar Informe Mensual',
+          message: `¿Desexa crear un novo Informe Mensual (Nº ${nextNum}) copiando a estrutura e táboas do Informe nº ${src.numero || id}?`,
+          onConfirm: () => {
+            const newInf = JSON.parse(JSON.stringify(src));
+            newInf.id = `inf-${Date.now()}`;
+            newInf.obraId = obra.id;
+            newInf.numero = nextNum;
+            if (newInf.datosXerais) {
+              newInf.datosXerais.numeroInforme = nextNum;
+              newInf.datosXerais.dataInforme = new Date().toISOString().split('T')[0];
+            }
+            newInf.estado = 'borrador';
+            newInf.firmas = [];
+            db.saveInforme(newInf);
+            showToast(`Informe nº ${nextNum} creado con éxito`, 'success');
+            router.navigate('informe-editor', { id: newInf.id, obraId: obra.id });
           }
         });
       };
@@ -1130,6 +1207,31 @@ export function renderExpedienteView(container, router, params = {}) {
           onConfirm: () => {
             db.deleteNota(id);
             showToast('Nota eliminada', 'info');
+            render();
+          }
+        });
+      };
+    });
+
+    container.querySelectorAll('.btn-duplicate-nota').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        const src = db.getNotaById(id);
+        if (!src) return;
+
+        modal.confirmSave({
+          title: 'Duplicar Nota',
+          message: `¿Desexa duplicar a nota "${src.titulo}"?`,
+          onConfirm: () => {
+            const newNota = {
+              ...JSON.parse(JSON.stringify(src)),
+              id: `not-${Date.now()}`,
+              obraId: obra.id,
+              titulo: `${src.titulo} (Copia)`,
+              fecha: new Date().toISOString().split('T')[0]
+            };
+            db.saveNota(newNota);
+            showToast('Nota duplicada con éxito', 'success');
             render();
           }
         });
