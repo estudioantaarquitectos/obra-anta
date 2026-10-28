@@ -5,8 +5,8 @@
 /* Dashboard Summary Metrics */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.15rem;
   margin-bottom: 2rem;
 }
 
@@ -55,6 +55,11 @@
 .metric-icon-info {
   background: var(--color-info-bg);
   color: var(--color-info);
+}
+
+.metric-icon-reunion {
+  background: #eef2ff;
+  color: #6366f1;
 }
 
 .metric-data {

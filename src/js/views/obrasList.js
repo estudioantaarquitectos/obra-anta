@@ -114,6 +114,7 @@ export function renderObrasList(container, router) {
     const allAgentes = db.getAgentes();
     const filtered = getFilteredObras();
     const allActas = db.getActas();
+    const allReuniones = db.getReuniones();
     const allInformes = db.getInformes();
     const allNotas = db.getNotas();
 
@@ -132,8 +133,8 @@ export function renderObrasList(container, router) {
               Expedientes de Obra
             </h1>
             <p style="font-size: 0.92rem; color: var(--text-muted); margin-top: 0.25rem; max-width: 780px; line-height: 1.5;">
-              Seleccione a obra na que desexa intervir para xestionar as súas <strong>Actas de reunión</strong>, 
-              <strong>Informes Mensuais</strong> e <strong>Notas de bitácora</strong>, ou edite os datos oficiais do seu expediente.
+              Seleccione a obra na que desexa intervir para xestionar as súas <strong>Actas Semanais</strong>, 
+              <strong>Reunións de Obra</strong>, <strong>Informes Mensuais</strong> e <strong>Notas de bitácora</strong>, ou edite os datos oficiais do seu expediente.
             </p>
           </div>
 
@@ -164,6 +165,16 @@ export function renderObrasList(container, router) {
             <div class="metric-data">
               <div class="metric-label">Actas de Obra</div>
               <div class="metric-value">${allActas.length}</div>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-box metric-icon-reunion">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div class="metric-data">
+              <div class="metric-label">Reunións de Obra</div>
+              <div class="metric-value">${allReuniones.length}</div>
             </div>
           </div>
 
@@ -237,6 +248,7 @@ export function renderObrasList(container, router) {
               <tbody>
                 ${filtered.map(obra => {
       const actasCount = db.getActas(obra.id).length;
+      const reunionesCount = db.getReuniones(obra.id).length;
       const informesCount = db.getInformes(obra.id).length;
       const notasCount = db.getNotas(obra.id).length;
 
@@ -288,15 +300,18 @@ export function renderObrasList(container, router) {
 
                       <td style="text-align: center; vertical-align: middle;">
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
-                          <span class="badge badge-neutral" title="Actas Semanais" style="font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 96px; justify-content: center; white-space: nowrap;">
+                          <a href="javascript:void(0)" class="badge badge-neutral btn-nav-doc" data-id="${obra.id}" data-tab="actas" title="Ver Actas Semanais" style="text-decoration: none; font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 102px; justify-content: center; white-space: nowrap; cursor: pointer;">
                             📝 <strong>${actasCount}</strong> actas
-                          </span>
-                          <span class="badge badge-neutral" title="Informes Mensuais" style="font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 96px; justify-content: center; white-space: nowrap;">
+                          </a>
+                          <a href="javascript:void(0)" class="badge badge-neutral btn-nav-doc" data-id="${obra.id}" data-tab="reuniones" title="Ver Reunións de Obra" style="text-decoration: none; font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 102px; justify-content: center; white-space: nowrap; cursor: pointer;">
+                            👥 <strong>${reunionesCount}</strong> reunións
+                          </a>
+                          <a href="javascript:void(0)" class="badge badge-neutral btn-nav-doc" data-id="${obra.id}" data-tab="informes" title="Ver Informes Mensuais" style="text-decoration: none; font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 102px; justify-content: center; white-space: nowrap; cursor: pointer;">
                             📊 <strong>${informesCount}</strong> informes
-                          </span>
-                          <span class="badge badge-neutral" title="Notas de bitácora" style="font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 96px; justify-content: center; white-space: nowrap;">
+                          </a>
+                          <a href="javascript:void(0)" class="badge badge-neutral btn-nav-doc" data-id="${obra.id}" data-tab="notas" title="Ver Notas de bitácora" style="text-decoration: none; font-size: 0.74rem; padding: 0.18rem 0.45rem; width: 100%; max-width: 102px; justify-content: center; white-space: nowrap; cursor: pointer;">
                             📌 <strong>${notasCount}</strong> notas
-                          </span>
+                          </a>
                         </div>
                       </td>
 
@@ -386,6 +401,17 @@ export function renderObrasList(container, router) {
           onSaved: () => render(),
           onDeleted: () => render()
         });
+      };
+    });
+
+    // Direct document pill navigation (actas, reuniones, informes, notas)
+    container.querySelectorAll('.btn-nav-doc').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const tab = btn.dataset.tab || 'actas';
+        db.setActiveObraId(id);
+        router.navigate('expediente', { id, tab });
       };
     });
 
