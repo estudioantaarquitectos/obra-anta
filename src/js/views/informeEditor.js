@@ -134,6 +134,13 @@ export function renderInformeEditor(container, router, params = {}) {
   }
 
   function render() {
+    const ce = infData.seguimentoOrzamentario?.controlEconomico || {};
+    const orzamentoVal = parseCurrency(ce.orzamentoAdxudicacion !== undefined ? ce.orzamentoAdxudicacion : 894520);
+    const acumuladoVal = parseCurrency(ce.importeCertificadoAcumulado !== undefined ? ce.importeCertificadoAcumulado : 0);
+    const mesVal = parseCurrency(ce.certificacionMes !== undefined ? ce.certificacionMes : 0);
+    const pctCalculada = orzamentoVal > 0 ? (acumuladoVal / orzamentoVal) * 100 : 0;
+    const pctDisplay = pctCalculada.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
+
     container.innerHTML = `
       <div class="content-wrapper">
         <div class="editor-container">
@@ -374,20 +381,52 @@ export function renderInformeEditor(container, router, params = {}) {
                 </h4>
                 <div class="form-grid-4">
                   <div class="form-group">
-                    <label class="form-label">Orzamento adxudicación (€)</label>
-                    <input type="number" id="eco-adxudicacion" class="form-control" value="${infData.seguimentoOrzamentario?.controlEconomico?.orzamentoAdxudicacion || 0}" step="0.01" />
+                    <label class="form-label" for="eco-adxudicacion">Orzamento adxudicación (€)</label>
+                    <input 
+                      type="text" 
+                      id="eco-adxudicacion" 
+                      class="form-control" 
+                      value="${formatCurrency(orzamentoVal)}" 
+                      placeholder="0,00 €" 
+                      autocomplete="off"
+                    />
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Certificado acumulado (€)</label>
-                    <input type="number" id="eco-acumulado" class="form-control" value="${infData.seguimentoOrzamentario?.controlEconomico?.importeCertificadoAcumulado || 0}" step="0.01" />
+                    <label class="form-label" for="eco-acumulado">Certificado acumulado (€)</label>
+                    <input 
+                      type="text" 
+                      id="eco-acumulado" 
+                      class="form-control" 
+                      value="${formatCurrency(acumuladoVal)}" 
+                      placeholder="0,00 €" 
+                      autocomplete="off"
+                    />
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Porcentaxe acumulada (%)</label>
-                    <input type="number" id="eco-porcentaxe" class="form-control" value="${infData.seguimentoOrzamentario?.controlEconomico?.porcentaxeAcumulada || 0}" step="0.1" />
+                    <label class="form-label" for="eco-porcentaxe" style="display: flex; align-items: center; justify-content: space-between;">
+                      <span>Porcentaxe acumulada (%)</span>
+                      <span style="font-size: 0.72rem; color: var(--primary); font-weight: 600;">(Cálculo automático)</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      id="eco-porcentaxe" 
+                      class="form-control" 
+                      value="${pctDisplay}" 
+                      readonly 
+                      tabindex="-1"
+                      style="background-color: var(--bg-subtle, #f8fafc); font-weight: 700; color: var(--primary, #1e3a8a); cursor: default;" 
+                    />
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Certificación do mes (€)</label>
-                    <input type="number" id="eco-mes" class="form-control" value="${infData.seguimentoOrzamentario?.controlEconomico?.certificacionMes || 0}" step="0.01" />
+                    <label class="form-label" for="eco-mes">Certificación do mes (€)</label>
+                    <input 
+                      type="text" 
+                      id="eco-mes" 
+                      class="form-control" 
+                      value="${formatCurrency(mesVal)}" 
+                      placeholder="0,00 €" 
+                      autocomplete="off"
+                    />
                   </div>
                 </div>
 
@@ -851,13 +890,21 @@ export function renderInformeEditor(container, router, params = {}) {
       }
     };
 
+    const orzamentoNum = parseCurrency(container.querySelector('#eco-adxudicacion')?.value);
+    const acumuladoNum = parseCurrency(container.querySelector('#eco-acumulado')?.value);
+    const mesNum = parseCurrency(container.querySelector('#eco-mes')?.value);
+    let pctCalculada = 0;
+    if (orzamentoNum > 0) {
+      pctCalculada = Math.round((acumuladoNum / orzamentoNum) * 10000) / 100;
+    }
+
     const prazoSitRadio = container.querySelector('input[name="prazoSituacion"]:checked');
     infData.seguimentoOrzamentario = {
       controlEconomico: {
-        orzamentoAdxudicacion: parseFloat(container.querySelector('#eco-adxudicacion')?.value) || 0,
-        importeCertificadoAcumulado: parseFloat(container.querySelector('#eco-acumulado')?.value) || 0,
-        porcentaxeAcumulada: parseFloat(container.querySelector('#eco-porcentaxe')?.value) || 0,
-        certificacionMes: parseFloat(container.querySelector('#eco-mes')?.value) || 0,
+        orzamentoAdxudicacion: orzamentoNum,
+        importeCertificadoAcumulado: acumuladoNum,
+        porcentaxeAcumulada: pctCalculada,
+        certificacionMes: mesNum,
         desviacionEstimada: container.querySelector('#eco-desviacion')?.value.trim() || ''
       },
       controlPrazo: {
@@ -945,6 +992,43 @@ export function renderInformeEditor(container, router, params = {}) {
   function wireEvents() {
     // Wire rich text toolbars and paste interceptors
     wireRichEditors(container);
+
+    // =========================================================================
+    // Control Económico: Formato Moeda (€ con céntimos) e Cálculo Automático %
+    // =========================================================================
+    const inputAdx = container.querySelector('#eco-adxudicacion');
+    const inputAcum = container.querySelector('#eco-acumulado');
+    const inputMes = container.querySelector('#eco-mes');
+    const inputPct = container.querySelector('#eco-porcentaxe');
+
+    const updatePctAutomatico = () => {
+      if (!inputAdx || !inputAcum || !inputPct) return;
+      const adxVal = parseCurrency(inputAdx.value);
+      const acumVal = parseCurrency(inputAcum.value);
+      let pct = 0;
+      if (adxVal > 0) {
+        pct = (acumVal / adxVal) * 100;
+      }
+      inputPct.value = pct.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
+    };
+
+    [inputAdx, inputAcum, inputMes].forEach(input => {
+      if (!input) return;
+
+      input.addEventListener('focus', () => {
+        input.select();
+      });
+
+      input.addEventListener('input', () => {
+        updatePctAutomatico();
+      });
+
+      input.addEventListener('blur', () => {
+        const parsed = parseCurrency(input.value);
+        input.value = formatCurrency(parsed);
+        updatePctAutomatico();
+      });
+    });
 
     // =========================================================================
     // Actas de Visitas en PDF Upload and Dropzone (Apartado Propio)
@@ -1387,4 +1471,38 @@ function formatFileSize(bytes) {
     unitIdx++;
   }
   return `${size.toFixed(unitIdx > 0 ? 1 : 0)} ${units[unitIdx]}`;
+}
+
+function parseCurrency(val) {
+  if (val === undefined || val === null || val === '') return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  let str = String(val).trim().replace(/[€\s]/g, '');
+  if (!str) return 0;
+  
+  if (str.includes('.') && str.includes(',')) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else if (str.includes(',')) {
+    str = str.replace(',', '.');
+  } else if (str.includes('.')) {
+    const parts = str.split('.');
+    if (parts.length > 2) {
+      str = str.replace(/\./g, '');
+    } else if (parts.length === 2) {
+      if (parts[1].length === 3 && parts[0].length >= 1 && parts[0].length <= 3) {
+        str = str.replace('.', '');
+      }
+    }
+  }
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+}
+
+function formatCurrency(val) {
+  const num = parseCurrency(val);
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num);
 }

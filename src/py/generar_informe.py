@@ -527,7 +527,12 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
         set_cell_clean_text(t4.cell(0, 1), format_currency(ce.get('orzamentoAdxudicacion', 894520.00)), bold=True, font_size_pt=10.0)
         set_cell_clean_text(t4.cell(1, 1), format_currency(ce.get('importeCertificadoAcumulado', 402534.00)), bold=True, font_size_pt=10.0)
         pct_ac = ce.get('porcentaxeAcumulada', 45.0)
-        set_cell_clean_text(t4.cell(2, 1), f"{pct_ac}%" if not str(pct_ac).endswith('%') else str(pct_ac), bold=True, font_size_pt=10.0)
+        try:
+            pct_float = float(str(pct_ac).replace('%', '').replace(',', '.').strip())
+            pct_str = f"{pct_float:.2f}".replace('.', ',') + " %"
+        except Exception:
+            pct_str = f"{pct_ac}%" if not str(pct_ac).endswith('%') else str(pct_ac)
+        set_cell_clean_text(t4.cell(2, 1), pct_str, bold=True, font_size_pt=10.0)
         set_cell_clean_text(t4.cell(3, 1), format_currency(ce.get('certificacionMes', 44726.00)), bold=True, font_size_pt=10.0)
         set_cell_clean_text(t4.cell(4, 1), str(ce.get('desviacionEstimada', '0.0%')), font_size_pt=10.0)
 

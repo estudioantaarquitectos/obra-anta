@@ -288,7 +288,7 @@ export function renderInformePrint(container, router, params = {}) {
                 </tr>
                 <tr>
                   <td style="font-weight: 600; background: #f8fafc;">Porcentaxe acumulada (%):</td>
-                  <td>${inf.seguimentoOrzamentario?.controlEconomico?.porcentaxeAcumulada || 0}%</td>
+                  <td style="font-weight: bold;">${Number(inf.seguimentoOrzamentario?.controlEconomico?.porcentaxeAcumulada || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</td>
                 </tr>
                 <tr>
                   <td style="font-weight: 600; background: #f8fafc;">Certificación do mes (€):</td>

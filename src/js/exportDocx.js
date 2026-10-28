@@ -1536,7 +1536,7 @@ export async function buildInformeDocx(inf) {
           children: [
             formatEuros(eco.orzamentoAdxudicacion),
             formatEuros(eco.importeCertificadoAcumulado),
-            `${eco.porcentaxeAcumulada || 0}%`,
+            `${Number(eco.porcentaxeAcumulada || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`,
             formatEuros(eco.certificacionMes),
             eco.desviacionEstimada || '0.0%'
           ].map((val) => {
