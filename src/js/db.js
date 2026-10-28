@@ -17,7 +17,11 @@ import {
   syncInformeToSupabase,
   deleteInformeFromSupabase,
   syncNotaToSupabase,
-  deleteNotaFromSupabase
+  deleteNotaFromSupabase,
+  syncUsuarioToSupabase,
+  deleteUsuarioFromSupabase,
+  syncGrupoToSupabase,
+  deleteGrupoFromSupabase
 } from './supabaseClient.js';
 
 const STORAGE_KEYS = {
@@ -74,6 +78,34 @@ class Database {
       }
       if (Array.isArray(data.notas) && data.notas.length > 0) {
         this.setCollection(STORAGE_KEYS.NOTAS, data.notas);
+        updated = true;
+      }
+      if (Array.isArray(data.grupos) && data.grupos.length > 0) {
+        const localGroups = this.getGroups();
+        const mergedGroups = [...localGroups];
+        for (const remoteG of data.grupos) {
+          const idx = mergedGroups.findIndex(g => String(g.id) === String(remoteG.id));
+          if (idx >= 0) {
+            mergedGroups[idx] = { ...mergedGroups[idx], ...remoteG };
+          } else {
+            mergedGroups.push(remoteG);
+          }
+        }
+        this.setCollection(STORAGE_KEYS.GROUPS, mergedGroups);
+        updated = true;
+      }
+      if (Array.isArray(data.usuarios) && data.usuarios.length > 0) {
+        const localUsers = this.getUsers();
+        const mergedUsers = [...localUsers];
+        for (const remoteU of data.usuarios) {
+          const idx = mergedUsers.findIndex(u => String(u.id) === String(remoteU.id) || u.username?.toLowerCase() === remoteU.username?.toLowerCase());
+          if (idx >= 0) {
+            mergedUsers[idx] = { ...mergedUsers[idx], ...remoteU };
+          } else {
+            mergedUsers.push(remoteU);
+          }
+        }
+        this.setCollection(STORAGE_KEYS.USERS, mergedUsers);
         updated = true;
       }
       if (updated && typeof window !== 'undefined') {
@@ -648,18 +680,22 @@ class Database {
   saveUser(user) {
     const users = this.getUsers();
     const existingIndex = users.findIndex(u => String(u.id) === String(user.id));
+    let savedUser;
     
     if (existingIndex >= 0) {
-      users[existingIndex] = { ...users[existingIndex], ...user };
+      savedUser = { ...users[existingIndex], ...user };
+      users[existingIndex] = savedUser;
     } else {
-      users.push({
+      savedUser = {
         ...user,
         id: user.id || `usr-${Date.now()}`,
         active: user.active !== undefined ? user.active : true
-      });
+      };
+      users.push(savedUser);
     }
     this.setCollection(STORAGE_KEYS.USERS, users);
-    return user;
+    syncUsuarioToSupabase(savedUser);
+    return savedUser;
   }
 
   deleteUser(id) {
@@ -670,6 +706,7 @@ class Database {
     let users = this.getUsers();
     users = users.filter(u => String(u.id) !== String(id));
     this.setCollection(STORAGE_KEYS.USERS, users);
+    deleteUsuarioFromSupabase(id);
     return true;
   }
 
@@ -684,17 +721,21 @@ class Database {
   saveGroup(group) {
     const groups = this.getGroups();
     const existingIndex = groups.findIndex(g => String(g.id) === String(group.id));
+    let savedGroup;
     
     if (existingIndex >= 0) {
-      groups[existingIndex] = { ...groups[existingIndex], ...group };
+      savedGroup = { ...groups[existingIndex], ...group };
+      groups[existingIndex] = savedGroup;
     } else {
-      groups.push({
+      savedGroup = {
         ...group,
         id: group.id || `grp-${Date.now()}`
-      });
+      };
+      groups.push(savedGroup);
     }
     this.setCollection(STORAGE_KEYS.GROUPS, groups);
-    return group;
+    syncGrupoToSupabase(savedGroup);
+    return savedGroup;
   }
 
   deleteGroup(id) {
@@ -704,6 +745,7 @@ class Database {
     let groups = this.getGroups();
     groups = groups.filter(g => String(g.id) !== String(id));
     this.setCollection(STORAGE_KEYS.GROUPS, groups);
+    deleteGrupoFromSupabase(id);
 
     // Reasignar usuarios vinculados al grupo eliminado hacia admin
     let users = this.getUsers();
@@ -711,7 +753,9 @@ class Database {
     users = users.map(u => {
       if (u.role === id) {
         updated = true;
-        return { ...u, role: 'admin' };
+        const reassigned = { ...u, role: 'admin' };
+        syncUsuarioToSupabase(reassigned);
+        return reassigned;
       }
       return u;
     });

@@ -1141,3 +1141,123 @@ Vale, hice la opción B ¿puedes comprobarlo?
 
 ---
 
+## Conversación #32
+
+### 👤 Usuario:
+
+Venga perfecto, entonces quiero implementar unos cambios.
+La generación de las actas e informes están OK (o casi).
+Ahora otros asuntos. Escucha el audio.
+
+### 🤖 Antigravity:
+
+¡Te entiendo perfectamente y **tienes toda la razón**!
+
+Ese bloque de *"Datos Maestros del Proyecto"* es un residuo de la primera versión del prototipo, de cuando la aplicación estaba pensada para una única obra fija.
+
+Posteriormente creamos la arquitectura actual de **Expedientes de Obra** en el Dashboard, donde:
+* Cada obra es un expediente independiente con su propio título oficial, número de expediente, situación, contratista, equipo de dirección, actas e informes.
+* Por tanto, tener *"Datos maestros"* en la configuración global no tiene ningún sentido, es redundante y genera confusión.
+
+---
+
+### 🧹 Lo que corresponde hacer:
+
+1. **Eliminar por completo la tarjeta de *"Datos Maestros del Proyecto"*** de esa vista. Los datos maestros pertenecen única y exclusivamente a la ficha de cada **Expediente**.
+2. **Renombrar la sección en el menú lateral**:
+   - En lugar de *"Configuración Global"*, llamarla directamente **`Copias de Seguridade`** (o **`Copias de Seguridade e Sistema`**).
+3. **Dejar esa pantalla limpia y enfocada a su verdadera utilidad**:
+   - **Copias de Seguridad (Exportar / Importar JSON)**: Para respaldar todos los expedientes, actas, fotos y agentes en un clic.
+   - **Estado de los servicios en la nube**: Indicador del estado de Supabase (Base de datos) y de Render (Motor de PDF).
+
+¿Quieres que aplique esta limpieza ahora mismo, actualice el menú y suba los cambios a GitHub / Vercel?
+
+---
+
+## Conversación #33
+
+### 👤 Usuario:
+
+Exacto! Vamos allá!
+
+### 🤖 Antigravity:
+
+He lanzado la sincronización de los archivos modificados hacia el repositorio de Git local para revisar el estado y preparar el despliegue automático. Esperamos unos instantes a que finalice.
+
+Esperando unos segundos a que finalice la sincronización...
+
+---
+
+## Conversación #34
+
+### 👤 Usuario:
+
+Hay una cosa que me preocupa que es el limite de las cuotas gratuitas. Podemos saber de alguna manera el espacio almacenado, trafico consumido, ... e definitiva el "gasto" que llevamos?
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #35
+
+### 👤 Usuario:
+
+Me ha salido un  error en Antigravity y me ha dirigo a https://go.dev/dl/
+¿qué ocurre?
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #36
+
+### 👤 Usuario:
+
+memo, quiero que traslades todos los comentarios a memo.md como siempre, pero haz un md con datos relevantes por si cambio de ordenador. Por ejemplo, la implantación de hoy en Vercel Supabase y Github
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #37
+
+### 👤 Usuario:
+
+Los campos de € en formato moneda, con céntimos. El procentaje acumulado se calculará automáticamente (no editable), en función del certificado acumulado y orzamento de adxuudicación
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #38
+
+### 👤 Usuario:
+
+En esta ventana no funcionan los botones de eleiminar ni cancelar ni cerrar ventana.
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #39
+
+### 👤 Usuario:
+
+he creado un usuario nuevo y no me deja entrar en la WEB
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+

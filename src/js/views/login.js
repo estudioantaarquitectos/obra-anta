@@ -101,18 +101,25 @@ export function renderLogin(container, router) {
   const form = container.querySelector('#login-form');
   const errDiv = container.querySelector('#login-error');
 
-  form.onsubmit = (e) => {
+  form.onsubmit = async (e) => {
     e.preventDefault();
     const user = container.querySelector('#login-username').value;
     const pass = container.querySelector('#login-password').value;
 
-    const res = auth.login(user, pass);
-    if (res.success) {
-      showToast(`Benvido/a, ${res.user.name}`, 'success');
-      router.navigate('dashboard');
-    } else {
-      errDiv.textContent = res.message;
-      errDiv.style.display = 'block';
+    const submitBtn = container.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const res = await auth.login(user, pass);
+      if (res.success) {
+        showToast(`Benvido/a, ${res.user.name}`, 'success');
+        router.navigate('dashboard');
+      } else {
+        errDiv.textContent = res.message;
+        errDiv.style.display = 'block';
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
     }
   };
 }

@@ -98,12 +98,39 @@ CREATE TABLE IF NOT EXISTS public.notas (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. POLÍTICAS DE ACCESO INICIALES (Row-Level Security)
+-- 6. TABLA: GRUPOS
+CREATE TABLE IF NOT EXISTS public.grupos (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    permissions JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. TABLA: USUARIOS
+CREATE TABLE IF NOT EXISTS public.usuarios (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL,
+    cargo TEXT,
+    empresa TEXT,
+    email TEXT,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8. POLÍTICAS DE ACCESO INICIALES (Row-Level Security)
 ALTER TABLE public.agentes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.obras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.actas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.informes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.grupos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 
 DO $$ 
 BEGIN
@@ -121,9 +148,15 @@ BEGIN
 
     DROP POLICY IF EXISTS "Acceso total notas" ON public.notas;
     CREATE POLICY "Acceso total notas" ON public.notas FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Acceso total grupos" ON public.grupos;
+    CREATE POLICY "Acceso total grupos" ON public.grupos FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Acceso total usuarios" ON public.usuarios;
+    CREATE POLICY "Acceso total usuarios" ON public.usuarios FOR ALL USING (true) WITH CHECK (true);
 END $$;
 
--- 7. BUCKET DE ALMACENAMIENTO PARA FOTOS Y PDFs
+-- 9. BUCKET DE ALMACENAMIENTO PARA FOTOS Y PDFs
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('anta-files', 'anta-files', true)
 ON CONFLICT (id) DO NOTHING;
@@ -134,3 +167,4 @@ BEGIN
     CREATE POLICY "Public Storage Access" ON storage.objects
     FOR ALL USING (bucket_id = 'anta-files') WITH CHECK (bucket_id = 'anta-files');
 END $$;
+

@@ -37,12 +37,14 @@ if (isSupabaseConfigured) {
 export async function fetchAllFromSupabase() {
   if (!isSupabaseConfigured || !supabase) return null;
   try {
-    const [agRes, obRes, acRes, infRes, notRes] = await Promise.all([
+    const [agRes, obRes, acRes, infRes, notRes, usrRes, grpRes] = await Promise.all([
       supabase.from('agentes').select('*'),
       supabase.from('obras').select('*'),
       supabase.from('actas').select('*'),
       supabase.from('informes').select('*'),
-      supabase.from('notas').select('*')
+      supabase.from('notas').select('*'),
+      supabase.from('usuarios').select('*').then(r => r, () => ({ data: null })),
+      supabase.from('grupos').select('*').then(r => r, () => ({ data: null }))
     ]);
 
     return {
@@ -125,6 +127,25 @@ export async function fetchAllFromSupabase() {
         asunto: n.asunto,
         contenido: n.contenido,
         autor: n.autor
+      })) : null,
+
+      usuarios: (usrRes && usrRes.data) ? usrRes.data.map(u => ({
+        id: u.id,
+        username: u.username,
+        password: u.password,
+        name: u.name,
+        role: u.role,
+        cargo: u.cargo,
+        empresa: u.empresa,
+        email: u.email,
+        active: u.active
+      })) : null,
+
+      grupos: (grpRes && grpRes.data) ? grpRes.data.map(g => ({
+        id: g.id,
+        name: g.name,
+        description: g.description,
+        permissions: g.permissions || []
       })) : null
     };
   } catch (err) {
@@ -346,3 +367,87 @@ export async function deleteFileFromSupabase(targetPath) {
     return false;
   }
 }
+
+/* ------------------------------------------------------------------------------
+   Sincronización de Usuarios y Grupos con Supabase PostgreSQL
+   ------------------------------------------------------------------------------ */
+
+export async function syncUsuarioToSupabase(user) {
+  if (!isSupabaseConfigured || !supabase || !user) return;
+  try {
+    await supabase.from('usuarios').upsert({
+      id: user.id,
+      username: user.username,
+      password: user.password,
+      name: user.name,
+      role: user.role,
+      cargo: user.cargo || '',
+      empresa: user.empresa || '',
+      email: user.email || '',
+      active: user.active !== undefined ? user.active : true,
+      updated_at: new Date().toISOString()
+    });
+  } catch (e) {
+    console.warn('Agente CONECTOR: Aviso sincronizando usuario con Supabase:', e);
+  }
+}
+
+export async function deleteUsuarioFromSupabase(id) {
+  if (!isSupabaseConfigured || !supabase || !id) return;
+  try {
+    await supabase.from('usuarios').delete().eq('id', id);
+  } catch (e) {
+    console.warn('Agente CONECTOR: Aviso eliminando usuario de Supabase:', e);
+  }
+}
+
+export async function syncGrupoToSupabase(group) {
+  if (!isSupabaseConfigured || !supabase || !group) return;
+  try {
+    await supabase.from('grupos').upsert({
+      id: group.id,
+      name: group.name,
+      description: group.description || '',
+      permissions: group.permissions || []
+    });
+  } catch (e) {
+    console.warn('Agente CONECTOR: Aviso sincronizando grupo con Supabase:', e);
+  }
+}
+
+export async function deleteGrupoFromSupabase(id) {
+  if (!isSupabaseConfigured || !supabase || !id) return;
+  try {
+    await supabase.from('grupos').delete().eq('id', id);
+  } catch (e) {
+    console.warn('Agente CONECTOR: Aviso eliminando grupo de Supabase:', e);
+  }
+}
+
+export async function findUsuarioInSupabase(username) {
+  if (!isSupabaseConfigured || !supabase || !username) return null;
+  try {
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .ilike('username', username.trim())
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return {
+      id: data.id,
+      username: data.username,
+      password: data.password,
+      name: data.name,
+      role: data.role,
+      cargo: data.cargo,
+      empresa: data.empresa,
+      email: data.email,
+      active: data.active
+    };
+  } catch (e) {
+    console.warn('Agente CONECTOR: Aviso buscando usuario en Supabase:', e);
+    return null;
+  }
+}
+

@@ -3,6 +3,7 @@
    ========================================================================== */
 
 import { db } from './db.js';
+import { findUsuarioInSupabase } from './supabaseClient.js';
 
 class AuthService {
   constructor() {
@@ -26,7 +27,7 @@ class AuthService {
     return false;
   }
 
-  login(username, password) {
+  async login(username, password) {
     if (!username || password === undefined || password === null) {
       return { success: false, message: 'Introduzca usuario y contraseña' };
     }
@@ -34,7 +35,16 @@ class AuthService {
     const cleanUsername = username.trim();
     const cleanPassword = String(password).trim();
 
-    const user = db.getUserByUsername(cleanUsername);
+    let user = db.getUserByUsername(cleanUsername);
+
+    // Si no está en el localStorage local (ej: ventana de incógnito o nuevo equipo), buscar en Supabase
+    if (!user) {
+      user = await findUsuarioInSupabase(cleanUsername);
+      if (user) {
+        db.saveUser(user);
+      }
+    }
+
     if (!user) {
       return { success: false, message: 'Usuario no encontrado' };
     }
