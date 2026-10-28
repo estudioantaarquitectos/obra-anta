@@ -281,13 +281,12 @@ class Database {
     });
     if (actasChanged) this.setCollection(STORAGE_KEYS.ACTAS, actas);
 
-    let informes = this.getCollection(STORAGE_KEYS.INFORMES);
-    let infChanged = false;
-    const fullOfficialTitle = 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
-    if (!informes.length || (informes.length === 1 && informes[0].id === 'inf-2025-09') || !informes.some(i => i.numero === 3)) {
-      informes = JSON.parse(JSON.stringify(INITIAL_INFORMES));
-      infChanged = true;
+    if (!localStorage.getItem(STORAGE_KEYS.INFORMES)) {
+      localStorage.setItem(STORAGE_KEYS.INFORMES, JSON.stringify(INITIAL_INFORMES));
     } else {
+      let informes = this.getCollection(STORAGE_KEYS.INFORMES);
+      let infChanged = false;
+      const fullOfficialTitle = 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
       informes.forEach((i, idx) => {
         if (!i.obraId) {
           i.obraId = defaultObraId;
@@ -308,8 +307,8 @@ class Database {
           infChanged = true;
         }
       });
+      if (infChanged) this.setCollection(STORAGE_KEYS.INFORMES, informes);
     }
-    if (infChanged) this.setCollection(STORAGE_KEYS.INFORMES, informes);
 
     const notas = this.getCollection(STORAGE_KEYS.NOTAS);
     let notasChanged = false;
