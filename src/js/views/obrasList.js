@@ -10,6 +10,87 @@ import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
 import { openExpedienteEditorModal } from './expedienteEditorModal.js';
 import { formatCurrency } from '../utils/currency.js';
+import { renderAgentAvatarHtml } from '../utils/avatar.js';
+
+function getObraFacultativos(obra, allAgentes = []) {
+  const result = [];
+  const addedKeys = new Set();
+
+  function pushAg(rawAg, defaultRol) {
+    if (!rawAg) return;
+    const agId = rawAg.id || rawAg.agenteId;
+    const matched = (agId && allAgentes.find(a => a.id === agId)) ||
+                    allAgentes.find(a => a.nombre && rawAg.nombre && a.nombre.trim().toLowerCase() === rawAg.nombre.trim().toLowerCase()) ||
+                    rawAg;
+    
+    const uniqueKey = matched.id || (matched.nombre ? matched.nombre.trim().toLowerCase() : String(Math.random()));
+    if (addedKeys.has(uniqueKey)) return;
+    addedKeys.add(uniqueKey);
+
+    const rol = (rawAg.rol || defaultRol || '').toUpperCase();
+    let cargo = rawAg.cargo || matched.cargoHabitual || matched.cargo || '';
+    if (!cargo) {
+      if (rol === 'DO') cargo = 'Dirección de Obra (DO)';
+      else if (rol === 'DEM' || rol === 'DE') cargo = 'Dirección de Execución Material (DEM)';
+      else if (rol === 'CSS') cargo = 'Coordinador de Seguridade e Saúde (CSS)';
+    }
+
+    result.push({
+      ...matched,
+      rol,
+      cargo,
+      iniciales: matched.iniciales || rawAg.iniciales,
+      colorFondo: matched.colorFondo || rawAg.colorFondo
+    });
+  }
+
+  // 1. Revisar array obra.agentes
+  if (Array.isArray(obra.agentes) && obra.agentes.length > 0) {
+    // 1.1 Dirección de Obra (DO)
+    obra.agentes.forEach(ag => {
+      const rol = (ag.rol || '').toUpperCase();
+      const cargoText = `${ag.cargo || ''} ${ag.cargoHabitual || ''}`.toLowerCase();
+      if (rol === 'DO' || (/\bdo\b|director.*obra/i.test(cargoText) && !/\bdem\b|\bde\b/i.test(cargoText))) {
+        pushAg(ag, 'DO');
+      }
+    });
+
+    // 1.2 Dirección de Execución Material (DE / DEM)
+    obra.agentes.forEach(ag => {
+      const rol = (ag.rol || '').toUpperCase();
+      const cargoText = `${ag.cargo || ''} ${ag.cargoHabitual || ''}`.toLowerCase();
+      if (rol === 'DEM' || rol === 'DE' || /\bdem\b|\bde\b|execuci|ejecuci|aparellad|aparejad/i.test(cargoText)) {
+        pushAg(ag, 'DEM');
+      }
+    });
+
+    // 1.3 Coordinador de Seguridade e Saúde (CSS)
+    obra.agentes.forEach(ag => {
+      const rol = (ag.rol || '').toUpperCase();
+      const cargoText = `${ag.cargo || ''} ${ag.cargoHabitual || ''}`.toLowerCase();
+      if (rol === 'CSS' || /\bcss\b|seguridade|seguridad|sa[uú]de/i.test(cargoText)) {
+        pushAg(ag, 'CSS');
+      }
+    });
+  }
+
+  // 2. Fallback: Si no hay agentes en el array o faltan, comprobar los campos de texto legacy
+  if (result.length === 0) {
+    const doText = (obra.direccionObra || '').toLowerCase();
+    const deText = (obra.direccionEjecucion || '').toLowerCase();
+    const cssText = (obra.coordinadorCSS || '').toLowerCase();
+
+    allAgentes.forEach(ag => {
+      const name = (ag.nombre || '').toLowerCase();
+      if (!name) return;
+      if (doText.includes(name)) pushAg(ag, 'DO');
+      else if (deText.includes(name)) pushAg(ag, 'DEM');
+      else if (cssText.includes(name)) pushAg(ag, 'CSS');
+    });
+  }
+
+  return result;
+}
 
 export function renderObrasList(container, router) {
   let obras = db.getObras();
@@ -30,6 +111,7 @@ export function renderObrasList(container, router) {
 
   function render() {
     obras = db.getObras();
+    const allAgentes = db.getAgentes();
     const filtered = getFilteredObras();
     const allActas = db.getActas();
     const allInformes = db.getInformes();
@@ -190,15 +272,18 @@ export function renderObrasList(container, router) {
                         </div>
                       </td>
 
-                      <td>
-                        <div style="font-size: 0.8rem; margin-bottom: 0.2rem; line-height: 1.3;">
-                          <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Contrata:</span>
-                          <strong style="color: var(--text-main); margin-left: 0.2rem;">${escapeHtml(obra.contratista || 'Cabero Edificaciones')}</strong>
-                        </div>
-                        <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.3;" title="${escapeHtml(obra.direccionObra || '')}">
-                          <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">DO:</span>
-                          <span style="margin-left: 0.2rem;">${escapeHtml(obra.direccionObra || 'Rosa Vilas / Sergio Beceiro')}</span>
-                        </div>
+                      <td style="vertical-align: middle;">
+                        ${(() => {
+                          const facultativos = getObraFacultativos(obra, allAgentes);
+                          if (facultativos.length === 0) {
+                            return `<span style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">Sen axentes DO/DE/CSS</span>`;
+                          }
+                          return `
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                              ${facultativos.map(ag => renderAgentAvatarHtml(ag, { size: 30, cargo: ag.cargo })).join('')}
+                            </div>
+                          `;
+                        })()}
                       </td>
 
                       <td style="text-align: center; vertical-align: middle;">
