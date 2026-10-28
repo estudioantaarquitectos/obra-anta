@@ -2334,3 +2334,15 @@ CUando se añada el asistente no hab´ra una casilla de "Asistió", porque por e
 
 ---
 
+## Conversación #65
+
+### 👤 Usuario:
+
+en el dashboard faltan las "Reuniones"
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
