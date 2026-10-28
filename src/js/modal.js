@@ -87,10 +87,10 @@ export const modal = {
    * Confirmation dialog for DELETING (always requested by user specification)
    */
   confirmDelete({ title = 'Confirmar Eliminación', message = '¿Está seguro de que desea eliminar este elemento?', itemName = '', count = 1, confirmText = 'Eliminar definitivamente', cancelText = 'Cancelar', onConfirm }) {
-    this.close();
-
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop active';
+    const zIndex = 100 + (modalStack.length + 1) * 20;
+    backdrop.style.zIndex = zIndex;
     backdrop.innerHTML = `
       <div class="modal-window">
         <div class="modal-header">
@@ -130,12 +130,12 @@ export const modal = {
     `;
 
     document.body.appendChild(backdrop);
-    activeModal = backdrop;
+    modalStack.push(backdrop);
 
     const cleanup = () => {
       backdrop.classList.remove('active');
       setTimeout(() => backdrop.remove(), 200);
-      activeModal = null;
+      modalStack = modalStack.filter(m => m !== backdrop);
     };
 
     backdrop.querySelector('#modal-close-x').onclick = cleanup;
@@ -311,10 +311,10 @@ export const modal = {
    * Photo Lightbox Modal
    */
   openLightbox(url, title = 'Fotografía de Obra', caption = '', date = '') {
-    this.close();
-
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop active';
+    const zIndex = 100 + (modalStack.length + 1) * 20;
+    backdrop.style.zIndex = zIndex;
     backdrop.innerHTML = `
       <div class="modal-window modal-window-lg" style="max-width: 800px; background: #0f172a; color: white;">
         <div class="modal-header" style="border-bottom-color: #334155;">
@@ -336,12 +336,12 @@ export const modal = {
     `;
 
     document.body.appendChild(backdrop);
-    activeModal = backdrop;
+    modalStack.push(backdrop);
 
     const cleanup = () => {
       backdrop.classList.remove('active');
       setTimeout(() => backdrop.remove(), 200);
-      activeModal = null;
+      modalStack = modalStack.filter(m => m !== backdrop);
     };
 
     backdrop.querySelector('#modal-close-x').onclick = cleanup;
