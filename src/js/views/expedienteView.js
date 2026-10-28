@@ -1191,8 +1191,8 @@ export function renderExpedienteView(container, router, params = {}) {
     // Tab buttons
     container.querySelectorAll('.expediente-nav-tabs .tab-btn').forEach(btn => {
       btn.onclick = () => {
-        activeTab = btn.dataset.tab;
-        render();
+        const tab = btn.dataset.tab;
+        router.navigate('expediente', { id: obra.id, tab });
       };
     });
 

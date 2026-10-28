@@ -1364,3 +1364,46 @@ Varios cambios:
 
 ---
 
+## Conversación #46
+
+### 👤 Usuario:
+
+Me gustaría crear una nuevo tipo de documento, además de actas semanales, informes mensuales y notas... Se llamará Reuniones.
+Seguirá la plantilla de actas semanales, pero arriba a la derecha pondrá Reunión.
+Se podrá editar como las actas semanales, pero tendrá unos apartados y secciones definidas:
+1- Datos xerais da reunión:
+Proxecto:
+Emprazamento:
+Expediente nº:
+Contratista:
+Dirección de obra:
+Dirección de execución:
+Coordinador CSS:
+2- Datos xerais da reunión:
+Data:
+Hora:
+Tipo de reunión: virtual/presencial
+Lugar: 
+3- Asistentes (igual que actas semanales) (marcar quién firma)
+4- Cuestións tratadas na reunión 
+4.1- (Aquí se podrán crear tantas secciones como sea necesario)
+...
+Se podrán añadir nuevos apartados  y secciones.
+
+5- Firmas
+6- Anexos (al igual que en los otros documentos se generará una separata y se adjuntarán los PDFS):
+
+Por otro lado. 
+En captura 1:
+- (recuadro en rojo): los títulos aparecen desplazados de las filas de abajo.
+En capturas 1 y 2
+- recuadro azul: nme gustaría uniformidad en los botones entre los distintos tipos de documentos.
+
+Notas: Me gustaría que también se viesen en filas, y con posibilidad de imprimirlas desde su edición
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+

@@ -16,6 +16,7 @@ import { renderNotas } from './views/notas.js';
 import { renderUsuarios } from './views/usuarios.js';
 import { renderAgentes } from './views/agentes.js';
 import { renderSettings } from './views/settings.js';
+import { modal } from './modal.js';
 import { isSupabaseConfigured } from './supabaseClient.js';
 import logoImg from '../../LOGO_200px.png';
 
@@ -24,7 +25,7 @@ class AppRouter {
     this.currentRoute = 'dashboard';
     this.currentParams = {};
     this.appRoot = document.getElementById('app');
-    window.addEventListener('popstate', () => this.handlePopState());
+    window.addEventListener('popstate', (e) => this.handlePopState(e));
     window.addEventListener('anta:db-synced', () => {
       if (
         !this.currentRoute.includes('editor') &&
@@ -36,30 +37,118 @@ class AppRouter {
     });
   }
 
-  init() {
-    if (!auth.isAuthenticated()) {
-      this.navigate('login');
-    } else {
-      this.navigate('dashboard');
+  parseHash(hash = window.location.hash) {
+    if (!hash || hash === '#' || hash === '#/') {
+      return { route: auth.isAuthenticated() ? 'dashboard' : 'login', params: {} };
     }
+    const clean = hash.replace(/^#\/?/, '');
+    const [routePart, queryPart] = clean.split('?');
+    const route = routePart || (auth.isAuthenticated() ? 'dashboard' : 'login');
+    const params = {};
+    if (queryPart) {
+      const searchParams = new URLSearchParams(queryPart);
+      for (const [k, v] of searchParams.entries()) {
+        if (v === 'true') params[k] = true;
+        else if (v === 'false') params[k] = false;
+        else params[k] = v;
+      }
+    }
+    return { route, params };
   }
 
-  navigate(route, params = {}) {
-    this.currentRoute = route;
-    this.currentParams = params;
-    
+  serializeRouteToHash(route, params = {}) {
+    const cleanParams = {};
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null && v !== '') {
+        cleanParams[k] = v;
+      }
+    }
+    const searchParams = new URLSearchParams(cleanParams);
+    const qs = searchParams.toString();
+    return qs ? `#/${route}?${qs}` : `#/${route}`;
+  }
+
+  init() {
+    const parsed = this.parseHash();
+    let initialRoute = parsed.route;
+    let initialParams = parsed.params;
+
+    if (!auth.isAuthenticated() && initialRoute !== 'login') {
+      initialRoute = 'login';
+      initialParams = {};
+    } else if (auth.isAuthenticated() && initialRoute === 'login') {
+      initialRoute = 'dashboard';
+      initialParams = {};
+    }
+
+    this.currentRoute = initialRoute;
+    this.currentParams = initialParams;
+
+    const targetHash = this.serializeRouteToHash(initialRoute, initialParams);
+    window.history.replaceState({ route: initialRoute, params: initialParams }, '', targetHash);
+
+    this.render();
+  }
+
+  navigate(route, params = {}, options = {}) {
+    const { replace = false, skipHistory = false } = options;
+
     // Check auth
     if (!auth.isAuthenticated() && route !== 'login') {
-      this.currentRoute = 'login';
+      route = 'login';
+      params = {};
     } else if (auth.isAuthenticated() && route === 'login') {
-      this.currentRoute = 'dashboard';
+      route = 'dashboard';
+      params = {};
+    }
+
+    this.currentRoute = route;
+    this.currentParams = params;
+
+    const targetHash = this.serializeRouteToHash(route, params);
+
+    if (!skipHistory) {
+      const state = { route, params };
+      if (replace) {
+        window.history.replaceState(state, '', targetHash);
+      } else {
+        if (window.location.hash !== targetHash) {
+          window.history.pushState(state, '', targetHash);
+        } else {
+          window.history.replaceState(state, '', targetHash);
+        }
+      }
     }
 
     this.render();
   }
 
-  handlePopState() {
-    // Popstate handling if needed
+  handlePopState(e) {
+    try {
+      if (modal && typeof modal.close === 'function') {
+        modal.close();
+      }
+    } catch (_) {}
+
+    let route, params;
+    if (e && e.state && e.state.route) {
+      route = e.state.route;
+      params = e.state.params || {};
+    } else {
+      const parsed = this.parseHash();
+      route = parsed.route;
+      params = parsed.params;
+    }
+
+    this.navigate(route, params, { skipHistory: true });
+  }
+
+  back(fallbackRoute = 'dashboard', fallbackParams = {}) {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      this.navigate(fallbackRoute, fallbackParams);
+    }
   }
 
   render() {

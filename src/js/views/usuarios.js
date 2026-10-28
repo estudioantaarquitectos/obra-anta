@@ -44,10 +44,12 @@ export function renderUsuarios(container, router) {
         <div class="empty-state">
           <div class="empty-title" style="color: var(--color-danger);">Acceso restringido</div>
           <div class="empty-desc">Esta sección está reservada exclusivamente para el usuario Administrador y usuarios con permiso de gestión.</div>
-          <button class="btn btn-primary" onclick="window.history.back()">Volver</button>
+          <button class="btn btn-primary" id="btn-restricted-back">Volver</button>
         </div>
       </div>
     `;
+    const backBtn = container.querySelector('#btn-restricted-back');
+    if (backBtn) backBtn.onclick = () => router.back('dashboard');
     return;
   }
 

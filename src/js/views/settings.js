@@ -16,10 +16,12 @@ export function renderSettings(container, router) {
         <div class="empty-state">
           <div class="empty-title" style="color: var(--color-danger);">Acceso restringido</div>
           <div class="empty-desc">O seu grupo de usuario non dispón de permisos para acceder ás Copias de Seguridade e Mantemento do Sistema.</div>
-          <button class="btn btn-primary" onclick="window.history.back()">Volver</button>
+          <button class="btn btn-primary" id="btn-restricted-back">Volver</button>
         </div>
       </div>
     `;
+    const backBtn = container.querySelector('#btn-restricted-back');
+    if (backBtn) backBtn.onclick = () => router.back('dashboard');
     return;
   }
 
