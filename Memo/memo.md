@@ -2307,3 +2307,30 @@ está actualizado en Github?
 
 ---
 
+## Conversación #63
+
+### 👤 Usuario:
+
+Veo que vuelven a aparecer aparecen expedientes y agentes eliminados.... Ya me pasó antes con actas, informes y notas. Revisa las eliminaciones
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #64
+
+### 👤 Usuario:
+
+En cualquier acta, informe o reunión A la hora de asignar asistentes, se podrá agregar de dos maneras:
++ Engadir axente: Se abrirán un listado de los agentes del proyecto y se seleccionarán para añadir.
++ Engadir asistente: Se podrá añadir asistentes que no sean agentes (ejemplo: Un instalador de red municipal que da información). Es el caso de como está ahora el botónde + Añadir Asistente.
+CUando se añada el asistente no hab´ra una casilla de "Asistió", porque por eso se ha seleccionado. Sçi habrá una de firma
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
