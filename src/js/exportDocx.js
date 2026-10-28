@@ -864,11 +864,13 @@ export async function buildModernActaDocx(acta) {
     );
   }
 
+  let currentSec = 4;
+
   // 4. INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS)
   const indCSS = acta.indicacionesSeguridad;
   const hasCSS = indCSS && (Array.isArray(indCSS) ? indCSS.length > 0 : String(indCSS).trim().length > 0);
   if (hasCSS) {
-    addModernSectionHeader('4.- INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS):');
+    addModernSectionHeader(`${currentSec++}.- INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS):`);
     const ptsCSS = Array.isArray(indCSS) ? indCSS : String(indCSS).split('\n').filter(Boolean);
     ptsCSS.forEach((p) => {
       children.push(
@@ -885,7 +887,7 @@ export async function buildModernActaDocx(acta) {
   const proxAct = acta.actuacionesPrevistas;
   const hasProx = proxAct && (Array.isArray(proxAct) ? proxAct.length > 0 : String(proxAct).trim().length > 0);
   if (hasProx) {
-    addModernSectionHeader('5.- PRÓXIMAS ACTUACIÓNS PREVISTAS:');
+    addModernSectionHeader(`${currentSec++}.- PRÓXIMAS ACTUACIÓNS PREVISTAS:`);
     const ptsProx = Array.isArray(proxAct) ? proxAct : String(proxAct).split('\n').filter(Boolean);
     ptsProx.forEach((p) => {
       children.push(
@@ -898,78 +900,90 @@ export async function buildModernActaDocx(acta) {
     });
   }
 
-  // 6. DILIXENCIA DE FIRMAS (Separated DO and DE)
-  addModernSectionHeader('6.- DILIXENCIA DE FIRMAS:');
-  const lugarStr = situacion.includes('Ferrol') ? 'Ferrol' : (situacion.split(',').pop()?.trim() || 'Ferrol');
-  children.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: `En ${lugarStr} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta:`,
-          italics: true,
-          size: 14,
-          color: '475569',
-        }),
-      ],
-      spacing: { after: 80 },
-    }),
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
-        bottom: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
-        left: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
-        right: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
-        insideVertical: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
-        insideHorizontal: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
-              shading: { fill: 'F8FAFC' },
-              margins: { top: 60, bottom: 140, left: 60, right: 60 },
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: 'Pola Dirección de Obra (DO):', bold: true, size: 14, color: COLOR_PRIMARY })],
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: doClean || 'Dirección de Obra', bold: true, size: 14, color: '0F172A' })],
-                  spacing: { before: 20, after: 140 },
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: 'Asdo.: ____________________________', size: 14, color: '94A3B8' })],
-                }),
-              ],
-            }),
-            new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
-              shading: { fill: 'F8FAFC' },
-              margins: { top: 60, bottom: 140, left: 60, right: 60 },
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: 'Pola Dirección de Execución (DE):', bold: true, size: 14, color: COLOR_SECONDARY })],
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: deClean || 'Dirección de Execución Material', bold: true, size: 14, color: '0F172A' })],
-                  spacing: { before: 20, after: 140 },
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: 'Asdo.: ____________________________', size: 14, color: '94A3B8' })],
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    })
-  );
+  // 6. DILIXENCIA DE FIRMAS (Sólo si hay firmantes marcados)
+  const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion';
+  const asistentesRaw = acta.asistentes || [];
+  const asistentesFirmantes = asistentesRaw.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste' && Boolean(a.firma));
+  let hasFirmas = true;
+  if (isReunion) {
+    hasFirmas = asistentesFirmantes.length > 0;
+  } else if (asistentesRaw.length > 0 && asistentesRaw.some(a => 'firma' in a)) {
+    hasFirmas = asistentesFirmantes.length > 0;
+  }
+
+  if (hasFirmas) {
+    addModernSectionHeader(`${currentSec++}.- DILIXENCIA DE FIRMAS:`);
+    const lugarStr = situacion.includes('Ferrol') ? 'Ferrol' : (situacion.split(',').pop()?.trim() || 'Ferrol');
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `En ${lugarStr} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta:`,
+            italics: true,
+            size: 14,
+            color: '475569',
+          }),
+        ],
+        spacing: { after: 80 },
+      }),
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
+          bottom: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
+          left: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
+          right: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
+          insideVertical: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' },
+          insideHorizontal: { style: BorderStyle.NONE },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                shading: { fill: 'F8FAFC' },
+                margins: { top: 60, bottom: 140, left: 60, right: 60 },
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: 'Pola Dirección de Obra (DO):', bold: true, size: 14, color: COLOR_PRIMARY })],
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: doClean || 'Dirección de Obra', bold: true, size: 14, color: '0F172A' })],
+                    spacing: { before: 20, after: 140 },
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: 'Asdo.: ____________________________', size: 14, color: '94A3B8' })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                shading: { fill: 'F8FAFC' },
+                margins: { top: 60, bottom: 140, left: 60, right: 60 },
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: 'Pola Dirección de Execución (DE):', bold: true, size: 14, color: COLOR_SECONDARY })],
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: deClean || 'Dirección de Execución Material', bold: true, size: 14, color: '0F172A' })],
+                    spacing: { before: 20, after: 140 },
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: 'Asdo.: ____________________________', size: 14, color: '94A3B8' })],
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      })
+    );
+  }
 
   // 7. ANEXO REPORTAXE FOTOGRÁFICO (2x2 Grid)
   const fotos = acta.fotos || [];
   if (fotos.length > 0) {
-    addModernSectionHeader('7.- ANEXO REPORTAXE FOTOGRÁFICO:');
+    addModernSectionHeader(`${currentSec++}.- ANEXO REPORTAXE FOTOGRÁFICO:`);
 
     for (let i = 0; i < fotos.length; i += 2) {
       const f1 = fotos[i];
@@ -1071,7 +1085,7 @@ export async function buildModernActaDocx(acta) {
   // 8. ANEXO DOCUMENTACIÓN COMPLEMENTARIA
   const anexos = acta.anexosPdf || acta.anexos || [];
   if (anexos.length > 0) {
-    addModernSectionHeader('8.- ANEXO DOCUMENTACIÓN COMPLEMENTARIA:');
+    addModernSectionHeader(`${currentSec++}.- ANEXO DOCUMENTACIÓN COMPLEMENTARIA:`);
     children.push(
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },

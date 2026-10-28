@@ -42,21 +42,29 @@ export function renderActaPrint(container, router, params = {}) {
   const jefeObraStr = currentObra?.jefeObra || '';
 
   const asistentes = acta.asistentes || [];
-  const firmantes = (acta.firmas && acta.firmas.length > 0)
-    ? acta.firmas
-    : asistentes.filter(a => a.asistio && a.firma);
+  const asistentesFirmantes = asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste' && Boolean(a.firma));
+  
+  // Regla: Si no hay ningún asistente con firma marcada, desaparece el punto de firmas en el resultado final
+  const firmantes = isReunion
+    ? asistentesFirmantes
+    : (asistentesFirmantes.length > 0
+        ? asistentesFirmantes
+        : ((acta.firmas && acta.firmas.length > 0 && !asistentes.some(a => a.firma === false))
+            ? acta.firmas
+            : (asistentes.length > 0 && !asistentes.some(a => a.firma === false) ? asistentes.slice(0, 2) : [])));
 
+  const hasFirmas = firmantes.length > 0;
   const fotos = acta.fotos || [];
   const anexosPdf = acta.anexosPdf || [];
 
-  let nextSec = 4;
-  const hasCSS = Boolean(acta.indicacionesSeguridad && (Array.isArray(acta.indicacionesSeguridad) ? acta.indicacionesSeguridad.length : acta.indicacionesSeguridad.trim()));
+  let nextSec = isReunion ? 5 : 4;
+  const hasCSS = !isReunion && Boolean(acta.indicacionesSeguridad && (Array.isArray(acta.indicacionesSeguridad) ? acta.indicacionesSeguridad.length : acta.indicacionesSeguridad.trim()));
   const numCSS = hasCSS ? nextSec++ : null;
 
-  const hasPrevistas = Boolean(acta.actuacionesPrevistas && (Array.isArray(acta.actuacionesPrevistas) ? acta.actuacionesPrevistas.length : acta.actuacionesPrevistas.trim()));
+  const hasPrevistas = !isReunion && Boolean(acta.actuacionesPrevistas && (Array.isArray(acta.actuacionesPrevistas) ? acta.actuacionesPrevistas.length : acta.actuacionesPrevistas.trim()));
   const numPrevistas = hasPrevistas ? nextSec++ : null;
 
-  const numFirmas = nextSec++;
+  const numFirmas = hasFirmas ? nextSec++ : null;
   const numFotos = (fotos && fotos.length > 0) ? nextSec++ : null;
   const numAnexos = (anexosPdf && anexosPdf.length > 0) ? nextSec++ : null;
 
@@ -200,10 +208,9 @@ export function renderActaPrint(container, router, params = {}) {
               <table class="dt05-table" style="margin-top: 8px;">
                 <thead>
                   <tr>
-                    <th style="width: 34%;">Nome e Apelidos</th>
-                    <th style="width: 28%;">Cargo / Función</th>
-                    <th style="width: 26%;">Entidade Representada</th>
-                    <th style="width: 12%; text-align: center;">Firma</th>
+                    <th style="width: 38%;">Nome e Apelidos</th>
+                    <th style="width: 32%;">Cargo / Función</th>
+                    <th style="width: 30%;">Entidade Representada</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -218,9 +225,6 @@ export function renderActaPrint(container, router, params = {}) {
                       <td style="color: #64748b; vertical-align: middle;">
                         ${escapeHtml(asist.entidad || asist.empresa || '—')}
                       </td>
-                      <td style="text-align: center; vertical-align: middle;">
-                        ${asist.firma ? '<span style="color: #1e3a8a; font-weight: 700; font-size: 8pt;">● SI</span>' : '<span style="color: #94a3b8; font-size: 8pt;">—</span>'}
-                      </td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -233,24 +237,26 @@ export function renderActaPrint(container, router, params = {}) {
               ${renderApartadosHtmlModern(acta, 4)}
             </div>
 
-            <!-- 5. SECTION 5: DILIXENCIA DE FIRMAS -->
-            <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
-              <div class="dt05-sec-header">5.- DILIXENCIA DE FIRMAS:</div>
-              <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
-                En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta de reunión:
-              </div>
-              <div class="acta-modern-firmas-grid">
-                ${(firmantes.length > 0 ? firmantes : asistentes.filter(a => a.asistio && a.firma)).map(f => `
-                  <div class="acta-modern-firma-card">
-                    <div>
-                      <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
-                      <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+            <!-- 5. SECTION 5: DILIXENCIA DE FIRMAS (Sólo si hay asistentes con firma marcada) -->
+            ${hasFirmas ? `
+              <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
+                <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS:</div>
+                <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
+                  En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta de reunión:
+                </div>
+                <div class="acta-modern-firmas-grid">
+                  ${firmantes.map(f => `
+                    <div class="acta-modern-firma-card">
+                      <div>
+                        <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
+                        <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+                      </div>
+                      <div class="acta-modern-firma-space"></div>
                     </div>
-                    <div class="acta-modern-firma-space"></div>
-                  </div>
-                `).join('')}
+                  `).join('')}
+                </div>
               </div>
-            </div>
+            ` : ''}
           ` : `
             <!-- 2. SECTION 1: DATOS XERAIS (Audio 4: DO and DE strictly separated) -->
             <div class="dt05-section">
@@ -364,25 +370,27 @@ export function renderActaPrint(container, router, params = {}) {
               </div>
             ` : ''}
 
-            <!-- 7. DILIXENCIA DE FIRMAS -->
-            <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
-              <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS:</div>
-              <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
-                En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta:
-              </div>
-              
-              <div class="acta-modern-firmas-grid">
-                ${(firmantes.length > 0 ? firmantes : asistentes.slice(0, 2)).map(f => `
-                  <div class="acta-modern-firma-card">
-                    <div>
-                      <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
-                      <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+            <!-- 7. DILIXENCIA DE FIRMAS (Sólo si hasFirmas) -->
+            ${hasFirmas ? `
+              <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
+                <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS:</div>
+                <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
+                  En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta:
+                </div>
+                
+                <div class="acta-modern-firmas-grid">
+                  ${firmantes.map(f => `
+                    <div class="acta-modern-firma-card">
+                      <div>
+                        <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
+                        <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+                      </div>
+                      <div class="acta-modern-firma-space"></div>
                     </div>
-                    <div class="acta-modern-firma-space"></div>
-                  </div>
-                `).join('')}
+                  `).join('')}
+                </div>
               </div>
-            </div>
+            ` : ''}
           `}
 
           <!-- 8. ANEXO REPORTAXE FOTOGRÁFICO EN MODO GRID 2x2 (Audio 2) -->

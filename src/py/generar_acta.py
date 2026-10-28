@@ -337,13 +337,13 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
         doc.add_paragraph('3.- ASISTENTES', style=style_h1)
         asistentes = [a for a in acta_data.get('asistentes', []) if a.get('asistio') is not False and a.get('asiste') is not False and a.get('estado') != 'non_asiste']
         if asistentes:
-            t_asist = doc.add_table(rows=1, cols=4)
+            t_asist = doc.add_table(rows=1, cols=3)
             t_asist.alignment = WD_TABLE_ALIGNMENT.CENTER
             t_asist.autofit = False
 
             h_row = t_asist.rows[0]
             set_row_bottom_border(h_row, "0284C7", "6")
-            headers = [("Nome e Apelidos", 2.2), ("Cargo / Función", 2.2), ("Entidade", 1.8), ("Firma", 1.0)]
+            headers = [("Nome e Apelidos", 2.7), ("Cargo / Función", 2.5), ("Entidade Representada", 2.0)]
             for idx, (h_title, w_in) in enumerate(headers):
                 c = h_row.cells[idx]
                 c.width = Inches(w_in)
@@ -361,10 +361,9 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                 nome = a.get('nombre') or a.get('nome') or ''
                 cargo = a.get('cargo') or '—'
                 entidade = a.get('entidad') or a.get('empresa') or a.get('entidade') or '—'
-                firma_txt = "SI" if a.get('firma') else "—"
 
                 c0 = r.cells[0]
-                c0.width = Inches(2.2)
+                c0.width = Inches(2.7)
                 set_cell_margins(c0, 30, 30, 30, 30)
                 p0 = c0.paragraphs[0]
                 r0 = p0.add_run(nome)
@@ -372,7 +371,7 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                 r0.font.size = Pt(8.5)
 
                 c1 = r.cells[1]
-                c1.width = Inches(2.2)
+                c1.width = Inches(2.5)
                 set_cell_margins(c1, 30, 30, 30, 30)
                 p1 = c1.paragraphs[0]
                 r1 = p1.add_run(cargo)
@@ -380,22 +379,12 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                 r1.font.color.rgb = RGBColor(71, 85, 105)
 
                 c2 = r.cells[2]
-                c2.width = Inches(1.8)
+                c2.width = Inches(2.0)
                 set_cell_margins(c2, 30, 30, 30, 30)
                 p2 = c2.paragraphs[0]
                 r2 = p2.add_run(entidade)
                 r2.font.size = Pt(8.5)
                 r2.font.color.rgb = RGBColor(100, 116, 139)
-
-                c3 = r.cells[3]
-                c3.width = Inches(1.0)
-                set_cell_margins(c3, 30, 30, 30, 30)
-                p3 = c3.paragraphs[0]
-                r3 = p3.add_run(firma_txt)
-                r3.font.size = Pt(8.5)
-                r3.bold = (firma_txt == "SI")
-                if firma_txt == "SI":
-                    r3.font.color.rgb = RGBColor(30, 58, 138)
 
         # 4- CUESTIÓNS TRATADAS NA REUNIÓN
         doc.add_paragraph('4.- CUESTIÓNS TRATADAS NA REUNIÓN', style=style_h1)
@@ -426,50 +415,49 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
             r_emp.italic = True
             r_emp.font.size = Pt(8.5)
 
-        # 5- FIRMAS
-        doc.add_paragraph('5.- FIRMAS', style=style_h1)
-        p_f_intro = doc.add_paragraph(style='Normal')
-        p_f_intro.paragraph_format.space_after = Pt(8)
-        lugar_str = lugar_val or ('Ferrol' if 'ferrol' in situacion.lower() else situacion.split(',')[-1].strip() or 'Ferrol')
-        r_fi = p_f_intro.add_run(f"En {lugar_str} a {fecha_val}. Para que así conste e aos efectos oportunos, asinan a acta da presente reunión:")
-        r_fi.italic = True
-        r_fi.font.size = Pt(8.5)
-        r_fi.font.color.rgb = RGBColor(71, 85, 105)
+        # 5- FIRMAS (Sólo si hay algún asistente con firma marcada)
+        firmantes = [a for a in acta_data.get('asistentes', []) if a.get('asistio') is not False and a.get('asiste') is not False and a.get('estado') != 'non_asiste' and a.get('firma')]
+        next_sec_reu = 5
+        if firmantes:
+            doc.add_paragraph(f'{next_sec_reu}.- DILIXENCIA DE FIRMAS', style=style_h1)
+            p_f_intro = doc.add_paragraph(style='Normal')
+            p_f_intro.paragraph_format.space_after = Pt(8)
+            lugar_str = lugar_val or ('Ferrol' if 'ferrol' in situacion.lower() else situacion.split(',')[-1].strip() or 'Ferrol')
+            r_fi = p_f_intro.add_run(f"En {lugar_str} a {fecha_val}. Para que así conste e aos efectos oportunos, asinan a presente acta de reunión:")
+            r_fi.italic = True
+            r_fi.font.size = Pt(8.5)
+            r_fi.font.color.rgb = RGBColor(71, 85, 105)
 
-        firmantes = [a for a in acta_data.get('asistentes', []) if a.get('asistio') and a.get('firma')]
-        if not firmantes:
-            firmantes = [
-                {'nombre': do_clean, 'cargo': 'Dirección de Obra'},
-                {'nombre': de_clean, 'cargo': 'Dirección de Execución'}
-            ]
+            # Tabla de firmas dinámica (2 firmas por fila)
+            t_firmas = doc.add_table(rows=0, cols=2)
+            t_firmas.alignment = WD_TABLE_ALIGNMENT.CENTER
+            t_firmas.autofit = False
 
-        # Tabla de firmas dinámica (2 firmas por fila)
-        t_firmas = doc.add_table(rows=0, cols=2)
-        t_firmas.alignment = WD_TABLE_ALIGNMENT.CENTER
-        t_firmas.autofit = False
-
-        for f_i in range(0, len(firmantes), 2):
-            rf = t_firmas.add_row()
-            pair = firmantes[f_i:f_i+2]
-            for c_i, signer in enumerate(pair):
-                c_cell = rf.cells[c_i]
-                c_cell.width = Inches(3.6)
-                set_cell_shading(c_cell, "F8FAFC")
-                set_cell_margins(c_cell, 60, 140, 60, 60)
-                p_s = c_cell.paragraphs[0]
-                r_c = p_s.add_run(f"{signer.get('cargo', 'Asistente')}:\n")
-                r_c.bold = True
-                r_c.font.size = Pt(8.5)
-                r_c.font.color.rgb = RGBColor(30, 58, 138)
-                r_n = p_s.add_run(f"{signer.get('nombre', '')}\n\n\n")
-                r_n.bold = True
-                r_n.font.size = Pt(8.5)
-                r_sig = p_s.add_run("Asdo.: ____________________________")
-                r_sig.font.size = Pt(8)
-                r_sig.font.color.rgb = RGBColor(148, 163, 184)
-            if len(pair) == 1:
-                c_empty = rf.cells[1]
-                c_empty.width = Inches(3.6)
+            for f_i in range(0, len(firmantes), 2):
+                rf = t_firmas.add_row()
+                pair = firmantes[f_i:f_i+2]
+                for c_i, signer in enumerate(pair):
+                    c_cell = rf.cells[c_i]
+                    c_cell.width = Inches(3.6)
+                    set_cell_shading(c_cell, "F8FAFC")
+                    set_cell_margins(c_cell, 60, 140, 60, 60)
+                    p_s = c_cell.paragraphs[0]
+                    cargo_s = signer.get('cargo') or 'Asistente'
+                    ent_s = signer.get('entidad') or signer.get('empresa') or signer.get('entidade') or ''
+                    r_c = p_s.add_run(f"{cargo_s}{f' ({ent_s})' if ent_s else ''}:\n")
+                    r_c.bold = True
+                    r_c.font.size = Pt(8.5)
+                    r_c.font.color.rgb = RGBColor(30, 58, 138)
+                    r_n = p_s.add_run(f"{signer.get('nombre') or signer.get('nome') or ''}\n\n\n")
+                    r_n.bold = True
+                    r_n.font.size = Pt(8.5)
+                    r_sig = p_s.add_run("Asdo.: ____________________________")
+                    r_sig.font.size = Pt(8)
+                    r_sig.font.color.rgb = RGBColor(148, 163, 184)
+                if len(pair) == 1:
+                    c_empty = rf.cells[1]
+                    c_empty.width = Inches(3.6)
+            next_sec_reu += 1
 
     else:
         # ======================================================================
@@ -673,58 +661,68 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                 r_t.font.color.rgb = RGBColor(30, 41, 59)
 
         # 8. SECCIÓN 6: DILIXENCIA DE FIRMAS (DO y DE separadas)
-        doc.add_paragraph('DILIXENCIA DE FIRMAS', style=style_h1)
-        p_f_intro = doc.add_paragraph(style='Normal')
-        p_f_intro.paragraph_format.space_after = Pt(8)
-        lugar = 'Ferrol' if 'ferrol' in situacion.lower() else situacion.split(',')[-1].strip() or 'Ferrol'
-        r_fi = p_f_intro.add_run(f"En {lugar} a {format_date_long_es(acta_data.get('fecha'))}. Para que así conste e aos efectos oportunos, asinan a presente acta:")
-        r_fi.italic = True
-        r_fi.font.size = Pt(8.5)
-        r_fi.font.color.rgb = RGBColor(71, 85, 105)
+        asistentes_raw = acta_data.get('asistentes', [])
+        has_firmas_acta = True
+        if asistentes_raw and any('firma' in a for a in asistentes_raw):
+            has_firmas_acta = any(a.get('firma') for a in asistentes_raw if a.get('asistio') is not False and a.get('asiste') is not False and a.get('estado') != 'non_asiste')
 
-        t_f = doc.add_table(rows=1, cols=2)
-        t_f.alignment = WD_TABLE_ALIGNMENT.CENTER
-        t_f.autofit = False
-        row_f = t_f.rows[0]
+        if has_firmas_acta:
+            doc.add_paragraph('DILIXENCIA DE FIRMAS', style=style_h1)
+            p_f_intro = doc.add_paragraph(style='Normal')
+            p_f_intro.paragraph_format.space_after = Pt(8)
+            lugar = 'Ferrol' if 'ferrol' in situacion.lower() else situacion.split(',')[-1].strip() or 'Ferrol'
+            r_fi = p_f_intro.add_run(f"En {lugar} a {format_date_long_es(acta_data.get('fecha'))}. Para que así conste e aos efectos oportunos, asinan a presente acta:")
+            r_fi.italic = True
+            r_fi.font.size = Pt(8.5)
+            r_fi.font.color.rgb = RGBColor(71, 85, 105)
 
-        # Firma DO
-        cf0 = row_f.cells[0]
-        cf0.width = Inches(3.6)
-        set_cell_shading(cf0, "F8FAFC")
-        set_cell_margins(cf0, 60, 140, 60, 60)
-        pf0 = cf0.paragraphs[0]
-        r_do_h = pf0.add_run("Pola Dirección de Obra (DO):\n")
-        r_do_h.bold = True
-        r_do_h.font.size = Pt(8.5)
-        r_do_h.font.color.rgb = RGBColor(30, 58, 138)
-        r_do_n = pf0.add_run(f"{do_clean}\n\n\n")
-        r_do_n.bold = True
-        r_do_n.font.size = Pt(8.5)
-        r_do_s = pf0.add_run("Asdo.: ____________________________")
-        r_do_s.font.size = Pt(8)
-        r_do_s.font.color.rgb = RGBColor(148, 163, 184)
+            t_f = doc.add_table(rows=1, cols=2)
+            t_f.alignment = WD_TABLE_ALIGNMENT.CENTER
+            t_f.autofit = False
+            row_f = t_f.rows[0]
 
-        # Firma DE
-        cf1 = row_f.cells[1]
-        cf1.width = Inches(3.6)
-        set_cell_shading(cf1, "F8FAFC")
-        set_cell_margins(cf1, 60, 140, 60, 60)
-        pf1 = cf1.paragraphs[0]
-        r_de_h = pf1.add_run("Pola Dirección de Execución (DE):\n")
-        r_de_h.bold = True
-        r_de_h.font.size = Pt(8.5)
-        r_de_h.font.color.rgb = RGBColor(2, 132, 199)
-        r_de_n = pf1.add_run(f"{de_clean}\n\n\n")
-        r_de_n.bold = True
-        r_de_n.font.size = Pt(8.5)
-        r_de_s = pf1.add_run("Asdo.: ____________________________")
-        r_de_s.font.size = Pt(8)
-        r_de_s.font.color.rgb = RGBColor(148, 163, 184)
+            # Firma DO
+            cf0 = row_f.cells[0]
+            cf0.width = Inches(3.6)
+            set_cell_shading(cf0, "F8FAFC")
+            set_cell_margins(cf0, 60, 140, 60, 60)
+            pf0 = cf0.paragraphs[0]
+            r_do_h = pf0.add_run("Pola Dirección de Obra (DO):\n")
+            r_do_h.bold = True
+            r_do_h.font.size = Pt(8.5)
+            r_do_h.font.color.rgb = RGBColor(30, 58, 138)
+            r_do_n = pf0.add_run(f"{do_clean}\n\n\n")
+            r_do_n.bold = True
+            r_do_n.font.size = Pt(8.5)
+            r_do_s = pf0.add_run("Asdo.: ____________________________")
+            r_do_s.font.size = Pt(8)
+            r_do_s.font.color.rgb = RGBColor(148, 163, 184)
+
+            # Firma DE
+            cf1 = row_f.cells[1]
+            cf1.width = Inches(3.6)
+            set_cell_shading(cf1, "F8FAFC")
+            set_cell_margins(cf1, 60, 140, 60, 60)
+            pf1 = cf1.paragraphs[0]
+            r_de_h = pf1.add_run("Pola Dirección de Execución (DE):\n")
+            r_de_h.bold = True
+            r_de_h.font.size = Pt(8.5)
+            r_de_h.font.color.rgb = RGBColor(2, 132, 199)
+            r_de_n = pf1.add_run(f"{de_clean}\n\n\n")
+            r_de_n.bold = True
+            r_de_n.font.size = Pt(8.5)
+            r_de_s = pf1.add_run("Asdo.: ____________________________")
+            r_de_s.font.size = Pt(8)
+            r_de_s.font.color.rgb = RGBColor(148, 163, 184)
 
     # 9. SECCIÓN 7: ANEXO REPORTAXE FOTOGRÁFICO (Cuadrícula 2x2 preservando proporciones)
     fotos = acta_data.get('fotos', [])
     if fotos:
-        doc.add_paragraph('ANEXO REPORTAXE FOTOGRÁFICO', style=style_h1)
+        if is_reunion:
+            doc.add_paragraph(f'{next_sec_reu}.- ANEXO REPORTAXE FOTOGRÁFICO', style=style_h1)
+            next_sec_reu += 1
+        else:
+            doc.add_paragraph('ANEXO REPORTAXE FOTOGRÁFICO', style=style_h1)
         for i in range(0, len(fotos), 2):
             t_foto = doc.add_table(rows=1, cols=2)
             t_foto.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -776,7 +774,11 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
     # 10. SECCIÓN 8: ANEXO DOCUMENTACIÓN COMPLEMENTARIA
     anexos = acta_data.get('anexosPdf') or acta_data.get('anexos') or []
     if anexos:
-        doc.add_paragraph('ANEXO DOCUMENTACIÓN COMPLEMENTARIA', style=style_h1)
+        if is_reunion:
+            doc.add_paragraph(f'{next_sec_reu}.- ANEXO DOCUMENTACIÓN COMPLEMENTARIA', style=style_h1)
+            next_sec_reu += 1
+        else:
+            doc.add_paragraph('ANEXO DOCUMENTACIÓN COMPLEMENTARIA', style=style_h1)
         t_anx = doc.add_table(rows=1, cols=3)
         t_anx.alignment = WD_TABLE_ALIGNMENT.CENTER
         t_anx.autofit = False
