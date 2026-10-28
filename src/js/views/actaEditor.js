@@ -12,6 +12,7 @@
 import { db, normalizeActa, normalizeReunion, isDefaultSignerRole } from '../db.js';
 import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
+import { renderAgentAvatarHtml } from '../utils/avatar.js';
 
 export function renderActaEditor(container, router, params = {}) {
   const isReunion = Boolean(params && (params.isReunion || params.tipoDocumento === 'reunion'));
@@ -41,7 +42,7 @@ export function renderActaEditor(container, router, params = {}) {
 
     // Ensure all asistentes have asistio and firma properly defined
     (actaData.asistentes || []).forEach(asist => {
-      if (asist.asistio === undefined) asist.asistio = true;
+      asist.asistio = true;
       if (asist.firma === undefined) {
         if (actaData.firmas && actaData.firmas.length > 0) {
           asist.firma = actaData.firmas.some(f => 
@@ -53,12 +54,11 @@ export function renderActaEditor(container, router, params = {}) {
           asist.firma = isDefaultSignerRole(asist.cargo, asist.entidad);
         }
       }
-      if (!asist.asistio) asist.firma = false;
     });
 
-    // Derive active firmas from attendees who attended and sign
+    // Derive active firmas from attendees who sign
     actaData.firmas = (actaData.asistentes || [])
-      .filter(a => a.asistio && a.firma)
+      .filter(a => a.firma)
       .map(a => ({
         asistenteId: a.id,
         nombre: a.nombre,
@@ -71,6 +71,7 @@ export function renderActaEditor(container, router, params = {}) {
     const defaultAsistentes = (currentObra?.agentes && currentObra.agentes.length > 0)
       ? currentObra.agentes.map((ag, idx) => ({
           id: `asist-${idx + 1}`,
+          agenteId: ag.agenteId || ag.id,
           nombre: ag.nombre,
           cargo: ag.cargo || ag.rol,
           entidad: ag.entidad || '',
@@ -99,7 +100,7 @@ export function renderActaEditor(container, router, params = {}) {
         obraTitulo: currentObra ? currentObra.titulo : settings.obraPrincipal,
         situacion: currentObra ? currentObra.situacion : settings.situacion,
         expediente: currentObra ? currentObra.expediente : settings.expediente,
-        asistentes: defaultAsistentes,
+        asistentes: [],
         apartados: [
           {
             id: 'ap-1',
@@ -113,12 +114,7 @@ export function renderActaEditor(container, router, params = {}) {
             ]
           }
         ],
-        firmas: defaultAsistentes.filter(a => a.asistio && a.firma).map(a => ({
-          asistenteId: a.id,
-          nombre: a.nombre,
-          cargo: a.cargo || 'Dirección Facultativa',
-          texto: `Fdo. ${a.nombre || ''} (${a.cargo || ''})`
-        })),
+        firmas: [],
         fotos: [],
         anexosPdf: [],
         estado: 'borrador'
@@ -352,18 +348,28 @@ export function renderActaEditor(container, router, params = {}) {
                     <span class="section-number-tag">${isReunion ? '3' : 'A'}</span>
                     ${isReunion ? 'Asistentes á Reunión' : 'Asistentes a la Visita / Reunión de Obra'}
                   </div>
-                  <div class="editor-section-desc">${isReunion ? 'Persoas convocadas, indicando quen asiste e quen asina' : 'Personas y cargos presentes en la reunión'}</div>
+                  <div class="editor-section-desc">${isReunion ? 'Persoas convocadas e asistentes á reunión' : 'Personas y cargos presentes en la reunión'}</div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-add-asistente">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                  Añadir Asistente
-                </button>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-add-agente" title="Seleccionar dos axentes asignados ao proxecto">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    + Engadir axente
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-add-asistente" title="Engadir asistente externo ou puntual">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    + Engadir asistente
+                  </button>
+                </div>
               </div>
               <div class="editor-section-body">
                 <div class="repeater-list" id="asistentes-list">
-                  ${(actaData.asistentes || []).map((asist, idx) => {
-                    const isAttending = asist.asistio !== false;
-                    const isSigner = Boolean(isAttending && asist.firma);
+                  ${(!actaData.asistentes || actaData.asistentes.length === 0) ? `
+                    <div style="padding: 1.5rem; text-align: center; background: var(--bg-subtle, #f8fafc); border: 1.5px dashed var(--border-color, #cbd5e1); border-radius: 8px; color: var(--text-muted, #64748b); font-size: 0.9rem;">
+                      <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">Non hai asistentes engadidos neste documento.</div>
+                      <div style="font-size: 0.82rem;">Pulse <strong>+ Engadir axente</strong> para elixir axentes da obra ou <strong>+ Engadir asistente</strong> para engadir un asistente puntual.</div>
+                    </div>
+                  ` : (actaData.asistentes || []).map((asist, idx) => {
+                    const isSigner = Boolean(asist.firma);
                     return `
                     <div class="repeater-item" data-index="${idx}" data-id="${asist.id || `asist-${idx + 1}`}">
                       <div class="repeater-fields">
@@ -376,14 +382,10 @@ export function renderActaEditor(container, router, params = {}) {
                         <div style="flex: 1.5; min-width: 130px;">
                           <input type="text" class="form-control asist-entidad" placeholder="Entidad / Empresa" value="${escapeHtml(asist.entidad || '')}" />
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.85rem; padding: 0 0.5rem; flex-wrap: nowrap; white-space: nowrap;">
-                          <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; cursor: pointer; user-select: none;">
-                            <input type="checkbox" class="asist-asistio" ${isAttending ? 'checked' : ''} />
-                            <span>Asistió</span>
-                          </label>
-                          <label class="label-asist-firma" style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; cursor: ${isAttending ? 'pointer' : 'not-allowed'}; user-select: none; color: ${isAttending ? 'var(--text-main)' : 'var(--text-muted)'};">
-                            <input type="checkbox" class="asist-firma" ${isSigner ? 'checked' : ''} ${!isAttending ? 'disabled' : ''} />
-                            <span title="Indica si este asistente firma en el acta oficial">Firma</span>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; padding: 0 0.5rem; flex-wrap: nowrap; white-space: nowrap;">
+                          <label class="label-asist-firma" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; cursor: pointer; user-select: none; font-weight: 500; color: var(--text-main);" title="Indica si este asistente firma en el acta oficial">
+                            <input type="checkbox" class="asist-firma" ${isSigner ? 'checked' : ''} style="cursor: pointer; width: 16px; height: 16px;" />
+                            <span>Firma</span>
                           </label>
                         </div>
                       </div>
@@ -763,19 +765,23 @@ export function renderActaEditor(container, router, params = {}) {
     // Asistentes
     const asistentes = [];
     container.querySelectorAll('#asistentes-list .repeater-item').forEach(item => {
-      const nombre = item.querySelector('.asist-nombre').value.trim();
-      const cargo = item.querySelector('.asist-cargo').value.trim();
-      const entidad = item.querySelector('.asist-entidad').value.trim();
-      const asistio = item.querySelector('.asist-asistio').checked;
+      const nombreInput = item.querySelector('.asist-nombre');
+      const cargoInput = item.querySelector('.asist-cargo');
+      const entidadInput = item.querySelector('.asist-entidad');
       const firmaChk = item.querySelector('.asist-firma');
-      const firma = Boolean(asistio && firmaChk && firmaChk.checked);
+
+      const nombre = nombreInput ? nombreInput.value.trim() : '';
+      const cargo = cargoInput ? cargoInput.value.trim() : '';
+      const entidad = entidadInput ? entidadInput.value.trim() : '';
+      const firma = Boolean(firmaChk && firmaChk.checked);
+
       if (nombre || cargo) {
         asistentes.push({
           id: item.dataset.id || `asist-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           nombre,
           cargo,
           entidad,
-          asistio,
+          asistio: true, // Si está en la lista es porque asiste
           firma
         });
       }
@@ -852,20 +858,255 @@ export function renderActaEditor(container, router, params = {}) {
     return actaData;
   }
 
-  function wireEvents() {
-    // Add Asistente
-    container.querySelector('#btn-add-asistente').onclick = () => {
-      collectFormData();
-      actaData.asistentes.push({
-        id: `asist-${Date.now()}`,
-        nombre: '',
-        cargo: '',
-        entidad: '',
-        asistio: true,
-        firma: false
+  function openAgentesSelectorModal() {
+    // 1. Obtener agentes de la obra activa y del directorio general
+    const obraAgentes = Array.isArray(currentObra?.agentes) ? currentObra.agentes : [];
+    const allDbAgentes = db.getAgentes() || [];
+
+    // Map para consolidar y evitar duplicados en la lista de selección
+    const unifiedMap = new Map();
+
+    // Prioridad 1: Agentes asignados a la obra activa
+    obraAgentes.forEach(oa => {
+      const dbMatch = allDbAgentes.find(a => String(a.id) === String(oa.agenteId || oa.id));
+      const key = (oa.nombre || '').trim().toLowerCase();
+      if (!key) return;
+      unifiedMap.set(key, {
+        id: oa.agenteId || oa.id || dbMatch?.id || `ag-${Math.random().toString(36).substr(2, 6)}`,
+        nombre: oa.nombre || dbMatch?.nombre || '',
+        cargo: oa.rol || oa.cargo || dbMatch?.cargoHabitual || 'Agente de Obra',
+        entidad: oa.entidad || dbMatch?.empresa || '',
+        email: oa.email || dbMatch?.email || '',
+        colorFondo: dbMatch?.colorFondo,
+        iniciales: dbMatch?.iniciales,
+        isFromObra: true
       });
-      render();
-    };
+    });
+
+    // Prioridad 2: Agentes del directorio general no añadidos aún al mapa
+    allDbAgentes.forEach(da => {
+      const key = (da.nombre || '').trim().toLowerCase();
+      if (!key || unifiedMap.has(key)) return;
+      unifiedMap.set(key, {
+        id: da.id,
+        nombre: da.nombre,
+        cargo: da.cargoHabitual || 'Agente',
+        entidad: da.empresa || '',
+        email: da.email || '',
+        colorFondo: da.colorFondo,
+        iniciales: da.iniciales,
+        isFromObra: false
+      });
+    });
+
+    const candidateList = Array.from(unifiedMap.values());
+
+    if (candidateList.length === 0) {
+      showToast('Non se atoparon axentes rexistrados nesta obra nin no Directorio de Axentes. Pode engadir asistentes externos co botón "+ Engadir asistente".', 'info', 5000);
+      return;
+    }
+
+    // Detectar cuáles ya están añadidos en la lista actual de asistentes
+    const currentAttendeeNames = new Set(
+      (actaData.asistentes || []).map(a => (a.nombre || '').trim().toLowerCase()).filter(Boolean)
+    );
+
+    const contentHtml = `
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.45;">
+          Seleccione os axentes que desexe incorporar como asistentes. A opción de firma activarase automaticamente para os cargos con sinatura oficial habitual.
+        </div>
+
+        <!-- Buscador -->
+        <div style="position: relative;">
+          <input 
+            type="text" 
+            id="modal-filter-agentes" 
+            class="form-control" 
+            placeholder="🔍 Buscar por nome, cargo ou empresa..." 
+            style="padding-left: 0.85rem; font-size: 0.9rem;"
+          />
+        </div>
+
+        <!-- Botones de selección rápida -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0.1rem;">
+          <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+            Axentes dispoñibles (<span id="modal-agentes-count">${candidateList.length}</span>)
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-modal-select-all" style="padding: 0.2rem 0.55rem; font-size: 0.75rem;">Seleccionar dispoñibles</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-modal-deselect-all" style="padding: 0.2rem 0.55rem; font-size: 0.75rem;">Deseleccionar</button>
+          </div>
+        </div>
+
+        <!-- Listado de agentes -->
+        <div id="modal-agentes-scroll" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-light, #e2e8f0); border-radius: var(--radius-sm, 6px); background: #fff;">
+          ${candidateList.map((ag, i) => {
+            const isAlreadyAdded = currentAttendeeNames.has(ag.nombre.trim().toLowerCase());
+            const avatarHtml = renderAgentAvatarHtml(ag, { size: 36 });
+            return `
+              <label 
+                class="modal-agente-row" 
+                data-name="${escapeHtml(ag.nombre.toLowerCase())}" 
+                data-cargo="${escapeHtml(ag.cargo.toLowerCase())}" 
+                data-entidad="${escapeHtml(ag.entidad.toLowerCase())}" 
+                style="display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; border-bottom: 1px solid var(--border-light, #f1f5f9); cursor: ${isAlreadyAdded ? 'not-allowed' : 'pointer'}; background: ${isAlreadyAdded ? '#f8fafc' : '#fff'}; transition: background 0.15s ease;"
+              >
+                <input 
+                  type="checkbox" 
+                  class="modal-agente-chk" 
+                  data-idx="${i}" 
+                  ${isAlreadyAdded ? 'checked disabled' : ''} 
+                  style="cursor: ${isAlreadyAdded ? 'not-allowed' : 'pointer'}; width: 16px; height: 16px;"
+                />
+                <div style="flex-shrink: 0;">${avatarHtml}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="font-weight: 600; font-size: 0.88rem; color: ${isAlreadyAdded ? 'var(--text-muted)' : 'var(--text-main)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      ${escapeHtml(ag.nombre)}
+                    </div>
+                    ${ag.isFromObra ? `<span style="font-size: 0.68rem; background: #eff6ff; color: #1d4ed8; padding: 1px 5px; border-radius: 4px; font-weight: 600;">Obra</span>` : ''}
+                    ${isAlreadyAdded ? `<span style="font-size: 0.68rem; background: #f1f5f9; color: #64748b; padding: 1px 5px; border-radius: 4px; font-weight: 500;">Xa na lista</span>` : ''}
+                  </div>
+                  <div style="font-size: 0.76rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(ag.cargo)}${ag.entidad ? ` · <span style="color: var(--text-muted);">${escapeHtml(ag.entidad)}</span>` : ''}
+                  </div>
+                </div>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button class="btn btn-secondary" id="modal-agentes-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary" id="modal-agentes-add-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        Engadir Seleccionados
+      </button>
+    `;
+
+    const { backdrop, close } = modal.open({
+      title: 'Engadir Axentes do Proxecto',
+      contentHtml,
+      footerHtml,
+      size: 'md',
+      closeOnBackdrop: true
+    });
+
+    // Búsqueda en tiempo real
+    const filterInput = backdrop.querySelector('#modal-filter-agentes');
+    if (filterInput) {
+      filterInput.focus();
+      filterInput.oninput = (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const rows = backdrop.querySelectorAll('.modal-agente-row');
+        let visibleCount = 0;
+        rows.forEach(row => {
+          const match = !query ||
+            row.dataset.name.includes(query) ||
+            row.dataset.cargo.includes(query) ||
+            row.dataset.entidad.includes(query);
+          row.style.display = match ? 'flex' : 'none';
+          if (match) visibleCount++;
+        });
+        const countSpan = backdrop.querySelector('#modal-agentes-count');
+        if (countSpan) countSpan.textContent = visibleCount;
+      };
+    }
+
+    // Seleccionar todos / deseleccionar
+    const btnSelectAll = backdrop.querySelector('#btn-modal-select-all');
+    if (btnSelectAll) {
+      btnSelectAll.onclick = () => {
+        backdrop.querySelectorAll('.modal-agente-chk:not(:disabled)').forEach(chk => {
+          const row = chk.closest('.modal-agente-row');
+          if (row && row.style.display !== 'none') {
+            chk.checked = true;
+          }
+        });
+      };
+    }
+
+    const btnDeselectAll = backdrop.querySelector('#btn-modal-deselect-all');
+    if (btnDeselectAll) {
+      btnDeselectAll.onclick = () => {
+        backdrop.querySelectorAll('.modal-agente-chk:not(:disabled)').forEach(chk => {
+          chk.checked = false;
+        });
+      };
+    }
+
+    // Cancelar
+    const btnCancel = backdrop.querySelector('#modal-agentes-cancel-btn');
+    if (btnCancel) btnCancel.onclick = close;
+
+    // Confirmar e engadir
+    const btnAdd = backdrop.querySelector('#modal-agentes-add-btn');
+    if (btnAdd) {
+      btnAdd.onclick = () => {
+        const checkedBoxes = Array.from(backdrop.querySelectorAll('.modal-agente-chk:checked:not(:disabled)'));
+        if (checkedBoxes.length === 0) {
+          showToast('Seleccione polo menos un axente para engadir', 'info');
+          return;
+        }
+
+        let addedCount = 0;
+        checkedBoxes.forEach(chk => {
+          const idx = parseInt(chk.dataset.idx, 10);
+          const ag = candidateList[idx];
+          if (!ag) return;
+
+          actaData.asistentes.push({
+            id: `asist-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            agenteId: ag.id,
+            nombre: ag.nombre,
+            cargo: ag.cargo,
+            entidad: ag.entidad,
+            asistio: true, // Se se engade á lista é porque asiste
+            firma: isDefaultSignerRole(ag.cargo, ag.entidad)
+          });
+          addedCount++;
+        });
+
+        close();
+        render();
+        showToast(`${addedCount} axente(s) engadido(s) como asistentes`, 'success');
+      };
+    }
+  }
+
+  function wireEvents() {
+    // Botón + Engadir axente
+    const btnAddAgente = container.querySelector('#btn-add-agente');
+    if (btnAddAgente) {
+      btnAddAgente.onclick = () => {
+        collectFormData();
+        openAgentesSelectorModal();
+      };
+    }
+
+    // Botón + Engadir asistente
+    const btnAddAsistente = container.querySelector('#btn-add-asistente');
+    if (btnAddAsistente) {
+      btnAddAsistente.onclick = () => {
+        collectFormData();
+        actaData.asistentes.push({
+          id: `asist-${Date.now()}`,
+          nombre: '',
+          cargo: '',
+          entidad: '',
+          asistio: true,
+          firma: false
+        });
+        render();
+        setTimeout(() => {
+          const list = container.querySelectorAll('#asistentes-list .asist-nombre');
+          if (list.length) list[list.length - 1].focus();
+        }, 50);
+      };
+    }
 
     // Remove Asistente
     container.querySelectorAll('.remove-asistente').forEach(btn => {
@@ -878,39 +1119,18 @@ export function renderActaEditor(container, router, params = {}) {
       };
     });
 
-    // Toggle Asistió: habilita/deshabilita la casilla Firma
-    container.querySelectorAll('#asistentes-list .asist-asistio').forEach(chk => {
+    // Toggle Firma en la fila
+    container.querySelectorAll('#asistentes-list .asist-firma').forEach(chk => {
       chk.onchange = (e) => {
         const item = e.target.closest('.repeater-item');
         if (!item) return;
-        const firmaLabel = item.querySelector('.label-asist-firma');
-        const firmaChk = item.querySelector('.asist-firma');
-        const cargoInput = item.querySelector('.asist-cargo');
-        const entidadInput = item.querySelector('.asist-entidad');
-        const isAttending = e.target.checked;
-
-        if (!isAttending) {
-          if (firmaChk) {
-            firmaChk.checked = false;
-            firmaChk.disabled = true;
-          }
-          if (firmaLabel) {
-            firmaLabel.style.cursor = 'not-allowed';
-            firmaLabel.style.color = 'var(--text-muted)';
-          }
-        } else {
-          if (firmaChk) {
-            firmaChk.disabled = false;
-            const cargo = cargoInput ? cargoInput.value : '';
-            const entidad = entidadInput ? entidadInput.value : '';
-            if (isDefaultSignerRole(cargo, entidad)) {
-              firmaChk.checked = true;
-            }
-          }
-          if (firmaLabel) {
-            firmaLabel.style.cursor = 'pointer';
-            firmaLabel.style.color = 'var(--text-main)';
-          }
+        const idx = parseInt(item.dataset.index, 10);
+        if (actaData.asistentes && actaData.asistentes[idx]) {
+          actaData.asistentes[idx].firma = e.target.checked;
+        }
+        if (isReunion) {
+          collectFormData();
+          render();
         }
       };
     });
