@@ -801,3 +801,54 @@ export const INITIAL_NOTAS = [
     vinculadoA: 'acta-17'
   }
 ];
+
+export const INITIAL_REUNIONES = [
+  {
+    id: 'reu-1',
+    obraId: 'obra-castillo-san-felipe',
+    numero: 1,
+    fecha: '2025-09-15',
+    hora: '10:30',
+    tipoModalidad: 'Presencial',
+    lugar: 'Caseta de Obra - Castillo de San Felipe',
+    tipoDocumento: 'reunion',
+    asistentes: [
+      { id: '1', nombre: 'Rosa Vilas Romalde', cargo: 'Arquitecta Directora de Obra', entidad: 'Dirección Facultativa', asistio: true, firma: true },
+      { id: '2', nombre: 'Sergio Beceiro Lodeiro', cargo: 'Arquitecto Director de Obra', entidad: 'Dirección Facultativa', asistio: true, firma: true },
+      { id: '3', nombre: 'Juan Carlos Bello Criado', cargo: 'Coordinador de Seguridad y Salud', entidad: 'CSS', asistio: true, firma: false },
+      { id: '4', nombre: 'Miguel López Rodríguez', cargo: 'Jefe de Obra', entidad: 'Cabero Edificaciones, S.A.', asistio: true, firma: false },
+      { id: '5', nombre: 'Ana Gallego Núñez', cargo: 'Directora de ejecución', entidad: 'DEM', asistio: true, firma: true }
+    ],
+    apartados: [
+      {
+        id: 'ap-1',
+        titulo: 'COORDINACIÓN XERAL E REPLANTEO',
+        secciones: [
+          {
+            id: 'sec-1-1',
+            titulo: 'Revisión do programa de traballos e accesos',
+            texto: '<p>Acórdase o cronograma de actuacións prioritarias e o protocolo de acceso de vehículos de subministro pola rampla principal.</p>'
+          },
+          {
+            id: 'sec-1-2',
+            titulo: 'Coordinación con Patrimonio Cultural',
+            texto: '<p>A dirección de obra informa do contacto co servizo provincial para axilizar a resolución dos ensaios de morteiro de cal.</p>'
+          }
+        ]
+      }
+    ],
+    firmas: [
+      { cargo: 'Dirección de Obra', nombre: 'Rosa Vilas Romalde', texto: 'Fdo. Rosa Vilas Romalde (DO)' },
+      { cargo: 'Dirección de Obra', nombre: 'Sergio Beceiro Lodeiro', texto: 'Fdo. Sergio Beceiro Lodeiro (DO)' },
+      { cargo: 'Directora de ejecución', nombre: 'Ana Gallego Núñez', texto: 'Fdo. Ana Gallego Núñez (DEM)' }
+    ],
+    anexosPdf: [],
+    fotos: [],
+    estado: 'firmada',
+    creadoPor: 'Rosa Vilas Romalde',
+    fechaCreacion: '2025-09-15T12:00:00Z',
+    modificadoPor: 'Sergio Beceiro Lodeiro',
+    fechaModificacion: '2025-09-15T17:30:00Z'
+  }
+];
+

@@ -440,9 +440,10 @@ img, svg {
 }
 
 .actas-list-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 140px 1fr 180px 105px 530px;
   align-items: center;
-  justify-content: space-between;
+  gap: 1rem;
   padding: 0.65rem 1.25rem;
   font-size: 0.75rem;
   font-weight: 700;
@@ -452,6 +453,7 @@ img, svg {
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
+  box-sizing: border-box;
 }
 
 .acta-accordion-card {
@@ -473,14 +475,15 @@ img, svg {
 }
 
 .acta-row-main {
-  display: flex;
+  display: grid;
+  grid-template-columns: 140px 1fr 180px 105px 530px;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1.25rem;
   gap: 1rem;
+  padding: 0.85rem 1.25rem;
   cursor: pointer;
   user-select: none;
   transition: background-color var(--transition-fast);
+  box-sizing: border-box;
 }
 
 .acta-row-main:hover {

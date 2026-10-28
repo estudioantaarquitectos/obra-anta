@@ -213,11 +213,12 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
         r2.font.size = Pt(8.0)
         r2.font.color.rgb = RGBColor(100, 116, 139)
 
-        # Celda título: ACTA SEMANAL (Requisito explícito: en lugar de INFORME MENSUAL)
+        # Celda título: ACTA SEMANAL o REUNIÓN según tipo de documento
+        es_reunion = acta_data.get('tipoDocumento') == 'reunion' or acta_data.get('tipo') == 'reunion' or acta_data.get('esReunion') is True
         c_title = t_head.cell(0, 2)
         if c_title.paragraphs:
             p = c_title.paragraphs[0]
-            p.text = "ACTA SEMANAL"
+            p.text = "REUNIÓN" if es_reunion else "ACTA SEMANAL"
             if p.runs:
                 p.runs[0].bold = True
                 p.runs[0].font.size = Pt(11)
@@ -251,161 +252,399 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
     style_h1 = 'Heading 1' if 'Heading 1' in doc.styles else ('Ttulo1' if 'Ttulo1' in doc.styles else 'Heading 1')
     style_h2 = 'Heading 2' if 'Heading 2' in doc.styles else ('Ttulo2' if 'Ttulo2' in doc.styles else 'Heading 2')
 
-    # 3. SECCIÓN 1: DATOS XERAIS
-    doc.add_paragraph('DATOS XERAIS', style=style_h1)
-
-    t1 = doc.add_table(rows=0, cols=2)
-    t1.alignment = WD_TABLE_ALIGNMENT.CENTER
-    t1.autofit = False
-
     situacion = acta_data.get('situacion') or '—'
     contratista = acta_data.get('contratista') or '—'
     do_clean = acta_data.get('doClean') or 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)'
     de_clean = acta_data.get('deClean') or 'Ana Gallego Núñez (DEM)'
     css_str = acta_data.get('coordinadorCSSStr') or 'Juan Carlos Bello Criado (CSS)'
     jo_str = acta_data.get('jefeObraStr') or 'Miguel López Rodríguez'
+    es_reunion = acta_data.get('tipoDocumento') == 'reunion' or acta_data.get('tipo') == 'reunion' or acta_data.get('esReunion') is True
 
-    fields = [
-        [("Proxecto:", obra_titulo, True, "0F172A"), ("Data da visita:", format_date_es(acta_data.get('fecha')), True, "0F172A")],
-        [("Emprazamento:", situacion, False, "334155"), ("Expediente nº:", expte, True, "0F172A")],
-        [("Contratista:", contratista, True, "0F172A"), ("Estado da acta:", "○ Borrador" if acta_data.get('estado') != 'pechada' else "● Pechada / Emitida", False, "854D0E")],
-        [("Dirección de obra:", do_clean, True, "1E3A8A"), ("Dirección de execución:", de_clean, True, "0284C7")],
-        [("Coordinador CSS:", css_str, False, "334155"), ("Xefe de Obra:", jo_str, False, "334155")]
-    ]
+    if es_reunion:
+        # ======================================================================
+        # DOCUMENTO OFICIAL: REUNIÓN
+        # ======================================================================
+        # 1- DATOS XERAIS DA OBRA
+        doc.add_paragraph('1.- DATOS XERAIS DA OBRA', style=style_h1)
+        t_obra = doc.add_table(rows=0, cols=2)
+        t_obra.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_obra.autofit = False
 
-    for row_data in fields:
-        row = t1.add_row()
-        set_row_bottom_border(row, "E2E8F0", "2")
+        fields_obra = [
+            [("Proxecto:", obra_titulo, True, "0F172A"), ("Emprazamento:", situacion, False, "334155")],
+            [("Expediente nº:", expte, True, "0F172A"), ("Contratista:", contratista, True, "0F172A")],
+            [("Dirección de obra:", do_clean, True, "1E3A8A"), ("Dirección de execución:", de_clean, True, "0284C7")],
+            [("Coordinador CSS:", css_str, False, "334155"), ("Xefe de Obra:", jo_str, False, "334155")]
+        ]
+        for row_data in fields_obra:
+            row = t_obra.add_row()
+            set_row_bottom_border(row, "E2E8F0", "2")
+            for col_i in range(2):
+                cell = row.cells[col_i]
+                cell.width = Inches(3.6)
+                set_cell_margins(cell, 35, 35, 40, 40)
+                p = cell.paragraphs[0]
+                lbl, val, b, col = row_data[col_i]
+                r_lbl = p.add_run(lbl + " ")
+                r_lbl.font.name = 'Arial'
+                r_lbl.font.size = Pt(8.5)
+                r_lbl.font.color.rgb = RGBColor(100, 116, 139)
+                r_val = p.add_run(val)
+                r_val.font.name = 'Arial'
+                r_val.font.size = Pt(8.5)
+                r_val.bold = b
+                if col == "1E3A8A": r_val.font.color.rgb = RGBColor(30, 58, 138)
+                elif col == "0284C7": r_val.font.color.rgb = RGBColor(2, 132, 199)
+                elif col == "0F172A": r_val.font.color.rgb = RGBColor(15, 23, 42)
+                else: r_val.font.color.rgb = RGBColor(51, 65, 85)
 
-        # Columna Izquierda
-        c1 = row.cells[0]
-        c1.width = Inches(3.6)
-        set_cell_margins(c1, 35, 35, 40, 40)
-        p1 = c1.paragraphs[0]
-        lbl1, val1, b1, col1 = row_data[0]
-        r_lbl1 = p1.add_run(lbl1 + " ")
-        r_lbl1.font.name = 'Arial'
-        r_lbl1.font.size = Pt(8.5)
-        r_lbl1.font.color.rgb = RGBColor(100, 116, 139)
-        r_val1 = p1.add_run(val1)
-        r_val1.font.name = 'Arial'
-        r_val1.font.size = Pt(8.5)
-        r_val1.bold = b1
-        if col1 == "1E3A8A": r_val1.font.color.rgb = RGBColor(30, 58, 138)
-        elif col1 == "0284C7": r_val1.font.color.rgb = RGBColor(2, 132, 199)
-        elif col1 == "0F172A": r_val1.font.color.rgb = RGBColor(15, 23, 42)
-        elif col1 == "334155": r_val1.font.color.rgb = RGBColor(51, 65, 85)
-        elif col1 == "854D0E": r_val1.font.color.rgb = RGBColor(133, 77, 14)
+        # 2- DATOS XERAIS DA REUNIÓN
+        doc.add_paragraph('2.- DATOS XERAIS DA REUNIÓN', style=style_h1)
+        t_reu = doc.add_table(rows=0, cols=2)
+        t_reu.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_reu.autofit = False
 
-        # Columna Derecha
-        c2 = row.cells[1]
-        c2.width = Inches(3.6)
-        set_cell_margins(c2, 35, 35, 40, 40)
-        p2 = c2.paragraphs[0]
-        lbl2, val2, b2, col2 = row_data[1]
-        r_lbl2 = p2.add_run(lbl2 + " ")
-        r_lbl2.font.name = 'Arial'
-        r_lbl2.font.size = Pt(8.5)
-        r_lbl2.font.color.rgb = RGBColor(100, 116, 139)
-        r_val2 = p2.add_run(val2)
-        r_val2.font.name = 'Arial'
-        r_val2.font.size = Pt(8.5)
-        r_val2.bold = b2
-        if col2 == "1E3A8A": r_val2.font.color.rgb = RGBColor(30, 58, 138)
-        elif col2 == "0284C7": r_val2.font.color.rgb = RGBColor(2, 132, 199)
-        elif col2 == "0F172A": r_val2.font.color.rgb = RGBColor(15, 23, 42)
-        elif col2 == "334155": r_val2.font.color.rgb = RGBColor(51, 65, 85)
-        elif col2 == "854D0E": r_val2.font.color.rgb = RGBColor(133, 77, 14)
+        fecha_val = format_date_long_es(acta_data.get('fecha'))
+        hora_val = acta_data.get('hora') or '10:00'
+        tipo_reu = acta_data.get('tipoModalidad') or acta_data.get('tipoReunion') or 'Presencial'
+        lugar_val = acta_data.get('lugar') or 'Caseta de obra'
 
-    # 4. SECCIÓN 2: ASISTENTES
-    doc.add_paragraph('ASISTENTES', style=style_h1)
-    asistentes = [a for a in acta_data.get('asistentes', []) if a.get('asistio') is not False and a.get('asiste') is not False and a.get('estado') != 'non_asiste']
-    if asistentes:
-        t2 = doc.add_table(rows=1, cols=3)
-        t2.alignment = WD_TABLE_ALIGNMENT.CENTER
-        t2.autofit = False
+        fields_reu = [
+            [("Data:", fecha_val, True, "0F172A"), ("Hora:", hora_val, True, "0F172A")],
+            [("Tipo de reunión:", tipo_reu, True, "1E3A8A"), ("Lugar:", lugar_val, False, "334155")]
+        ]
+        for row_data in fields_reu:
+            row = t_reu.add_row()
+            set_row_bottom_border(row, "E2E8F0", "2")
+            for col_i in range(2):
+                cell = row.cells[col_i]
+                cell.width = Inches(3.6)
+                set_cell_margins(cell, 35, 35, 40, 40)
+                p = cell.paragraphs[0]
+                lbl, val, b, col = row_data[col_i]
+                r_lbl = p.add_run(lbl + " ")
+                r_lbl.font.name = 'Arial'
+                r_lbl.font.size = Pt(8.5)
+                r_lbl.font.color.rgb = RGBColor(100, 116, 139)
+                r_val = p.add_run(val)
+                r_val.font.name = 'Arial'
+                r_val.font.size = Pt(8.5)
+                r_val.bold = b
+                if col == "1E3A8A": r_val.font.color.rgb = RGBColor(30, 58, 138)
+                else: r_val.font.color.rgb = RGBColor(15, 23, 42)
 
-        h_row = t2.rows[0]
-        set_row_bottom_border(h_row, "0284C7", "6")
-        headers = [("Nome e Apelidos", 2.36), ("Cargo / Función", 2.46), ("Entidade Representada", 1.97)]
-        for idx, (h_title, w_in) in enumerate(headers):
-            c = h_row.cells[idx]
-            c.width = Inches(w_in)
-            set_cell_shading(c, "F1F5F9")
-            set_cell_margins(c, 45, 45, 30, 30)
-            p = c.paragraphs[0]
-            r = p.add_run(h_title)
-            r.bold = True
-            r.font.size = Pt(8.5)
-            r.font.color.rgb = RGBColor(71, 85, 105)
+        # 3- ASISTENTES
+        doc.add_paragraph('3.- ASISTENTES', style=style_h1)
+        asistentes = [a for a in acta_data.get('asistentes', []) if a.get('asistio') is not False and a.get('asiste') is not False and a.get('estado') != 'non_asiste']
+        if asistentes:
+            t_asist = doc.add_table(rows=1, cols=4)
+            t_asist.alignment = WD_TABLE_ALIGNMENT.CENTER
+            t_asist.autofit = False
 
-        for a in asistentes:
-            r = t2.add_row()
-            set_row_bottom_border(r, "E2E8F0", "2")
-            nome = a.get('nombre') or a.get('nome') or ''
-            cargo = a.get('cargo') or '—'
-            entidade = a.get('entidad') or a.get('empresa') or a.get('entidade') or '—'
+            h_row = t_asist.rows[0]
+            set_row_bottom_border(h_row, "0284C7", "6")
+            headers = [("Nome e Apelidos", 2.2), ("Cargo / Función", 2.2), ("Entidade", 1.8), ("Firma", 1.0)]
+            for idx, (h_title, w_in) in enumerate(headers):
+                c = h_row.cells[idx]
+                c.width = Inches(w_in)
+                set_cell_shading(c, "F1F5F9")
+                set_cell_margins(c, 45, 45, 30, 30)
+                p = c.paragraphs[0]
+                r = p.add_run(h_title)
+                r.bold = True
+                r.font.size = Pt(8.5)
+                r.font.color.rgb = RGBColor(71, 85, 105)
 
-            # Nome
-            c0 = r.cells[0]
-            c0.width = Inches(2.36)
-            set_cell_margins(c0, 30, 30, 30, 30)
-            p0 = c0.paragraphs[0]
-            r0 = p0.add_run(nome)
-            r0.bold = True
-            r0.font.size = Pt(8.5)
-            r0.font.color.rgb = RGBColor(15, 23, 42)
+            for a in asistentes:
+                r = t_asist.add_row()
+                set_row_bottom_border(r, "E2E8F0", "2")
+                nome = a.get('nombre') or a.get('nome') or ''
+                cargo = a.get('cargo') or '—'
+                entidade = a.get('entidad') or a.get('empresa') or a.get('entidade') or '—'
+                firma_txt = "SI" if a.get('firma') else "—"
 
-            # Cargo
-            c1 = r.cells[1]
-            c1.width = Inches(2.46)
-            set_cell_margins(c1, 30, 30, 30, 30)
+                c0 = r.cells[0]
+                c0.width = Inches(2.2)
+                set_cell_margins(c0, 30, 30, 30, 30)
+                p0 = c0.paragraphs[0]
+                r0 = p0.add_run(nome)
+                r0.bold = True
+                r0.font.size = Pt(8.5)
+
+                c1 = r.cells[1]
+                c1.width = Inches(2.2)
+                set_cell_margins(c1, 30, 30, 30, 30)
+                p1 = c1.paragraphs[0]
+                r1 = p1.add_run(cargo)
+                r1.font.size = Pt(8.5)
+                r1.font.color.rgb = RGBColor(71, 85, 105)
+
+                c2 = r.cells[2]
+                c2.width = Inches(1.8)
+                set_cell_margins(c2, 30, 30, 30, 30)
+                p2 = c2.paragraphs[0]
+                r2 = p2.add_run(entidade)
+                r2.font.size = Pt(8.5)
+                r2.font.color.rgb = RGBColor(100, 116, 139)
+
+                c3 = r.cells[3]
+                c3.width = Inches(1.0)
+                set_cell_margins(c3, 30, 30, 30, 30)
+                p3 = c3.paragraphs[0]
+                r3 = p3.add_run(firma_txt)
+                r3.font.size = Pt(8.5)
+                r3.bold = (firma_txt == "SI")
+                if firma_txt == "SI":
+                    r3.font.color.rgb = RGBColor(30, 58, 138)
+
+        # 4- CUESTIÓNS TRATADAS NA REUNIÓN
+        doc.add_paragraph('4.- CUESTIÓNS TRATADAS NA REUNIÓN', style=style_h1)
+        apartados = acta_data.get('apartados') or []
+        if apartados:
+            for ap_idx, ap in enumerate(apartados, 1):
+                clean_ap_title = re.sub(r'^\d+[_.\s]+', '', ap.get('titulo', 'Cuestións')).strip()
+                p_ap = doc.add_paragraph(f"4.{ap_idx}.- {clean_ap_title}", style=style_h2)
+                for sec_idx, sec in enumerate(ap.get('secciones', []), 1):
+                    sec_title = re.sub(r'^\d+(\.\d+)*[_.\s]+', '', sec.get('titulo', '')).strip()
+                    if sec_title:
+                        p_st = doc.add_paragraph(style='Normal')
+                        p_st.paragraph_format.space_before = Pt(4)
+                        p_st.paragraph_format.space_after = Pt(2)
+                        r_st = p_st.add_run(f"4.{ap_idx}.{sec_idx}.- {sec_title}")
+                        r_st.bold = True
+                        r_st.font.size = Pt(9)
+                    txt = sec.get('texto', '')
+                    if txt:
+                        p_txt = doc.add_paragraph(style='Normal')
+                        p_txt.paragraph_format.space_before = Pt(1)
+                        p_txt.paragraph_format.space_after = Pt(4)
+                        r_txt = p_txt.add_run(re.sub(r'<[^>]+>', '', txt).strip())
+                        r_txt.font.size = Pt(8.5)
+        else:
+            p_empty = doc.add_paragraph(style='Normal')
+            r_emp = p_empty.add_run('Desenvolvemento normal dos acordos acadados na reunión.')
+            r_emp.italic = True
+            r_emp.font.size = Pt(8.5)
+
+        # 5- FIRMAS
+        doc.add_paragraph('5.- FIRMAS', style=style_h1)
+        p_f_intro = doc.add_paragraph(style='Normal')
+        p_f_intro.paragraph_format.space_after = Pt(8)
+        lugar_str = lugar_val or ('Ferrol' if 'ferrol' in situacion.lower() else situacion.split(',')[-1].strip() or 'Ferrol')
+        r_fi = p_f_intro.add_run(f"En {lugar_str} a {fecha_val}. Para que así conste e aos efectos oportunos, asinan a acta da presente reunión:")
+        r_fi.italic = True
+        r_fi.font.size = Pt(8.5)
+        r_fi.font.color.rgb = RGBColor(71, 85, 105)
+
+        firmantes = [a for a in acta_data.get('asistentes', []) if a.get('asistio') and a.get('firma')]
+        if not firmantes:
+            firmantes = [
+                {'nombre': do_clean, 'cargo': 'Dirección de Obra'},
+                {'nombre': de_clean, 'cargo': 'Dirección de Execución'}
+            ]
+
+        # Tabla de firmas dinámica (2 firmas por fila)
+        t_firmas = doc.add_table(rows=0, cols=2)
+        t_firmas.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_firmas.autofit = False
+
+        for f_i in range(0, len(firmantes), 2):
+            rf = t_firmas.add_row()
+            pair = firmantes[f_i:f_i+2]
+            for c_i, signer in enumerate(pair):
+                c_cell = rf.cells[c_i]
+                c_cell.width = Inches(3.6)
+                set_cell_shading(c_cell, "F8FAFC")
+                set_cell_margins(c_cell, 60, 140, 60, 60)
+                p_s = c_cell.paragraphs[0]
+                r_c = p_s.add_run(f"{signer.get('cargo', 'Asistente')}:\n")
+                r_c.bold = True
+                r_c.font.size = Pt(8.5)
+                r_c.font.color.rgb = RGBColor(30, 58, 138)
+                r_n = p_s.add_run(f"{signer.get('nombre', '')}\n\n\n")
+                r_n.bold = True
+                r_n.font.size = Pt(8.5)
+                r_sig = p_s.add_run("Asdo.: ____________________________")
+                r_sig.font.size = Pt(8)
+                r_sig.font.color.rgb = RGBColor(148, 163, 184)
+            if len(pair) == 1:
+                c_empty = rf.cells[1]
+                c_empty.width = Inches(3.6)
+
+    else:
+        # ======================================================================
+        # DOCUMENTO OFICIAL: ACTA SEMANAL ESTÁNDAR
+        # ======================================================================
+        # 3. SECCIÓN 1: DATOS XERAIS
+        doc.add_paragraph('DATOS XERAIS', style=style_h1)
+
+        t1 = doc.add_table(rows=0, cols=2)
+        t1.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t1.autofit = False
+
+        fields = [
+            [("Proxecto:", obra_titulo, True, "0F172A"), ("Data da visita:", format_date_es(acta_data.get('fecha')), True, "0F172A")],
+            [("Emprazamento:", situacion, False, "334155"), ("Expediente nº:", expte, True, "0F172A")],
+            [("Contratista:", contratista, True, "0F172A"), ("Estado da acta:", "○ Borrador" if acta_data.get('estado') != 'pechada' else "● Pechada / Emitida", False, "854D0E")],
+            [("Dirección de obra:", do_clean, True, "1E3A8A"), ("Dirección de execución:", de_clean, True, "0284C7")],
+            [("Coordinador CSS:", css_str, False, "334155"), ("Xefe de Obra:", jo_str, False, "334155")]
+        ]
+
+        for row_data in fields:
+            row = t1.add_row()
+            set_row_bottom_border(row, "E2E8F0", "2")
+
+            # Columna Izquierda
+            c1 = row.cells[0]
+            c1.width = Inches(3.6)
+            set_cell_margins(c1, 35, 35, 40, 40)
             p1 = c1.paragraphs[0]
-            r1 = p1.add_run(cargo)
-            r1.font.size = Pt(8.5)
-            r1.font.color.rgb = RGBColor(71, 85, 105)
+            lbl1, val1, b1, col1 = row_data[0]
+            r_lbl1 = p1.add_run(lbl1 + " ")
+            r_lbl1.font.name = 'Arial'
+            r_lbl1.font.size = Pt(8.5)
+            r_lbl1.font.color.rgb = RGBColor(100, 116, 139)
+            r_val1 = p1.add_run(val1)
+            r_val1.font.name = 'Arial'
+            r_val1.font.size = Pt(8.5)
+            r_val1.bold = b1
+            if col1 == "1E3A8A": r_val1.font.color.rgb = RGBColor(30, 58, 138)
+            elif col1 == "0284C7": r_val1.font.color.rgb = RGBColor(2, 132, 199)
+            elif col1 == "0F172A": r_val1.font.color.rgb = RGBColor(15, 23, 42)
+            elif col1 == "334155": r_val1.font.color.rgb = RGBColor(51, 65, 85)
+            elif col1 == "854D0E": r_val1.font.color.rgb = RGBColor(133, 77, 14)
 
-            # Entidade
-            c2 = r.cells[2]
-            c2.width = Inches(1.97)
-            set_cell_margins(c2, 30, 30, 30, 30)
+            # Columna Derecha
+            c2 = row.cells[1]
+            c2.width = Inches(3.6)
+            set_cell_margins(c2, 35, 35, 40, 40)
             p2 = c2.paragraphs[0]
-            r2 = p2.add_run(entidade)
-            r2.font.size = Pt(8.5)
-            r2.font.color.rgb = RGBColor(100, 116, 139)
+            lbl2, val2, b2, col2 = row_data[1]
+            r_lbl2 = p2.add_run(lbl2 + " ")
+            r_lbl2.font.name = 'Arial'
+            r_lbl2.font.size = Pt(8.5)
+            r_lbl2.font.color.rgb = RGBColor(100, 116, 139)
+            r_val2 = p2.add_run(val2)
+            r_val2.font.name = 'Arial'
+            r_val2.font.size = Pt(8.5)
+            r_val2.bold = b2
+            if col2 == "1E3A8A": r_val2.font.color.rgb = RGBColor(30, 58, 138)
+            elif col2 == "0284C7": r_val2.font.color.rgb = RGBColor(2, 132, 199)
+            elif col2 == "0F172A": r_val2.font.color.rgb = RGBColor(15, 23, 42)
+            elif col2 == "334155": r_val2.font.color.rgb = RGBColor(51, 65, 85)
+            elif col2 == "854D0E": r_val2.font.color.rgb = RGBColor(133, 77, 14)
+        # 4. SECCIÓN 2: ASISTENTES (ACTA SEMANAL)
+        doc.add_paragraph('ASISTENTES', style=style_h1)
+        asistentes = [a for a in acta_data.get('asistentes', []) if a.get('asistio') is not False and a.get('asiste') is not False and a.get('estado') != 'non_asiste']
+        if asistentes:
+            t2 = doc.add_table(rows=1, cols=3)
+            t2.alignment = WD_TABLE_ALIGNMENT.CENTER
+            t2.autofit = False
 
-    # 5. SECCIÓN 3: CUESTIÓNS TRATADAS NA VISITA / REUNIÓN
-    doc.add_paragraph('CUESTIÓNS TRATADAS NA VISITA / REUNIÓN', style=style_h1)
-    apartados = acta_data.get('apartados') or []
-    cuestiones = acta_data.get('cuestionesTratadas') or []
+            h_row = t2.rows[0]
+            set_row_bottom_border(h_row, "0284C7", "6")
+            headers = [("Nome e Apelidos", 2.36), ("Cargo / Función", 2.46), ("Entidade Representada", 1.97)]
+            for idx, (h_title, w_in) in enumerate(headers):
+                c = h_row.cells[idx]
+                c.width = Inches(w_in)
+                set_cell_shading(c, "F1F5F9")
+                set_cell_margins(c, 45, 45, 30, 30)
+                p = c.paragraphs[0]
+                r = p.add_run(h_title)
+                r.bold = True
+                r.font.size = Pt(8.5)
+                r.font.color.rgb = RGBColor(71, 85, 105)
 
-    if apartados:
-        for ap in apartados:
-            clean_title = re.sub(r'^\d+[_.\s]+', '', ap.get('titulo', 'Apartado')).strip()
-            doc.add_paragraph(clean_title, style=style_h2)
-            for sec in ap.get('secciones', []):
-                sec_title = re.sub(r'^\d+(\.\d+)*[_.\s]+', '', sec.get('titulo', '')).strip()
-                if sec_title:
-                    p_st = doc.add_paragraph(style='Normal')
-                    p_st.paragraph_format.space_before = Pt(4)
-                    p_st.paragraph_format.space_after = Pt(2)
-                    r_st = p_st.add_run(sec_title)
-                    r_st.bold = True
-                    r_st.font.size = Pt(9)
-                txt = sec.get('texto', '')
-                if txt:
-                    p_txt = doc.add_paragraph(style='Normal')
-                    p_txt.paragraph_format.space_before = Pt(1)
-                    p_txt.paragraph_format.space_after = Pt(4)
-                    r_txt = p_txt.add_run(re.sub(r'<[^>]+>', '', txt).strip())
-                    r_txt.font.size = Pt(8.5)
-    elif cuestiones:
-        for c in cuestiones:
-            doc.add_paragraph(c.get('subtitulo', 'Tema tratado'), style=style_h2)
-            puntos = c.get('puntos', [])
-            if isinstance(puntos, str):
-                puntos = [p.strip() for p in puntos.split('\n') if p.strip()]
-            for pt in puntos:
+            for a in asistentes:
+                r = t2.add_row()
+                set_row_bottom_border(r, "E2E8F0", "2")
+                nome = a.get('nombre') or a.get('nome') or ''
+                cargo = a.get('cargo') or '—'
+                entidade = a.get('entidad') or a.get('empresa') or a.get('entidade') or '—'
+
+                # Nome
+                c0 = r.cells[0]
+                c0.width = Inches(2.36)
+                set_cell_margins(c0, 30, 30, 30, 30)
+                p0 = c0.paragraphs[0]
+                r0 = p0.add_run(nome)
+                r0.bold = True
+                r0.font.size = Pt(8.5)
+                r0.font.color.rgb = RGBColor(15, 23, 42)
+
+                # Cargo
+                c1 = r.cells[1]
+                c1.width = Inches(2.46)
+                set_cell_margins(c1, 30, 30, 30, 30)
+                p1 = c1.paragraphs[0]
+                r1 = p1.add_run(cargo)
+                r1.font.size = Pt(8.5)
+                r1.font.color.rgb = RGBColor(71, 85, 105)
+
+                # Entidade
+                c2 = r.cells[2]
+                c2.width = Inches(1.97)
+                set_cell_margins(c2, 30, 30, 30, 30)
+                p2 = c2.paragraphs[0]
+                r2 = p2.add_run(entidade)
+                r2.font.size = Pt(8.5)
+                r2.font.color.rgb = RGBColor(100, 116, 139)
+
+        # 5. SECCIÓN 3: CUESTIÓNS TRATADAS NA VISITA / REUNIÓN
+        doc.add_paragraph('CUESTIÓNS TRATADAS NA VISITA / REUNIÓN', style=style_h1)
+        apartados = acta_data.get('apartados') or []
+        cuestiones = acta_data.get('cuestionesTratadas') or []
+
+        if apartados:
+            for ap in apartados:
+                clean_title = re.sub(r'^\d+[_.\s]+', '', ap.get('titulo', 'Apartado')).strip()
+                doc.add_paragraph(clean_title, style=style_h2)
+                for sec in ap.get('secciones', []):
+                    sec_title = re.sub(r'^\d+(\.\d+)*[_.\s]+', '', sec.get('titulo', '')).strip()
+                    if sec_title:
+                        p_st = doc.add_paragraph(style='Normal')
+                        p_st.paragraph_format.space_before = Pt(4)
+                        p_st.paragraph_format.space_after = Pt(2)
+                        r_st = p_st.add_run(sec_title)
+                        r_st.bold = True
+                        r_st.font.size = Pt(9)
+                    txt = sec.get('texto', '')
+                    if txt:
+                        p_txt = doc.add_paragraph(style='Normal')
+                        p_txt.paragraph_format.space_before = Pt(1)
+                        p_txt.paragraph_format.space_after = Pt(4)
+                        r_txt = p_txt.add_run(re.sub(r'<[^>]+>', '', txt).strip())
+                        r_txt.font.size = Pt(8.5)
+        elif cuestiones:
+            for c in cuestiones:
+                doc.add_paragraph(c.get('subtitulo', 'Tema tratado'), style=style_h2)
+                puntos = c.get('puntos', [])
+                if isinstance(puntos, str):
+                    puntos = [p.strip() for p in puntos.split('\n') if p.strip()]
+                for pt in puntos:
+                    p_pt = doc.add_paragraph(style='Normal')
+                    p_pt.paragraph_format.left_indent = Inches(0.2)
+                    p_pt.paragraph_format.space_before = Pt(2)
+                    p_pt.paragraph_format.space_after = Pt(3)
+                    r_b = p_pt.add_run('• ')
+                    r_b.bold = True
+                    r_t = p_pt.add_run(pt)
+                    r_t.font.size = Pt(8.5)
+                    r_t.font.color.rgb = RGBColor(30, 41, 59)
+        else:
+            p_empty = doc.add_paragraph(style='Normal')
+            r_emp = p_empty.add_run('Desenvolvemento normal dos traballos conforme ao previsto.')
+            r_emp.italic = True
+            r_emp.font.size = Pt(8.5)
+            r_emp.font.color.rgb = RGBColor(100, 116, 139)
+
+        # 6. SECCIÓN 4: INDICACIÓNS CSS (Si existen)
+        ind_css = acta_data.get('indicacionesSeguridad', [])
+        if isinstance(ind_css, str):
+            ind_css = [p.strip() for p in ind_css.split('\n') if p.strip()]
+        if ind_css:
+            doc.add_paragraph('INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS)', style=style_h1)
+            for pt in ind_css:
                 p_pt = doc.add_paragraph(style='Normal')
                 p_pt.paragraph_format.left_indent = Inches(0.2)
                 p_pt.paragraph_format.space_before = Pt(2)
@@ -415,95 +654,72 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                 r_t = p_pt.add_run(pt)
                 r_t.font.size = Pt(8.5)
                 r_t.font.color.rgb = RGBColor(30, 41, 59)
-    else:
-        p_empty = doc.add_paragraph(style='Normal')
-        r_emp = p_empty.add_run('Desenvolvemento normal dos traballos conforme ao previsto.')
-        r_emp.italic = True
-        r_emp.font.size = Pt(8.5)
-        r_emp.font.color.rgb = RGBColor(100, 116, 139)
 
-    # 6. SECCIÓN 4: INDICACIÓNS CSS (Si existen)
-    ind_css = acta_data.get('indicacionesSeguridad', [])
-    if isinstance(ind_css, str):
-        ind_css = [p.strip() for p in ind_css.split('\n') if p.strip()]
-    if ind_css:
-        doc.add_paragraph('INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS)', style=style_h1)
-        for pt in ind_css:
-            p_pt = doc.add_paragraph(style='Normal')
-            p_pt.paragraph_format.left_indent = Inches(0.2)
-            p_pt.paragraph_format.space_before = Pt(2)
-            p_pt.paragraph_format.space_after = Pt(3)
-            r_b = p_pt.add_run('• ')
-            r_b.bold = True
-            r_t = p_pt.add_run(pt)
-            r_t.font.size = Pt(8.5)
-            r_t.font.color.rgb = RGBColor(30, 41, 59)
+        # 7. SECCIÓN 5: PRÓXIMAS ACTUACIÓNS PREVISTAS (Si existen)
+        act_prev = acta_data.get('actuacionesPrevistas', [])
+        if isinstance(act_prev, str):
+            act_prev = [p.strip() for p in act_prev.split('\n') if p.strip()]
+        if act_prev:
+            doc.add_paragraph('PRÓXIMAS ACTUACIÓNS PREVISTAS', style=style_h1)
+            for pt in act_prev:
+                p_pt = doc.add_paragraph(style='Normal')
+                p_pt.paragraph_format.left_indent = Inches(0.2)
+                p_pt.paragraph_format.space_before = Pt(2)
+                p_pt.paragraph_format.space_after = Pt(3)
+                r_b = p_pt.add_run('• ')
+                r_b.bold = True
+                r_t = p_pt.add_run(pt)
+                r_t.font.size = Pt(8.5)
+                r_t.font.color.rgb = RGBColor(30, 41, 59)
 
-    # 7. SECCIÓN 5: PRÓXIMAS ACTUACIÓNS PREVISTAS (Si existen)
-    act_prev = acta_data.get('actuacionesPrevistas', [])
-    if isinstance(act_prev, str):
-        act_prev = [p.strip() for p in act_prev.split('\n') if p.strip()]
-    if act_prev:
-        doc.add_paragraph('PRÓXIMAS ACTUACIÓNS PREVISTAS', style=style_h1)
-        for pt in act_prev:
-            p_pt = doc.add_paragraph(style='Normal')
-            p_pt.paragraph_format.left_indent = Inches(0.2)
-            p_pt.paragraph_format.space_before = Pt(2)
-            p_pt.paragraph_format.space_after = Pt(3)
-            r_b = p_pt.add_run('• ')
-            r_b.bold = True
-            r_t = p_pt.add_run(pt)
-            r_t.font.size = Pt(8.5)
-            r_t.font.color.rgb = RGBColor(30, 41, 59)
+        # 8. SECCIÓN 6: DILIXENCIA DE FIRMAS (DO y DE separadas)
+        doc.add_paragraph('DILIXENCIA DE FIRMAS', style=style_h1)
+        p_f_intro = doc.add_paragraph(style='Normal')
+        p_f_intro.paragraph_format.space_after = Pt(8)
+        lugar = 'Ferrol' if 'ferrol' in situacion.lower() else situacion.split(',')[-1].strip() or 'Ferrol'
+        r_fi = p_f_intro.add_run(f"En {lugar} a {format_date_long_es(acta_data.get('fecha'))}. Para que así conste e aos efectos oportunos, asinan a presente acta:")
+        r_fi.italic = True
+        r_fi.font.size = Pt(8.5)
+        r_fi.font.color.rgb = RGBColor(71, 85, 105)
 
-    # 8. SECCIÓN 6: DILIXENCIA DE FIRMAS (DO y DE separadas)
-    doc.add_paragraph('DILIXENCIA DE FIRMAS', style=style_h1)
-    p_f_intro = doc.add_paragraph(style='Normal')
-    p_f_intro.paragraph_format.space_after = Pt(8)
-    lugar = 'Ferrol' if 'ferrol' in situacion.lower() else situacion.split(',')[-1].strip() or 'Ferrol'
-    r_fi = p_f_intro.add_run(f"En {lugar} a {format_date_long_es(acta_data.get('fecha'))}. Para que así conste e aos efectos oportunos, asinan a presente acta:")
-    r_fi.italic = True
-    r_fi.font.size = Pt(8.5)
-    r_fi.font.color.rgb = RGBColor(71, 85, 105)
+        t_f = doc.add_table(rows=1, cols=2)
+        t_f.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_f.autofit = False
+        row_f = t_f.rows[0]
 
-    t_f = doc.add_table(rows=1, cols=2)
-    t_f.alignment = WD_TABLE_ALIGNMENT.CENTER
-    t_f.autofit = False
-    row_f = t_f.rows[0]
+        # Firma DO
+        cf0 = row_f.cells[0]
+        cf0.width = Inches(3.6)
+        set_cell_shading(cf0, "F8FAFC")
+        set_cell_margins(cf0, 60, 140, 60, 60)
+        pf0 = cf0.paragraphs[0]
+        r_do_h = pf0.add_run("Pola Dirección de Obra (DO):\n")
+        r_do_h.bold = True
+        r_do_h.font.size = Pt(8.5)
+        r_do_h.font.color.rgb = RGBColor(30, 58, 138)
+        r_do_n = pf0.add_run(f"{do_clean}\n\n\n")
+        r_do_n.bold = True
+        r_do_n.font.size = Pt(8.5)
+        r_do_s = pf0.add_run("Asdo.: ____________________________")
+        r_do_s.font.size = Pt(8)
+        r_do_s.font.color.rgb = RGBColor(148, 163, 184)
 
-    # Firma DO
-    cf0 = row_f.cells[0]
-    cf0.width = Inches(3.6)
-    set_cell_shading(cf0, "F8FAFC")
-    set_cell_margins(cf0, 60, 140, 60, 60)
-    pf0 = cf0.paragraphs[0]
-    r_do_h = pf0.add_run("Pola Dirección de Obra (DO):\n")
-    r_do_h.bold = True
-    r_do_h.font.size = Pt(8.5)
-    r_do_h.font.color.rgb = RGBColor(30, 58, 138)
-    r_do_n = pf0.add_run(f"{do_clean}\n\n\n")
-    r_do_n.bold = True
-    r_do_n.font.size = Pt(8.5)
-    r_do_s = pf0.add_run("Asdo.: ____________________________")
-    r_do_s.font.size = Pt(8)
-    r_do_s.font.color.rgb = RGBColor(148, 163, 184)
-
-    # Firma DE
-    cf1 = row_f.cells[1]
-    cf1.width = Inches(3.6)
-    set_cell_shading(cf1, "F8FAFC")
-    set_cell_margins(cf1, 60, 140, 60, 60)
-    pf1 = cf1.paragraphs[0]
-    r_de_h = pf1.add_run("Pola Dirección de Execución (DE):\n")
-    r_de_h.bold = True
-    r_de_h.font.size = Pt(8.5)
-    r_de_h.font.color.rgb = RGBColor(2, 132, 199)
-    r_de_n = pf1.add_run(f"{de_clean}\n\n\n")
-    r_de_n.bold = True
-    r_de_n.font.size = Pt(8.5)
-    r_de_s = pf1.add_run("Asdo.: ____________________________")
-    r_de_s.font.size = Pt(8)
-    r_de_s.font.color.rgb = RGBColor(148, 163, 184)
+        # Firma DE
+        cf1 = row_f.cells[1]
+        cf1.width = Inches(3.6)
+        set_cell_shading(cf1, "F8FAFC")
+        set_cell_margins(cf1, 60, 140, 60, 60)
+        pf1 = cf1.paragraphs[0]
+        r_de_h = pf1.add_run("Pola Dirección de Execución (DE):\n")
+        r_de_h.bold = True
+        r_de_h.font.size = Pt(8.5)
+        r_de_h.font.color.rgb = RGBColor(2, 132, 199)
+        r_de_n = pf1.add_run(f"{de_clean}\n\n\n")
+        r_de_n.bold = True
+        r_de_n.font.size = Pt(8.5)
+        r_de_s = pf1.add_run("Asdo.: ____________________________")
+        r_de_s.font.size = Pt(8)
+        r_de_s.font.color.rgb = RGBColor(148, 163, 184)
 
     # 9. SECCIÓN 7: ANEXO REPORTAXE FOTOGRÁFICO (Cuadrícula 2x2 preservando proporciones)
     fotos = acta_data.get('fotos', [])

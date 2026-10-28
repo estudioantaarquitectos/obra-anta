@@ -9,11 +9,12 @@
    - Direct DOCX and PDF export using official Word template
    ========================================================================== */
 
-import { db, normalizeActa, isDefaultSignerRole } from '../db.js';
+import { db, normalizeActa, normalizeReunion, isDefaultSignerRole } from '../db.js';
 import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
 
 export function renderActaEditor(container, router, params = {}) {
+  const isReunion = Boolean(params && (params.isReunion || params.tipoDocumento === 'reunion'));
   const isEditing = Boolean(params && params.id);
   const settings = db.getSettings();
   const obraId = (params && params.obraId) || db.getActiveObraId();
@@ -21,13 +22,17 @@ export function renderActaEditor(container, router, params = {}) {
 
   let actaData;
   if (isEditing) {
-    const existing = db.getActaById(params.id);
+    const existing = isReunion
+      ? (db.getReunionById(params.id) || db.getActaById(params.id))
+      : db.getActaById(params.id);
     if (!existing) {
-      showToast('El acta solicitada no existe', 'error');
-      router.navigate('expediente', { id: obraId, tab: 'actas' });
+      showToast(isReunion ? 'A reunión solicitada non existe' : 'El acta solicitada no existe', 'error');
+      router.navigate('expediente', { id: obraId, tab: isReunion ? 'reuniones' : 'actas' });
       return;
     }
-    actaData = normalizeActa(JSON.parse(JSON.stringify(existing)));
+    actaData = isReunion
+      ? normalizeReunion(JSON.parse(JSON.stringify(existing)))
+      : normalizeActa(JSON.parse(JSON.stringify(existing)));
     if (!actaData.obraId && currentObra) {
       actaData.obraId = currentObra.id;
     }
@@ -61,8 +66,8 @@ export function renderActaEditor(container, router, params = {}) {
         texto: `Fdo. ${a.nombre || ''} (${a.cargo || ''})`
       }));
   } else {
-    // New Acta initialized with default project data and standard apartados
-    const nextNum = db.getNextActaNumber(currentObra?.id);
+    // New Document initialized with default project data and standard apartados
+    const nextNum = isReunion ? db.getNextReunionNumber(currentObra?.id) : db.getNextActaNumber(currentObra?.id);
     const defaultAsistentes = (currentObra?.agentes && currentObra.agentes.length > 0)
       ? currentObra.agentes.map((ag, idx) => ({
           id: `asist-${idx + 1}`,
@@ -80,69 +85,114 @@ export function renderActaEditor(container, router, params = {}) {
           { id: '5', nombre: 'Ana Gallego Núñez', cargo: 'Directora de ejecución', entidad: 'DEM', asistio: true, firma: true }
         ];
 
-    actaData = normalizeActa({
-      id: `acta-${Date.now()}`,
-      obraId: currentObra ? currentObra.id : 'obra-castillo-san-felipe',
-      numero: nextNum,
-      fecha: new Date().toISOString().split('T')[0],
-      obra: currentObra ? currentObra.titulo : settings.obraPrincipal,
-      obraTitulo: currentObra ? currentObra.titulo : settings.obraPrincipal,
-      situacion: currentObra ? currentObra.situacion : settings.situacion,
-      expediente: currentObra ? currentObra.expediente : settings.expediente,
-      asistentes: defaultAsistentes,
-      apartados: [
-        {
-          id: 'ap-1',
-          titulo: 'CUESTIONES TRATADAS EN REUNIÓN',
-          secciones: [
-            {
-              id: 'sec-1-1',
-              titulo: 'Carpinterías',
-              texto: '<p>Se revisan las muestras de taller y remates de mochetas.</p>'
-            },
-            {
-              id: 'sec-1-2',
-              titulo: 'Estructuras y cubiertas',
-              texto: '<p>Replanteo de vigas y preparación de apoyos en muros de cantería.</p>'
-            }
-          ]
-        },
-        {
-          id: 'ap-2',
-          titulo: 'INDICACIONES POR PARTE DEL COORDINADOR DE SEGURIDAD Y SALUD',
-          secciones: [
-            {
-              id: 'sec-2-1',
-              titulo: 'Medidas Preventivas e EPIS',
-              texto: '<p>Se recuerda el uso obligatorio de los EPIS correspondientes a los trabajos en ejecución.</p><p>Se ordena que los trabajadores en coronación de muros lleven arnés y línea de vida.</p>'
-            }
-          ]
-        },
-        {
-          id: 'ap-3',
-          titulo: 'ACTUACIONES PREVISTAS',
-          secciones: [
-            {
-              id: 'sec-3-1',
-              titulo: 'Próximas Actuaciones',
-              texto: '<p>Continuar con los trabajos de limpieza y encintados de muros.</p><p>Aportar muestras y fichas técnicas requeridas.</p>'
-            }
-          ]
-        }
-      ],
-      firmas: defaultAsistentes.filter(a => a.asistio && a.firma).map(a => ({
-        asistenteId: a.id,
-        nombre: a.nombre,
-        cargo: a.cargo || 'Dirección Facultativa',
-        texto: `Fdo. ${a.nombre || ''} (${a.cargo || ''})`
-      })),
-      fotos: [],
-      anexosPdf: [],
-      estado: 'borrador'
-    });
+    if (isReunion) {
+      actaData = normalizeReunion({
+        id: `reu-${Date.now()}`,
+        obraId: currentObra ? currentObra.id : 'obra-castillo-san-felipe',
+        tipoDocumento: 'reunion',
+        numero: nextNum,
+        fecha: new Date().toISOString().split('T')[0],
+        hora: '10:00',
+        tipoModalidad: 'Presencial',
+        lugar: currentObra?.situacion || 'Caseta de obra',
+        obra: currentObra ? currentObra.titulo : settings.obraPrincipal,
+        obraTitulo: currentObra ? currentObra.titulo : settings.obraPrincipal,
+        situacion: currentObra ? currentObra.situacion : settings.situacion,
+        expediente: currentObra ? currentObra.expediente : settings.expediente,
+        asistentes: defaultAsistentes,
+        apartados: [
+          {
+            id: 'ap-1',
+            titulo: 'CUESTIÓNS TRATADAS NA REUNIÓN',
+            secciones: [
+              {
+                id: 'sec-1-1',
+                titulo: 'Revisión xeral e acordos',
+                texto: '<p>Revisión do estado dos traballos e acordos acadados nesta reunión.</p>'
+              }
+            ]
+          }
+        ],
+        firmas: defaultAsistentes.filter(a => a.asistio && a.firma).map(a => ({
+          asistenteId: a.id,
+          nombre: a.nombre,
+          cargo: a.cargo || 'Dirección Facultativa',
+          texto: `Fdo. ${a.nombre || ''} (${a.cargo || ''})`
+        })),
+        fotos: [],
+        anexosPdf: [],
+        estado: 'borrador'
+      });
+    } else {
+      actaData = normalizeActa({
+        id: `acta-${Date.now()}`,
+        obraId: currentObra ? currentObra.id : 'obra-castillo-san-felipe',
+        numero: nextNum,
+        fecha: new Date().toISOString().split('T')[0],
+        obra: currentObra ? currentObra.titulo : settings.obraPrincipal,
+        obraTitulo: currentObra ? currentObra.titulo : settings.obraPrincipal,
+        situacion: currentObra ? currentObra.situacion : settings.situacion,
+        expediente: currentObra ? currentObra.expediente : settings.expediente,
+        asistentes: defaultAsistentes,
+        apartados: [
+          {
+            id: 'ap-1',
+            titulo: 'CUESTIONES TRATADAS EN REUNIÓN',
+            secciones: [
+              {
+                id: 'sec-1-1',
+                titulo: 'Carpinterías',
+                texto: '<p>Se revisan las muestras de taller y remates de mochetas.</p>'
+              },
+              {
+                id: 'sec-1-2',
+                titulo: 'Estructuras y cubiertas',
+                texto: '<p>Replanteo de vigas y preparación de apoyos en muros de cantería.</p>'
+              }
+            ]
+          },
+          {
+            id: 'ap-2',
+            titulo: 'INDICACIONES POR PARTE DEL COORDINADOR DE SEGURIDAD Y SALUD',
+            secciones: [
+              {
+                id: 'sec-2-1',
+                titulo: 'Medidas Preventivas e EPIS',
+                texto: '<p>Se recuerda el uso obligatorio de los EPIS correspondientes a los trabajos en ejecución.</p><p>Se ordena que los trabajadores en coronación de muros lleven arnés y línea de vida.</p>'
+              }
+            ]
+          },
+          {
+            id: 'ap-3',
+            titulo: 'ACTUACIONES PREVISTAS',
+            secciones: [
+              {
+                id: 'sec-3-1',
+                titulo: 'Próximas Actuaciones',
+                texto: '<p>Continuar con los trabajos de limpieza y encintados de muros.</p><p>Aportar muestras y fichas técnicas requeridas.</p>'
+              }
+            ]
+          }
+        ],
+        firmas: defaultAsistentes.filter(a => a.asistio && a.firma).map(a => ({
+          asistenteId: a.id,
+          nombre: a.nombre,
+          cargo: a.cargo || 'Dirección Facultativa',
+          texto: `Fdo. ${a.nombre || ''} (${a.cargo || ''})`
+        })),
+        fotos: [],
+        anexosPdf: [],
+        estado: 'borrador'
+      });
+    }
   }
 
   function render() {
+    const rawDO = currentObra?.direccionObra || 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)';
+    const doClean = rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO;
+    const deClean = currentObra?.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : 'Ana Gallego Núñez (DEM)');
+    const coordinadorCSSStr = currentObra?.coordinadorCSS || 'Juan Carlos Bello Criado (CSS)';
+
     container.innerHTML = `
       <div class="content-wrapper">
         <div class="editor-container">
@@ -150,9 +200,9 @@ export function renderActaEditor(container, router, params = {}) {
           <!-- Sticky Top Action Bar -->
           <div class="editor-sticky-header">
             <div class="editor-meta-info">
-              <span class="editor-type-badge">Acta de Obra</span>
+              <span class="editor-type-badge">${isReunion ? 'Reunión de Obra' : 'Acta de Obra'}</span>
               <div class="editor-doc-title">
-                Acta nº ${actaData.numero} • ${actaData.fecha ? formatDate(actaData.fecha) : 'Sin fecha'}
+                ${isReunion ? 'Reunión' : 'Acta'} nº ${actaData.numero} • ${actaData.fecha ? formatDate(actaData.fecha) : 'Sin fecha'}
               </div>
             </div>
 
@@ -161,7 +211,7 @@ export function renderActaEditor(container, router, params = {}) {
                 Cancelar
               </button>
               ${isEditing ? `
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-docx-editor" title="Exportar acta actual a formato Word (.docx) usando la plantilla oficial">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-docx-editor" title="Exportar documento a Word (.docx) con plantilla oficial">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                   <span>DOCX</span>
                 </button>
@@ -176,54 +226,133 @@ export function renderActaEditor(container, router, params = {}) {
               ` : ''}
               <button type="button" class="btn btn-primary" id="btn-save-acta">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                Guardar Acta
+                ${isReunion ? 'Guardar Reunión' : 'Guardar Acta'}
               </button>
             </div>
           </div>
 
           <form id="acta-form">
 
-            <!-- Section 0: Encabezado y Datos Generales -->
-            <div class="editor-section">
-              <div class="editor-section-header">
-                <div>
-                  <div class="editor-section-title">
-                    <span class="section-number-tag">0</span>
-                    Datos de Identificación del Acta
+            ${isReunion ? `
+              <!-- Section 1: Datos Xerais da Obra (Informativos) -->
+              <div class="editor-section">
+                <div class="editor-section-header">
+                  <div>
+                    <div class="editor-section-title">
+                      <span class="section-number-tag">1</span>
+                      Datos Xerais da Obra
+                    </div>
+                    <div class="editor-section-desc">Información institucional vinculada ao expediente de obra</div>
                   </div>
-                  <div class="editor-section-desc">Identificación de la sesión de obra</div>
                 </div>
-              </div>
-              <div class="editor-section-body">
-                <div class="form-grid-3">
-                  <div class="form-group">
-                    <label class="form-label required">Nº de Acta</label>
-                    <input type="number" id="input-numero" class="form-control" value="${actaData.numero}" required min="1" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label required">Fecha de la Reunión</label>
-                    <input type="date" id="input-fecha" class="form-control" value="${actaData.fecha}" required />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Estado del Documento</label>
-                    <select id="input-estado" class="form-control form-select">
-                      <option value="borrador" ${actaData.estado === 'borrador' ? 'selected' : ''}>Borrador en elaboración</option>
-                      <option value="firmada" ${actaData.estado === 'firmada' ? 'selected' : ''}>Firmada y distribuida</option>
-                    </select>
+                <div class="editor-section-body">
+                  <div style="background: var(--bg-subtle); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 1rem 1.25rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; font-size: 0.85rem;">
+                      <div><strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; display: block;">Proxecto:</strong> <span style="font-weight: 700; color: var(--text-main);">${escapeHtml(currentObra?.titulo || actaData.obraTitulo || actaData.obra)}</span></div>
+                      <div><strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; display: block;">Emprazamento:</strong> <span style="color: var(--text-main);">${escapeHtml(currentObra?.situacion || actaData.situacion || '—')}</span></div>
+                      <div><strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; display: block;">Expediente nº:</strong> <span style="font-weight: 700; color: var(--primary);">${escapeHtml(currentObra?.expediente || actaData.expediente || '—')}</span></div>
+                      <div><strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; display: block;">Contratista:</strong> <span style="font-weight: 600; color: var(--text-main);">${escapeHtml(currentObra?.contratista || '—')}</span></div>
+                      <div><strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; display: block;">Dirección de obra:</strong> <span style="color: #1e3a8a; font-weight: 600;">${escapeHtml(doClean)}</span></div>
+                      <div><strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; display: block;">Dirección de execución:</strong> <span style="color: #0284c7; font-weight: 600;">${escapeHtml(deClean)}</span></div>
+                      <div><strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; display: block;">Coordinador CSS:</strong> <span style="color: var(--text-main);">${escapeHtml(coordinadorCSSStr)}</span></div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Section 1: Asistentes a la Reunión -->
+              <!-- Section 2: Datos Xerais da Reunión -->
+              <div class="editor-section">
+                <div class="editor-section-header">
+                  <div>
+                    <div class="editor-section-title">
+                      <span class="section-number-tag">2</span>
+                      Datos Xerais da Reunión
+                    </div>
+                    <div class="editor-section-desc">Identificación da convocatoria, data, hora e modalidade</div>
+                  </div>
+                </div>
+                <div class="editor-section-body">
+                  <div class="form-grid-3">
+                    <div class="form-group">
+                      <label class="form-label required">Nº de Reunión</label>
+                      <input type="number" id="input-numero" class="form-control" value="${actaData.numero}" required min="1" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label required">Data da Reunión</label>
+                      <input type="date" id="input-fecha" class="form-control" value="${actaData.fecha}" required />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label required">Hora</label>
+                      <input type="text" id="input-hora" class="form-control" value="${escapeHtml(actaData.hora || '10:00')}" placeholder="Ex: 10:00 ou 11:30" required />
+                    </div>
+                  </div>
+
+                  <div class="form-grid-3" style="margin-top: 0.75rem;">
+                    <div class="form-group">
+                      <label class="form-label required">Tipo de Reunión</label>
+                      <select id="input-tipo-reunion" class="form-control form-select">
+                        <option value="Presencial" ${(actaData.tipoModalidad || 'Presencial') === 'Presencial' ? 'selected' : ''}>Presencial</option>
+                        <option value="Virtual" ${actaData.tipoModalidad === 'Virtual' ? 'selected' : ''}>Virtual (Videoconferencia)</option>
+                        <option value="Híbrida" ${actaData.tipoModalidad === 'Híbrida' ? 'selected' : ''}>Híbrida (Presencial e Virtual)</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label required">Lugar / Canle</label>
+                      <input type="text" id="input-lugar" class="form-control" value="${escapeHtml(actaData.lugar || (currentObra?.situacion || 'Caseta de obra'))}" placeholder="Ex: Caseta de obra / Microsoft Teams" required />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Estado do Documento</label>
+                      <select id="input-estado" class="form-control form-select">
+                        <option value="borrador" ${actaData.estado === 'borrador' ? 'selected' : ''}>Borrador en elaboración</option>
+                        <option value="firmada" ${actaData.estado === 'firmada' ? 'selected' : ''}>Firmada e distribuída</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <!-- Section 0: Encabezado y Datos Generales -->
+              <div class="editor-section">
+                <div class="editor-section-header">
+                  <div>
+                    <div class="editor-section-title">
+                      <span class="section-number-tag">0</span>
+                      Datos de Identificación del Acta
+                    </div>
+                    <div class="editor-section-desc">Identificación de la sesión de obra</div>
+                  </div>
+                </div>
+                <div class="editor-section-body">
+                  <div class="form-grid-3">
+                    <div class="form-group">
+                      <label class="form-label required">Nº de Acta</label>
+                      <input type="number" id="input-numero" class="form-control" value="${actaData.numero}" required min="1" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label required">Fecha de la Reunión</label>
+                      <input type="date" id="input-fecha" class="form-control" value="${actaData.fecha}" required />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Estado del Documento</label>
+                      <select id="input-estado" class="form-control form-select">
+                        <option value="borrador" ${actaData.estado === 'borrador' ? 'selected' : ''}>Borrador en elaboración</option>
+                        <option value="firmada" ${actaData.estado === 'firmada' ? 'selected' : ''}>Firmada y distribuida</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `}
+
+            <!-- Section 3: Asistentes a la Reunión -->
             <div class="editor-section">
               <div class="editor-section-header">
                 <div>
                   <div class="editor-section-title">
-                    <span class="section-number-tag">A</span>
-                    Asistentes a la Visita / Reunión de Obra
+                    <span class="section-number-tag">${isReunion ? '3' : 'A'}</span>
+                    ${isReunion ? 'Asistentes á Reunión' : 'Asistentes a la Visita / Reunión de Obra'}
                   </div>
-                  <div class="editor-section-desc">Personas y cargos presentes en la reunión</div>
+                  <div class="editor-section-desc">${isReunion ? 'Persoas convocadas, indicando quen asiste e quen asina' : 'Personas y cargos presentes en la reunión'}</div>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-add-asistente">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -268,16 +397,18 @@ export function renderActaEditor(container, router, params = {}) {
               </div>
             </div>
 
-            <!-- Section 2: Apartados y Secciones con Editor Enriquecido -->
+            <!-- Section 4: Apartados y Secciones con Editor Enriquecido -->
             <div class="editor-section">
               <div class="editor-section-header">
                 <div>
                   <div class="editor-section-title">
-                    <span class="section-number-tag">C</span>
-                    Contenido del Acta: Apartados y Secciones
+                    <span class="section-number-tag">${isReunion ? '4' : 'C'}</span>
+                    ${isReunion ? 'Cuestións Tratadas na Reunión' : 'Contenido del Acta: Apartados y Secciones'}
                   </div>
                   <div class="editor-section-desc">
-                    Estructura jerárquica oficial (1_APARTADO, 1.1_Sección/tema y texto enriquecido con tablas, imágenes y listas)
+                    ${isReunion 
+                      ? 'Estrutura oficial de apartados e seccións (4.1, 4.2...), podendo engadir cantos apartados e temas sexan precisos'
+                      : 'Estructura jerárquica oficial (1_APARTADO, 1.1_Sección/tema y texto enriquecido con tablas, imágenes y listas)'}
                   </div>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-add-apartado-top">
@@ -479,16 +610,52 @@ export function renderActaEditor(container, router, params = {}) {
               </div>
             </div>
 
-            <!-- Section 5: Anexos Documentales PDF -->
+            ${isReunion ? `
+              <!-- Section 5: Firmas da Reunión -->
+              <div class="editor-section">
+                <div class="editor-section-header">
+                  <div>
+                    <div class="editor-section-title">
+                      <span class="section-number-tag">5</span>
+                      Dilixencia de Firmas
+                    </div>
+                    <div class="editor-section-desc">Firmantes que asinarán o documento oficial (marcar na sección 3 "Asistentes")</div>
+                  </div>
+                </div>
+                <div class="editor-section-body">
+                  <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 1rem 1.25rem;">
+                    ${(() => {
+                      const signers = (actaData.asistentes || []).filter(a => a.asistio !== false && a.firma);
+                      if (!signers.length) {
+                        return `<div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Non hai asinantes seleccionados. Marque a opción "Firma" xunto aos asistentes que deban asinar o documento.</div>`;
+                      }
+                      return `
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                          ${signers.map(s => `
+                            <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 6px; padding: 0.65rem 1rem; min-width: 220px;">
+                              <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">${escapeHtml(s.nombre)}</div>
+                              <div style="font-size: 0.78rem; color: var(--primary); font-weight: 500;">${escapeHtml(s.cargo || 'Dirección de Obra')}</div>
+                              <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(s.entidad || '')}</div>
+                            </div>
+                          `).join('')}
+                        </div>
+                      `;
+                    })()}
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Section 6: Anexos Documentales PDF -->
             <div class="editor-section">
               <div class="editor-section-header">
                 <div>
                   <div class="editor-section-title">
-                    <span class="section-number-tag">📎</span>
-                    Anexos Documentales PDF
+                    <span class="section-number-tag">${isReunion ? '6' : '📎'}</span>
+                    ${isReunion ? 'Anexos Documentais PDF e Separata Oficial' : 'Anexos Documentales PDF'}
                   </div>
                   <div class="editor-section-desc">
-                    Adjunte documentos PDF (ensayos, planos, informes) que se incorporarán automáticamente al PDF final (no al Word).
+                    Adjunte documentos PDF (ensayos, planos, informes) que se incorporarán automáticamente al PDF final con separata oficial A4.
                   </div>
                 </div>
               </div>
@@ -496,7 +663,7 @@ export function renderActaEditor(container, router, params = {}) {
                 <!-- Informative Callout -->
                 <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-sm); padding: 0.65rem 0.9rem; margin-bottom: 1rem; font-size: 0.82rem; color: #1e40af; display: flex; align-items: center; gap: 0.6rem;">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                  <span>Los archivos PDF subidos en este apartado se concatenarán de forma correlativa al PDF oficial emitido. El archivo Word (.docx) descargable no contendrá estos adjuntos.</span>
+                  <span>Los archivos PDF subidos en este apartado se concatenarán de forma correlativa al PDF oficial emitido con su separata institucional.</span>
                 </div>
 
                 <!-- PDF Upload Dropzone -->
@@ -577,6 +744,13 @@ export function renderActaEditor(container, router, params = {}) {
     actaData.numero = parseInt(container.querySelector('#input-numero').value, 10) || 1;
     actaData.fecha = container.querySelector('#input-fecha').value;
     actaData.estado = container.querySelector('#input-estado').value;
+
+    if (isReunion) {
+      actaData.tipoDocumento = 'reunion';
+      actaData.hora = container.querySelector('#input-hora')?.value || actaData.hora || '10:00';
+      actaData.tipoModalidad = container.querySelector('#input-tipo-reunion')?.value || actaData.tipoModalidad || 'Presencial';
+      actaData.lugar = container.querySelector('#input-lugar')?.value || actaData.lugar || '';
+    }
 
     // Los datos del expediente son del expediente y proceden de la obra activa
     if (currentObra) {
@@ -1239,7 +1413,7 @@ export function renderActaEditor(container, router, params = {}) {
 
     // Cancel Button
     container.querySelector('#btn-cancel').onclick = () => {
-      router.navigate('expediente', { id: actaData.obraId, tab: 'actas' });
+      router.navigate('expediente', { id: actaData.obraId, tab: isReunion ? 'reuniones' : 'actas' });
     };
 
     // Preview Button
@@ -1247,8 +1421,9 @@ export function renderActaEditor(container, router, params = {}) {
     if (btnPreview) {
       btnPreview.onclick = () => {
         const data = collectFormData();
-        db.saveActa(data);
-        router.navigate('acta-print', { id: data.id });
+        if (isReunion) db.saveReunion(data);
+        else db.saveActa(data);
+        router.navigate(isReunion ? 'reunion-print' : 'acta-print', { id: data.id });
       };
     }
 
@@ -1257,7 +1432,8 @@ export function renderActaEditor(container, router, params = {}) {
     if (btnDocx) {
       btnDocx.onclick = async () => {
         const data = collectFormData();
-        db.saveActa(data);
+        if (isReunion) db.saveReunion(data);
+        else db.saveActa(data);
         const origHTML = btnDocx.innerHTML;
         try {
           btnDocx.disabled = true;
@@ -1281,7 +1457,8 @@ export function renderActaEditor(container, router, params = {}) {
     if (btnPdf) {
       btnPdf.onclick = async () => {
         const data = collectFormData();
-        db.saveActa(data);
+        if (isReunion) db.saveReunion(data);
+        else db.saveActa(data);
         const origHTML = btnPdf.innerHTML;
         try {
           btnPdf.disabled = true;
@@ -1305,7 +1482,7 @@ export function renderActaEditor(container, router, params = {}) {
       const data = collectFormData();
 
       if (!data.numero || isNaN(data.numero)) {
-        showToast('Debe indicar un número de acta válido', 'error');
+        showToast(isReunion ? 'Debe indicar un número de reunión válido' : 'Debe indicar un número de acta válido', 'error');
         return;
       }
       if (!data.fecha) {
@@ -1314,17 +1491,17 @@ export function renderActaEditor(container, router, params = {}) {
       }
 
       modal.confirmSave({
-        title: 'Confirmar Guardado de Acta',
-        message: `¿Desea guardar definitivamente los cambios en el Acta nº ${data.numero} (${formatDate(data.fecha)})?`,
+        title: isReunion ? 'Confirmar Guardado de Reunión' : 'Confirmar Guardado de Acta',
+        message: `¿Desea guardar definitivamente los cambios en ${isReunion ? 'la Reunión' : 'el Acta'} nº ${data.numero} (${formatDate(data.fecha)})?`,
         details: `Se actualizarán ${data.asistentes.length} asistentes, ${data.apartados ? data.apartados.length : 0} apartados con ${(data.apartados || []).reduce((acc, a) => acc + (a.secciones || []).length, 0)} sección(es), y ${(data.fotos || []).length} fotografías.`,
         onConfirm: () => {
-          const res = db.saveActa(data);
+          const res = isReunion ? db.saveReunion(data) : db.saveActa(data);
           if (res === false) {
             showToast('Error al guardar: el almacenamiento local no pudo persistir los datos', 'error');
             return;
           }
-          showToast(`Acta nº ${data.numero} guardada con éxito`, 'success');
-          router.navigate('expediente', { id: data.obraId, tab: 'actas' });
+          showToast(`${isReunion ? 'Reunión' : 'Acta'} nº ${data.numero} guardada con éxito`, 'success');
+          router.navigate('expediente', { id: data.obraId, tab: isReunion ? 'reuniones' : 'actas' });
         }
       });
     };

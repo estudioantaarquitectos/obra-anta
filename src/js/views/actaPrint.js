@@ -17,14 +17,16 @@ import { renderAgentAvatarHtml } from '../utils/avatar.js';
 
 export function renderActaPrint(container, router, params = {}) {
   const actaId = params.id;
-  const rawActa = db.getActaById(actaId);
+  const isReunionParam = Boolean(params && (params.isReunion || params.tipoDocumento === 'reunion'));
+  const rawActa = (isReunionParam ? db.getReunionById(actaId) : (db.getActaById(actaId) || db.getReunionById(actaId))) || db.getReunionById(actaId) || db.getActaById(actaId);
 
   if (!rawActa) {
-    showToast('Acta non atopada', 'error');
+    showToast(isReunionParam ? 'Reunión non atopada' : 'Acta non atopada', 'error');
     router.navigate('dashboard');
     return;
   }
 
+  const isReunion = Boolean(isReunionParam || rawActa.tipoDocumento === 'reunion' || rawActa.esReunion === true || String(actaId).startsWith('reu-'));
   const acta = normalizeActa(rawActa);
   const canEdit = auth.can('actas:edit');
 
@@ -70,7 +72,7 @@ export function renderActaPrint(container, router, params = {}) {
               Volver al Expediente
             </button>
             <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">
-              Acta nº ${acta.numero} • Plantilla Oficial de Obra
+              ${isReunion ? 'Reunión' : 'Acta'} nº ${acta.numero} • Plantilla Oficial de Obra
             </span>
           </div>
 
@@ -79,11 +81,11 @@ export function renderActaPrint(container, router, params = {}) {
             ${canEdit ? `
               <button class="btn btn-secondary btn-sm" id="btn-edit-current">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                Editar Acta
+                ${isReunion ? 'Editar Reunión' : 'Editar Acta'}
               </button>
             ` : ''}
 
-            <button class="btn btn-secondary btn-sm" id="btn-export-docx" title="Exportar acta a formato Microsoft Word (.docx)" style="font-weight: 600;">
+            <button class="btn btn-secondary btn-sm" id="btn-export-docx" title="Exportar documento a formato Microsoft Word (.docx)" style="font-weight: 600;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
               <span>DOCX</span>
             </button>
@@ -120,7 +122,7 @@ export function renderActaPrint(container, router, params = {}) {
 
             <div class="dt05-header-meta">
               <div class="dt05-meta-label">
-                ACTA SEMANAL
+                ${isReunion ? 'REUNIÓN' : 'ACTA SEMANAL'}
               </div>
               <div class="dt05-meta-row">
                 <span class="dt05-meta-num">${escapeHtml(String(acta.numero || ''))}</span>
@@ -129,137 +131,259 @@ export function renderActaPrint(container, router, params = {}) {
             </div>
           </div>
 
-          <!-- 2. SECTION 1: DATOS XERAIS (Audio 4: DO and DE strictly separated) -->
-          <div class="dt05-section">
-            <div class="dt05-sec-header">1.- DATOS XERAIS:</div>
-            
-            <div class="dt05-info-grid">
-              <div class="dt05-info-row">
-                <span class="dt05-lbl">Proxecto:</span>
-                <span class="dt05-val" style="font-weight: bold;">${escapeHtml(obraTitulo)}</span>
-              </div>
-              <div class="dt05-info-row">
-                <span class="dt05-lbl">Data da visita:</span>
-                <span class="dt05-val" style="font-weight: bold;">${formatDate(acta.fecha)}</span>
-              </div>
-              <div class="dt05-info-row">
-                <span class="dt05-lbl">Emprazamento:</span>
-                <span class="dt05-val">${escapeHtml(acta.situacion || currentObra?.situacion || '—')}</span>
-              </div>
-              <div class="dt05-info-row">
-                <span class="dt05-lbl">Expediente nº:</span>
-                <span class="dt05-val" style="font-weight: bold;">${escapeHtml(acta.expediente || currentObra?.expediente || '—')}</span>
-              </div>
-              <div class="dt05-info-row">
-                <span class="dt05-lbl">Contratista:</span>
-                <span class="dt05-val" style="font-weight: bold;">${escapeHtml(currentObra?.contratista || '—')}</span>
-              </div>
-              <div class="dt05-info-row">
-                <span class="dt05-lbl">Estado da acta:</span>
-                <span class="dt05-val">
-                  <span class="dt05-status-pill" style="background: ${acta.estado === 'pechada' ? '#dcfce7; color: #166534;' : '#fef9c3; color: #854d0e;'}">
-                    ${acta.estado === 'pechada' ? '● Pechada / Emitida' : '○ Borrador'}
-                  </span>
-                </span>
-              </div>
-              <div class="dt05-info-row">
-                <span class="dt05-lbl">Dirección de obra:</span>
-                <span class="dt05-val" style="font-weight: 600; color: #1e3a8a;">${escapeHtml(doClean)}</span>
-              </div>
-              <div class="dt05-info-row">
-                <span class="dt05-lbl">Dirección de execución:</span>
-                <span class="dt05-val" style="font-weight: 600; color: #0284c7;">${escapeHtml(deClean)}</span>
-              </div>
-              ${coordinadorCSSStr ? `
+          ${isReunion ? `
+            <!-- 1. SECTION 1: DATOS XERAIS DA OBRA -->
+            <div class="dt05-section">
+              <div class="dt05-sec-header">1.- DATOS XERAIS DA OBRA:</div>
+              <div class="dt05-info-grid">
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Proxecto:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(obraTitulo)}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Emprazamento:</span>
+                  <span class="dt05-val">${escapeHtml(acta.situacion || currentObra?.situacion || '—')}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Expediente nº:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(acta.expediente || currentObra?.expediente || '—')}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Contratista:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(currentObra?.contratista || '—')}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Dirección de obra:</span>
+                  <span class="dt05-val" style="font-weight: 600; color: #1e3a8a;">${escapeHtml(doClean)}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Dirección de execución:</span>
+                  <span class="dt05-val" style="font-weight: 600; color: #0284c7;">${escapeHtml(deClean)}</span>
+                </div>
                 <div class="dt05-info-row">
                   <span class="dt05-lbl">Coordinador CSS:</span>
-                  <span class="dt05-val">${escapeHtml(coordinadorCSSStr)}</span>
+                  <span class="dt05-val">${escapeHtml(coordinadorCSSStr || '—')}</span>
                 </div>
-              ` : ''}
-              ${jefeObraStr ? `
                 <div class="dt05-info-row">
                   <span class="dt05-lbl">Xefe de Obra:</span>
-                  <span class="dt05-val">${escapeHtml(jefeObraStr)}</span>
+                  <span class="dt05-val">${escapeHtml(jefeObraStr || '—')}</span>
                 </div>
-              ` : ''}
+              </div>
             </div>
-          </div>
 
-          <!-- 3. SECTION 2: ASISTENTES -->
-          <div class="dt05-section">
-            <div class="dt05-sec-header">2.- ASISTENTES:</div>
-            
-            <table class="dt05-table" style="margin-top: 8px;">
-              <thead>
-                <tr>
-                  <th style="width: 38%;">Nome e Apelidos</th>
-                  <th style="width: 32%;">Cargo / Función</th>
-                  <th style="width: 30%;">Entidade Representada</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').map(asist => `
+            <!-- 2. SECTION 2: DATOS XERAIS DA REUNIÓN -->
+            <div class="dt05-section" style="margin-top: 14px;">
+              <div class="dt05-sec-header">2.- DATOS XERAIS DA REUNIÓN:</div>
+              <div class="dt05-info-grid">
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Data:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${formatDate(acta.fecha)}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Hora:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(acta.hora || '10:00')}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Tipo de reunión:</span>
+                  <span class="dt05-val" style="font-weight: 600; color: #1e3a8a;">${escapeHtml(acta.tipoModalidad || 'Presencial')}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Lugar / Canle:</span>
+                  <span class="dt05-val">${escapeHtml(acta.lugar || (currentObra?.situacion || 'Caseta de obra'))}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. SECTION 3: ASISTENTES -->
+            <div class="dt05-section" style="margin-top: 14px;">
+              <div class="dt05-sec-header">3.- ASISTENTES:</div>
+              <table class="dt05-table" style="margin-top: 8px;">
+                <thead>
                   <tr>
-                    <td style="font-weight: 600; color: #0f172a; vertical-align: middle;">
-                      ${escapeHtml(asist.nombre || asist.nome || '')}
-                    </td>
-                    <td style="color: #475569; vertical-align: middle;">
-                      ${escapeHtml(asist.cargo || '—')}
-                    </td>
-                    <td style="color: #64748b; vertical-align: middle;">
-                      ${escapeHtml(asist.entidad || asist.empresa || '—')}
-                    </td>
+                    <th style="width: 34%;">Nome e Apelidos</th>
+                    <th style="width: 28%;">Cargo / Función</th>
+                    <th style="width: 26%;">Entidade Representada</th>
+                    <th style="width: 12%; text-align: center;">Firma</th>
                   </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  ${asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').map(asist => `
+                    <tr>
+                      <td style="font-weight: 600; color: #0f172a; vertical-align: middle;">
+                        ${escapeHtml(asist.nombre || asist.nome || '')}
+                      </td>
+                      <td style="color: #475569; vertical-align: middle;">
+                        ${escapeHtml(asist.cargo || '—')}
+                      </td>
+                      <td style="color: #64748b; vertical-align: middle;">
+                        ${escapeHtml(asist.entidad || asist.empresa || '—')}
+                      </td>
+                      <td style="text-align: center; vertical-align: middle;">
+                        ${asist.firma ? '<span style="color: #1e3a8a; font-weight: 700; font-size: 8pt;">● SI</span>' : '<span style="color: #94a3b8; font-size: 8pt;">—</span>'}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
 
-          <!-- 4. SECTION 3: CUESTIÓNS TRATADAS NA VISITA / REUNIÓN -->
-          <div class="dt05-section">
-            <div class="dt05-sec-header">3.- CUESTIÓNS TRATADAS NA VISITA / REUNIÓN:</div>
-            ${renderApartadosHtmlModern(acta, 3)}
-          </div>
-
-          <!-- 5. INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS) -->
-          ${hasCSS ? `
+            <!-- 4. SECTION 4: CUESTIÓNS TRATADAS NA REUNIÓN -->
             <div class="dt05-section" style="margin-top: 14px;">
-              <div class="dt05-sec-header">${numCSS}.- INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS):</div>
-              <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; padding: 10px 12px; border-radius: 4px; font-size: 9pt; line-height: 1.45;">
-                ${renderListOrText(acta.indicacionesSeguridad)}
-              </div>
+              <div class="dt05-sec-header">4.- CUESTIÓNS TRATADAS NA REUNIÓN:</div>
+              ${renderApartadosHtmlModern(acta, 4)}
             </div>
-          ` : ''}
 
-          <!-- 6. PRÓXIMAS ACTUACIÓNS PREVISTAS -->
-          ${hasPrevistas ? `
-            <div class="dt05-section" style="margin-top: 14px;">
-              <div class="dt05-sec-header">${numPrevistas}.- PRÓXIMAS ACTUACIÓNS PREVISTAS:</div>
-              <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #1e3a8a; padding: 10px 12px; border-radius: 4px; font-size: 9pt; line-height: 1.45;">
-                ${renderListOrText(acta.actuacionesPrevistas)}
+            <!-- 5. SECTION 5: DILIXENCIA DE FIRMAS -->
+            <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
+              <div class="dt05-sec-header">5.- DILIXENCIA DE FIRMAS:</div>
+              <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
+                En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta de reunión:
               </div>
-            </div>
-          ` : ''}
-
-          <!-- 7. DILIXENCIA DE FIRMAS -->
-          <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
-            <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS:</div>
-            <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
-              En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta:
-            </div>
-            
-            <div class="acta-modern-firmas-grid">
-              ${(firmantes.length > 0 ? firmantes : asistentes.slice(0, 2)).map(f => `
-                <div class="acta-modern-firma-card">
-                  <div>
-                    <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
-                    <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+              <div class="acta-modern-firmas-grid">
+                ${(firmantes.length > 0 ? firmantes : asistentes.filter(a => a.asistio && a.firma)).map(f => `
+                  <div class="acta-modern-firma-card">
+                    <div>
+                      <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
+                      <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+                    </div>
+                    <div class="acta-modern-firma-space"></div>
                   </div>
-                  <div class="acta-modern-firma-space"></div>
-                </div>
-              `).join('')}
+                `).join('')}
+              </div>
             </div>
-          </div>
+          ` : `
+            <!-- 2. SECTION 1: DATOS XERAIS (Audio 4: DO and DE strictly separated) -->
+            <div class="dt05-section">
+              <div class="dt05-sec-header">1.- DATOS XERAIS:</div>
+              
+              <div class="dt05-info-grid">
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Proxecto:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(obraTitulo)}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Data da visita:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${formatDate(acta.fecha)}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Emprazamento:</span>
+                  <span class="dt05-val">${escapeHtml(acta.situacion || currentObra?.situacion || '—')}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Expediente nº:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(acta.expediente || currentObra?.expediente || '—')}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Contratista:</span>
+                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(currentObra?.contratista || '—')}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Estado da acta:</span>
+                  <span class="dt05-val">
+                    <span class="dt05-status-pill" style="background: ${acta.estado === 'pechada' ? '#dcfce7; color: #166534;' : '#fef9c3; color: #854d0e;'}">
+                      ${acta.estado === 'pechada' ? '● Pechada / Emitida' : '○ Borrador'}
+                    </span>
+                  </span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Dirección de obra:</span>
+                  <span class="dt05-val" style="font-weight: 600; color: #1e3a8a;">${escapeHtml(doClean)}</span>
+                </div>
+                <div class="dt05-info-row">
+                  <span class="dt05-lbl">Dirección de execución:</span>
+                  <span class="dt05-val" style="font-weight: 600; color: #0284c7;">${escapeHtml(deClean)}</span>
+                </div>
+                ${coordinadorCSSStr ? `
+                  <div class="dt05-info-row">
+                    <span class="dt05-lbl">Coordinador CSS:</span>
+                    <span class="dt05-val">${escapeHtml(coordinadorCSSStr)}</span>
+                  </div>
+                ` : ''}
+                ${jefeObraStr ? `
+                  <div class="dt05-info-row">
+                    <span class="dt05-lbl">Xefe de Obra:</span>
+                    <span class="dt05-val">${escapeHtml(jefeObraStr)}</span>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- 3. SECTION 2: ASISTENTES -->
+            <div class="dt05-section">
+              <div class="dt05-sec-header">2.- ASISTENTES:</div>
+              
+              <table class="dt05-table" style="margin-top: 8px;">
+                <thead>
+                  <tr>
+                    <th style="width: 38%;">Nome e Apelidos</th>
+                    <th style="width: 32%;">Cargo / Función</th>
+                    <th style="width: 30%;">Entidade Representada</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').map(asist => `
+                    <tr>
+                      <td style="font-weight: 600; color: #0f172a; vertical-align: middle;">
+                        ${escapeHtml(asist.nombre || asist.nome || '')}
+                      </td>
+                      <td style="color: #475569; vertical-align: middle;">
+                        ${escapeHtml(asist.cargo || '—')}
+                      </td>
+                      <td style="color: #64748b; vertical-align: middle;">
+                        ${escapeHtml(asist.entidad || asist.empresa || '—')}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 4. SECTION 3: CUESTIÓNS TRATADAS NA VISITA / REUNIÓN -->
+            <div class="dt05-section">
+              <div class="dt05-sec-header">3.- CUESTIÓNS TRATADAS NA VISITA / REUNIÓN:</div>
+              ${renderApartadosHtmlModern(acta, 3)}
+            </div>
+
+            <!-- 5. INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS) -->
+            ${hasCSS ? `
+              <div class="dt05-section" style="margin-top: 14px;">
+                <div class="dt05-sec-header">${numCSS}.- INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS):</div>
+                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; padding: 10px 12px; border-radius: 4px; font-size: 9pt; line-height: 1.45;">
+                  ${renderListOrText(acta.indicacionesSeguridad)}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- 6. PRÓXIMAS ACTUACIÓNS PREVISTAS -->
+            ${hasPrevistas ? `
+              <div class="dt05-section" style="margin-top: 14px;">
+                <div class="dt05-sec-header">${numPrevistas}.- PRÓXIMAS ACTUACIÓNS PREVISTAS:</div>
+                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #1e3a8a; padding: 10px 12px; border-radius: 4px; font-size: 9pt; line-height: 1.45;">
+                  ${renderListOrText(acta.actuacionesPrevistas)}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- 7. DILIXENCIA DE FIRMAS -->
+            <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
+              <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS:</div>
+              <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
+                En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta:
+              </div>
+              
+              <div class="acta-modern-firmas-grid">
+                ${(firmantes.length > 0 ? firmantes : asistentes.slice(0, 2)).map(f => `
+                  <div class="acta-modern-firma-card">
+                    <div>
+                      <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
+                      <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+                    </div>
+                    <div class="acta-modern-firma-space"></div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `}
 
           <!-- 8. ANEXO REPORTAXE FOTOGRÁFICO EN MODO GRID 2x2 (Audio 2) -->
           ${numFotos ? `
@@ -337,12 +461,12 @@ export function renderActaPrint(container, router, params = {}) {
   const btnPrint = container.querySelector('#btn-trigger-print');
 
   btnBack.onclick = () => {
-    router.navigate('expediente', { id: acta.obraId || db.getActiveObraId(), tab: 'actas' });
+    router.navigate('expediente', { id: acta.obraId || db.getActiveObraId(), tab: isReunion ? 'reuniones' : 'actas' });
   };
 
   if (btnEdit) {
     btnEdit.onclick = () => {
-      router.navigate('acta-editor', { id: acta.id });
+      router.navigate(isReunion ? 'reunion-editor' : 'acta-editor', { id: acta.id, obraId: acta.obraId || db.getActiveObraId() });
     };
   }
 

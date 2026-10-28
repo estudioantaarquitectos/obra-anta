@@ -4,7 +4,7 @@
    full CRUD, backup export/import, and client-side photo optimization.
    ========================================================================== */
 
-import { INITIAL_USERS, INITIAL_GROUPS, INITIAL_SETTINGS, INITIAL_AGENTES, INITIAL_OBRAS, INITIAL_ACTAS, INITIAL_INFORMES, INITIAL_NOTAS } from './seed.js';
+import { INITIAL_USERS, INITIAL_GROUPS, INITIAL_SETTINGS, INITIAL_AGENTES, INITIAL_OBRAS, INITIAL_ACTAS, INITIAL_REUNIONES, INITIAL_INFORMES, INITIAL_NOTAS } from './seed.js';
 import {
   isSupabaseConfigured,
   fetchAllFromSupabase,
@@ -33,6 +33,7 @@ const STORAGE_KEYS = {
   ACTIVE_OBRA: 'anta_obra_active_obra',
   AGENTES: 'anta_obra_agentes',
   ACTAS: 'anta_obra_actas',
+  REUNIONES: 'anta_obra_reuniones',
   INFORMES: 'anta_obra_informes',
   NOTAS: 'anta_obra_notas',
   SESSION: 'anta_obra_session'
@@ -125,6 +126,7 @@ class Database {
     localStorage.setItem(STORAGE_KEYS.OBRAS, JSON.stringify(INITIAL_OBRAS));
     localStorage.setItem(STORAGE_KEYS.ACTIVE_OBRA, 'obra-castillo-san-felipe');
     localStorage.setItem(STORAGE_KEYS.ACTAS, JSON.stringify(INITIAL_ACTAS));
+    localStorage.setItem(STORAGE_KEYS.REUNIONES, JSON.stringify(INITIAL_REUNIONES));
     localStorage.setItem(STORAGE_KEYS.INFORMES, JSON.stringify(INITIAL_INFORMES));
     localStorage.setItem(STORAGE_KEYS.NOTAS, JSON.stringify(INITIAL_NOTAS));
   }
@@ -300,6 +302,10 @@ class Database {
     });
     if (notasChanged) this.setCollection(STORAGE_KEYS.NOTAS, notas);
 
+    if (!localStorage.getItem(STORAGE_KEYS.REUNIONES)) {
+      localStorage.setItem(STORAGE_KEYS.REUNIONES, JSON.stringify(INITIAL_REUNIONES));
+    }
+
     // Purge mock test users (usr-rosa, usr-ana, etc.) preserving Admin and any user created by Admin
     const users = this.getCollection(STORAGE_KEYS.USERS);
     const mockTestUserIds = ['usr-rosa', 'usr-sergio', 'usr-ana', 'usr-juancarlos', 'usr-miguel', 'usr-maria'];
@@ -435,6 +441,9 @@ class Database {
     // Cascade delete related records
     const actas = this.getActas().filter(a => String(a.obraId) !== String(id));
     this.setCollection(STORAGE_KEYS.ACTAS, actas);
+
+    const reuniones = this.getReuniones().filter(r => String(r.obraId) !== String(id));
+    this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
 
     const informes = this.getInformes().filter(i => String(i.obraId) !== String(id));
     this.setCollection(STORAGE_KEYS.INFORMES, informes);
@@ -609,6 +618,79 @@ class Database {
     if (!actas.length) return 1;
     const maxNum = actas.reduce((max, a) => {
       const n = parseInt(a.numero, 10);
+      return !isNaN(n) && n > max ? n : max;
+    }, 0);
+    return maxNum + 1;
+  }
+
+  /* ----------------- REUNIONES OFICIAIS ----------------- */
+  getReuniones(obraId = null) {
+    const reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
+    const filtered = obraId ? reuniones.filter(r => String(r.obraId) === String(obraId)) : reuniones;
+    return filtered.map(normalizeReunion);
+  }
+
+  getReunionById(id) {
+    const reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
+    const found = reuniones.find(r => String(r.id) === String(id));
+    return found ? normalizeReunion(found) : null;
+  }
+
+  saveReunion(reunion) {
+    const reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
+    const existingIndex = reuniones.findIndex(r => String(r.id) === String(reunion.id));
+    const normalized = normalizeReunion(reunion);
+    const currentUser = this.getCurrentUserModifier();
+    const now = new Date().toISOString();
+    
+    let saved;
+    if (existingIndex >= 0) {
+      saved = {
+        ...reuniones[existingIndex],
+        ...normalized,
+        modificadoPor: currentUser,
+        fechaModificacion: now
+      };
+      reuniones[existingIndex] = saved;
+    } else {
+      saved = {
+        ...normalized,
+        id: normalized.id || `reu-${Date.now()}`,
+        obraId: normalized.obraId || this.getActiveObraId(),
+        creadoPor: currentUser,
+        modificadoPor: currentUser,
+        fechaCreacion: now,
+        fechaModificacion: now
+      };
+      reuniones.unshift(saved);
+    }
+    this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
+    syncActaToSupabase(saved);
+    return saved;
+  }
+
+  deleteReunion(id) {
+    let reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
+    reuniones = reuniones.filter(r => String(r.id) !== String(id));
+    this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
+    deleteActaFromSupabase(id);
+    return true;
+  }
+
+  deleteMultipleReuniones(ids) {
+    const idSet = new Set(ids.map(String));
+    let reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
+    reuniones = reuniones.filter(r => !idSet.has(String(r.id)));
+    this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
+    ids.forEach(id => deleteActaFromSupabase(id));
+    return true;
+  }
+
+  getNextReunionNumber(obraId = null) {
+    const reuniones = this.getReuniones(obraId);
+    if (!reuniones.length) return 1;
+    const maxNum = reuniones.reduce((max, r) => {
+      const n = parseInt(r.numero, 10);
       return !isNaN(n) && n > max ? n : max;
     }, 0);
     return maxNum + 1;
@@ -904,6 +986,7 @@ class Database {
       obras: this.getObras(),
       activeObraId: this.getActiveObraId(),
       actas: this.getActas(),
+      reuniones: this.getReuniones(),
       informes: this.getInformes(),
       notas: this.getNotas()
     };
@@ -922,6 +1005,7 @@ class Database {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_OBRA, backupData.activeObraId);
     }
     this.setCollection(STORAGE_KEYS.ACTAS, backupData.actas);
+    this.setCollection(STORAGE_KEYS.REUNIONES, backupData.reuniones || INITIAL_REUNIONES);
     this.setCollection(STORAGE_KEYS.INFORMES, backupData.informes || []);
     this.setCollection(STORAGE_KEYS.NOTAS, backupData.notas || []);
     return true;
@@ -1167,6 +1251,18 @@ export function normalizeActa(acta) {
   }
 
   return clone;
+}
+
+/**
+ * Normaliza un objeto de Reunión oficial con sus campos específicos de reunión.
+ */
+export function normalizeReunion(data = {}) {
+  const normalized = normalizeActa(data);
+  normalized.tipoDocumento = 'reunion';
+  normalized.tipoModalidad = data.tipoModalidad || data.tipoReunion || 'Presencial';
+  normalized.lugar = data.lugar || 'Caseta de obra';
+  normalized.hora = data.hora || '10:00';
+  return normalized;
 }
 
 export { getAgentInitials, getAgentAvatarColors, renderAgentAvatarHtml, getApartado1Titulos, getUserDisplayName, formatModificationDate, renderUserModifierHtml } from './utils/avatar.js';
