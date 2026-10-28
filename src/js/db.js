@@ -36,12 +36,50 @@ const STORAGE_KEYS = {
   REUNIONES: 'anta_obra_reuniones',
   INFORMES: 'anta_obra_informes',
   NOTAS: 'anta_obra_notas',
+  DELETED_IDS: 'anta_obra_deleted_ids',
   SESSION: 'anta_obra_session'
 };
 
 class Database {
   constructor() {
     this.init();
+  }
+
+  getDeletedIds() {
+    return this.getCollection(STORAGE_KEYS.DELETED_IDS, {
+      obras: [],
+      agentes: [],
+      actas: [],
+      reuniones: [],
+      informes: [],
+      notas: []
+    });
+  }
+
+  markDeleted(type, id) {
+    if (!type || !id) return;
+    const deleted = this.getDeletedIds();
+    if (!deleted[type]) deleted[type] = [];
+    const strId = String(id);
+    if (!deleted[type].includes(strId)) {
+      deleted[type].push(strId);
+      this.setCollection(STORAGE_KEYS.DELETED_IDS, deleted);
+    }
+  }
+
+  isDeleted(type, id) {
+    if (!type || !id) return false;
+    const deleted = this.getDeletedIds();
+    if (!deleted[type]) return false;
+    return deleted[type].includes(String(id));
+  }
+
+  unmarkDeleted(type, id) {
+    if (!type || !id) return;
+    const deleted = this.getDeletedIds();
+    if (!deleted[type]) return;
+    deleted[type] = deleted[type].filter(item => String(item) !== String(id));
+    this.setCollection(STORAGE_KEYS.DELETED_IDS, deleted);
   }
 
   init() {
@@ -62,26 +100,63 @@ class Database {
       const data = await fetchAllFromSupabase();
       if (!data) return;
       let updated = false;
-      if (Array.isArray(data.agentes) && data.agentes.length > 0) {
-        this.setCollection(STORAGE_KEYS.AGENTES, data.agentes);
+
+      if (Array.isArray(data.agentes)) {
+        const validAgentes = data.agentes.filter(a => !this.isDeleted('agentes', a.id));
+        data.agentes.forEach(a => {
+          if (this.isDeleted('agentes', a.id)) {
+            deleteAgenteFromSupabase(a.id);
+          }
+        });
+        if (validAgentes.length > 0 || (data.agentes.length === 0 && this.getAgentes().length === 0)) {
+          this.setCollection(STORAGE_KEYS.AGENTES, validAgentes);
+          updated = true;
+        }
+      }
+
+      if (Array.isArray(data.obras)) {
+        const validObras = data.obras.filter(o => !this.isDeleted('obras', o.id));
+        data.obras.forEach(o => {
+          if (this.isDeleted('obras', o.id)) {
+            deleteObraFromSupabase(o.id);
+          }
+        });
+        if (validObras.length > 0) {
+          this.setCollection(STORAGE_KEYS.OBRAS, validObras);
+          if (this.isDeleted('obras', this.getActiveObraId())) {
+            this.setActiveObraId(validObras[0].id);
+          }
+          updated = true;
+        }
+      }
+
+      if (Array.isArray(data.actas)) {
+        const validActas = data.actas.filter(a => !this.isDeleted('actas', a.id));
+        data.actas.forEach(a => {
+          if (this.isDeleted('actas', a.id)) deleteActaFromSupabase(a.id);
+        });
+        this.setCollection(STORAGE_KEYS.ACTAS, validActas);
         updated = true;
       }
-      if (Array.isArray(data.obras) && data.obras.length > 0) {
-        this.setCollection(STORAGE_KEYS.OBRAS, data.obras);
+
+      if (Array.isArray(data.informes)) {
+        const validInformes = data.informes.filter(i => !this.isDeleted('informes', i.id));
+        data.informes.forEach(i => {
+          if (this.isDeleted('informes', i.id)) deleteInformeFromSupabase(i.id);
+        });
+        this.setCollection(STORAGE_KEYS.INFORMES, validInformes);
         updated = true;
       }
-      if (Array.isArray(data.actas) && data.actas.length > 0) {
-        this.setCollection(STORAGE_KEYS.ACTAS, data.actas);
+
+      if (Array.isArray(data.notas)) {
+        const validNotas = data.notas.filter(n => !this.isDeleted('notas', n.id));
+        data.notas.forEach(n => {
+          if (this.isDeleted('notas', n.id)) deleteNotaFromSupabase(n.id);
+        });
+        this.setCollection(STORAGE_KEYS.NOTAS, validNotas);
         updated = true;
       }
-      if (Array.isArray(data.informes) && data.informes.length > 0) {
-        this.setCollection(STORAGE_KEYS.INFORMES, data.informes);
-        updated = true;
-      }
-      if (Array.isArray(data.notas) && data.notas.length > 0) {
-        this.setCollection(STORAGE_KEYS.NOTAS, data.notas);
-        updated = true;
-      }
+
       if (Array.isArray(data.grupos) && data.grupos.length > 0) {
         const localGroups = this.getGroups();
         const mergedGroups = [...localGroups];
@@ -96,6 +171,7 @@ class Database {
         this.setCollection(STORAGE_KEYS.GROUPS, mergedGroups);
         updated = true;
       }
+
       if (Array.isArray(data.usuarios) && data.usuarios.length > 0) {
         const localUsers = this.getUsers();
         const mergedUsers = [...localUsers];
@@ -110,6 +186,7 @@ class Database {
         this.setCollection(STORAGE_KEYS.USERS, mergedUsers);
         updated = true;
       }
+
       if (updated && typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('anta:db-synced'));
       }
@@ -170,16 +247,6 @@ class Database {
         'ag-joaquin-ferrer': 'JF'
       };
 
-      // Incorporar automáticamente axentes novos definidos en INITIAL_AGENTES (evitando repetidos)
-      INITIAL_AGENTES.forEach(initAg => {
-        const exists = agentes.some(a => a.id === initAg.id || (a.email && initAg.email && a.email.toLowerCase().trim() === initAg.email.toLowerCase().trim()));
-        if (!exists) {
-          agentes.push(initAg);
-          agentesChanged = true;
-          syncAgenteToSupabase(initAg);
-        }
-      });
-
       agentes.forEach(a => {
         const seedAg = INITIAL_AGENTES.find(sa => sa.id === a.id);
         if (!a.colorFondo && seedAg?.colorFondo) {
@@ -201,19 +268,6 @@ class Database {
 
     if (!localStorage.getItem(STORAGE_KEYS.OBRAS)) {
       localStorage.setItem(STORAGE_KEYS.OBRAS, JSON.stringify(INITIAL_OBRAS));
-    } else {
-      const obras = this.getCollection(STORAGE_KEYS.OBRAS);
-      let obrasListChanged = false;
-      INITIAL_OBRAS.forEach(initO => {
-        if (!obras.some(o => o.id === initO.id)) {
-          obras.push(initO);
-          obrasListChanged = true;
-          syncObraToSupabase(initO);
-        }
-      });
-      if (obrasListChanged) {
-        this.setCollection(STORAGE_KEYS.OBRAS, obras);
-      }
     }
     if (!localStorage.getItem(STORAGE_KEYS.ACTIVE_OBRA)) {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_OBRA, 'obra-castillo-san-felipe');
@@ -443,6 +497,7 @@ class Database {
       };
       obras.unshift(saved);
     }
+    this.unmarkDeleted('obras', saved.id);
     this.setCollection(STORAGE_KEYS.OBRAS, obras);
 
     // If active obra or only obra, sync settings
@@ -458,27 +513,46 @@ class Database {
     if (obras.length <= 1) {
       throw new Error('Debe existir al menos un expediente de obra en el sistema.');
     }
-    const filtered = obras.filter(o => String(o.id) !== String(id));
+    const strId = String(id);
+    this.markDeleted('obras', strId);
+
+    const filtered = obras.filter(o => String(o.id) !== strId);
     this.setCollection(STORAGE_KEYS.OBRAS, filtered);
 
-    // Cascade delete related records
-    const actas = this.getActas().filter(a => String(a.obraId) !== String(id));
-    this.setCollection(STORAGE_KEYS.ACTAS, actas);
+    // Cascade delete related records & mark tombstones
+    const actas = this.getActas().filter(a => String(a.obraId) === strId);
+    actas.forEach(a => {
+      this.markDeleted('actas', a.id);
+      deleteActaFromSupabase(a.id);
+    });
+    this.setCollection(STORAGE_KEYS.ACTAS, this.getActas().filter(a => String(a.obraId) !== strId));
 
-    const reuniones = this.getReuniones().filter(r => String(r.obraId) !== String(id));
-    this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
+    const reuniones = this.getReuniones().filter(r => String(r.obraId) === strId);
+    reuniones.forEach(r => {
+      this.markDeleted('reuniones', r.id);
+      deleteActaFromSupabase(r.id);
+    });
+    this.setCollection(STORAGE_KEYS.REUNIONES, this.getReuniones().filter(r => String(r.obraId) !== strId));
 
-    const informes = this.getInformes().filter(i => String(i.obraId) !== String(id));
-    this.setCollection(STORAGE_KEYS.INFORMES, informes);
+    const informes = this.getInformes().filter(i => String(i.obraId) === strId);
+    informes.forEach(i => {
+      this.markDeleted('informes', i.id);
+      deleteInformeFromSupabase(i.id);
+    });
+    this.setCollection(STORAGE_KEYS.INFORMES, this.getInformes().filter(i => String(i.obraId) !== strId));
 
-    const notas = this.getNotas().filter(n => String(n.obraId) !== String(id));
-    this.setCollection(STORAGE_KEYS.NOTAS, notas);
+    const notas = this.getNotas().filter(n => String(n.obraId) === strId);
+    notas.forEach(n => {
+      this.markDeleted('notas', n.id);
+      deleteNotaFromSupabase(n.id);
+    });
+    this.setCollection(STORAGE_KEYS.NOTAS, this.getNotas().filter(n => String(n.obraId) !== strId));
 
     // If active was deleted, set another active
-    if (String(this.getActiveObraId()) === String(id)) {
+    if (String(this.getActiveObraId()) === strId) {
       this.setActiveObraId(filtered[0].id);
     }
-    deleteObraFromSupabase(id);
+    deleteObraFromSupabase(strId);
     return true;
   }
 
@@ -514,6 +588,7 @@ class Database {
       };
       agentes.push(saved);
     }
+    this.unmarkDeleted('agentes', saved.id);
     this.setCollection(STORAGE_KEYS.AGENTES, agentes);
 
     // Also update cached details in assigned obras if any
@@ -542,8 +617,11 @@ class Database {
   }
 
   deleteAgente(id) {
+    const strId = String(id);
+    this.markDeleted('agentes', strId);
+
     let agentes = this.getAgentes();
-    agentes = agentes.filter(a => String(a.id) !== String(id));
+    agentes = agentes.filter(a => String(a.id) !== strId);
     this.setCollection(STORAGE_KEYS.AGENTES, agentes);
 
     // Also remove from any obras where assigned
@@ -552,7 +630,7 @@ class Database {
     obras.forEach(o => {
       if (o.agentes && Array.isArray(o.agentes)) {
         const origLen = o.agentes.length;
-        o.agentes = o.agentes.filter(oa => String(oa.agenteId) !== String(id));
+        o.agentes = o.agentes.filter(oa => String(oa.agenteId) !== strId);
         if (o.agentes.length !== origLen) obrasUpdated = true;
       }
     });
@@ -560,7 +638,7 @@ class Database {
       this.setCollection(STORAGE_KEYS.OBRAS, obras);
     }
 
-    deleteAgenteFromSupabase(id);
+    deleteAgenteFromSupabase(strId);
     return true;
   }
 
@@ -614,20 +692,24 @@ class Database {
       };
       actas.unshift(saved);
     }
+    this.unmarkDeleted('actas', saved.id);
     this.setCollection(STORAGE_KEYS.ACTAS, actas);
     syncActaToSupabase(saved);
     return saved;
   }
 
   deleteActa(id) {
+    const strId = String(id);
+    this.markDeleted('actas', strId);
     let actas = this.getCollection(STORAGE_KEYS.ACTAS);
-    actas = actas.filter(a => String(a.id) !== String(id));
+    actas = actas.filter(a => String(a.id) !== strId);
     this.setCollection(STORAGE_KEYS.ACTAS, actas);
-    deleteActaFromSupabase(id);
+    deleteActaFromSupabase(strId);
     return true;
   }
 
   deleteMultipleActas(ids) {
+    ids.forEach(id => this.markDeleted('actas', id));
     const idSet = new Set(ids.map(String));
     let actas = this.getCollection(STORAGE_KEYS.ACTAS);
     actas = actas.filter(a => !idSet.has(String(a.id)));
@@ -687,20 +769,24 @@ class Database {
       };
       reuniones.unshift(saved);
     }
+    this.unmarkDeleted('reuniones', saved.id);
     this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
     syncActaToSupabase(saved);
     return saved;
   }
 
   deleteReunion(id) {
+    const strId = String(id);
+    this.markDeleted('reuniones', strId);
     let reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
-    reuniones = reuniones.filter(r => String(r.id) !== String(id));
+    reuniones = reuniones.filter(r => String(r.id) !== strId);
     this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
-    deleteActaFromSupabase(id);
+    deleteActaFromSupabase(strId);
     return true;
   }
 
   deleteMultipleReuniones(ids) {
+    ids.forEach(id => this.markDeleted('reuniones', id));
     const idSet = new Set(ids.map(String));
     let reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
     reuniones = reuniones.filter(r => !idSet.has(String(r.id)));
@@ -760,20 +846,24 @@ class Database {
       };
       informes.unshift(saved);
     }
+    this.unmarkDeleted('informes', saved.id);
     this.setCollection(STORAGE_KEYS.INFORMES, informes);
     syncInformeToSupabase(saved);
     return saved;
   }
 
   deleteInforme(id) {
+    const strId = String(id);
+    this.markDeleted('informes', strId);
     let informes = this.getCollection(STORAGE_KEYS.INFORMES);
-    informes = informes.filter(i => String(i.id) !== String(id));
+    informes = informes.filter(i => String(i.id) !== strId);
     this.setCollection(STORAGE_KEYS.INFORMES, informes);
-    deleteInformeFromSupabase(id);
+    deleteInformeFromSupabase(strId);
     return true;
   }
 
   deleteMultipleInformes(ids) {
+    ids.forEach(id => this.markDeleted('informes', id));
     const idSet = new Set(ids.map(String));
     let informes = this.getCollection(STORAGE_KEYS.INFORMES);
     informes = informes.filter(i => !idSet.has(String(i.id)));
@@ -834,16 +924,19 @@ class Database {
       };
       notas.unshift(saved);
     }
+    this.unmarkDeleted('notas', saved.id);
     this.setCollection(STORAGE_KEYS.NOTAS, notas);
     syncNotaToSupabase(saved);
     return saved;
   }
 
   deleteNota(id) {
+    const strId = String(id);
+    this.markDeleted('notas', strId);
     let notas = this.getNotas();
-    notas = notas.filter(n => String(n.id) !== String(id));
+    notas = notas.filter(n => String(n.id) !== strId);
     this.setCollection(STORAGE_KEYS.NOTAS, notas);
-    deleteNotaFromSupabase(id);
+    deleteNotaFromSupabase(strId);
     return true;
   }
 

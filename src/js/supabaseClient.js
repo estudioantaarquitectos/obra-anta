@@ -184,7 +184,8 @@ export async function syncAgenteToSupabase(agente) {
 export async function deleteAgenteFromSupabase(id) {
   if (!isSupabaseConfigured || !supabase || !id) return;
   try {
-    await supabase.from('agentes').delete().eq('id', id);
+    const { error } = await supabase.from('agentes').delete().eq('id', id);
+    if (error) console.error('Error eliminando agente de Supabase:', error);
   } catch (e) {
     console.error('Error eliminando agente de Supabase:', e);
   }
@@ -221,7 +222,14 @@ export async function syncObraToSupabase(obra) {
 export async function deleteObraFromSupabase(id) {
   if (!isSupabaseConfigured || !supabase || !id) return;
   try {
-    await supabase.from('obras').delete().eq('id', id);
+    // Eliminar previamente registros dependientes para no violar restricciones de clave foránea
+    await Promise.allSettled([
+      supabase.from('actas').delete().eq('obra_id', id),
+      supabase.from('informes').delete().eq('obra_id', id),
+      supabase.from('notas').delete().eq('obra_id', id)
+    ]);
+    const { error } = await supabase.from('obras').delete().eq('id', id);
+    if (error) console.error('Error eliminando obra de Supabase:', error);
   } catch (e) {
     console.error('Error eliminando obra de Supabase:', e);
   }
