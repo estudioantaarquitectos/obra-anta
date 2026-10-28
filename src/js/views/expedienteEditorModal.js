@@ -10,10 +10,12 @@ import { getRolLabel } from './agentes.js';
 import { formatCurrency, parseCurrency } from '../utils/currency.js';
 
 export const AGENTE_ROLES = [
+  { id: 'Propiedade', label: 'Propiedad / Promotor' },
   { id: 'DO', label: 'Dirección de Obra (DO)' },
   { id: 'DEM', label: 'Dirección de Ejecución Material (DEM)' },
   { id: 'CSS', label: 'Coordinador de Seguridad y Salud (CSS)' },
   { id: 'JO', label: 'Jefe de Obra (JO)' },
+  { id: 'ControlCalidade', label: 'Control de Calidad / Ensayos' },
   { id: 'Municipal', label: 'Supervisión Municipal / Concello' },
   { id: 'Arqueoloxía', label: 'Arqueología / Patrimonio Cultural' },
   { id: 'Especialista', label: 'Asistencia Técnica / Especialista' },

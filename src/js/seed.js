@@ -170,6 +170,102 @@ export const INITIAL_AGENTES = [
     colorFondo: '#ffffff',
     iniciales: 'JF',
     notas: 'Seguimiento y control de afecciones arqueológicas y patrimoniales'
+  },
+  {
+    id: 'ag-jose-roberto-botana',
+    nombre: 'Jose Roberto Botana Corral',
+    cargoHabitual: 'Responsable Técnico da Propiedade',
+    entidad: 'VIPUGAL',
+    colegiado: 'Sociedade de Vivenda Pública de Galicia',
+    telefono: '881 95 85 69',
+    email: 'jose.roberto.botana.corral@vivendapublica.gal',
+    colorFondo: '#0ea5e9',
+    iniciales: 'JB',
+    notas: 'Responsable técnico da propiedade - Sociedade de Vivenda Pública de Galicia (VIPUGAL)'
+  },
+  {
+    id: 'ag-fernando-lopez',
+    nombre: 'Fernando López Bellón',
+    cargoHabitual: 'Coordinador Técnico da Propiedade',
+    entidad: 'VIPUGAL',
+    colegiado: 'Sociedade de Vivenda Pública de Galicia',
+    telefono: '981 54 19 53 - 609 12 30 14',
+    email: 'fernando.lopez.bellon@vivendapublica.gal',
+    colorFondo: '#0284c7',
+    iniciales: 'FL',
+    notas: 'Coordinador técnico da propiedade - Sociedade de Vivenda Pública de Galicia (VIPUGAL)'
+  },
+  {
+    id: 'ag-baltasar-otero',
+    nombre: 'Baltasar Otero Gómez',
+    cargoHabitual: 'Arquitecto Director de Obra (DO)',
+    entidad: 'UTE ANTA-BOG_Berton13',
+    colegiado: 'COAG',
+    telefono: '619 31 77 16',
+    email: 'baltaotero@gmail.com',
+    colorFondo: '#1e3a8a',
+    iniciales: 'BO',
+    notas: 'Arquitecto Director de Obra - UTE ANTA-BOG_Berton13'
+  },
+  {
+    id: 'ag-rafael-vazquez',
+    nombre: 'Rafael Vázquez Barros',
+    cargoHabitual: 'Director de Execución Material (DEM)',
+    entidad: 'Rafael Vázquez Barros',
+    colegiado: 'COATAC',
+    telefono: '661 31 10 77',
+    email: 'rafaelvazquez@coatac.es',
+    colorFondo: '#38bdf8',
+    iniciales: 'RB',
+    notas: 'Arquitecto Técnico / Aparellador - Director de Execución Material (DEM)'
+  },
+  {
+    id: 'ag-raul-perez',
+    nombre: 'Raúl Pérez Garrote',
+    cargoHabitual: 'Coordinador de Seguridade e Saúde (CSS)',
+    entidad: 'INCOPE CONSULTORES S.L.',
+    colegiado: 'Técnico Sup. PRL',
+    telefono: '683 50 10 75',
+    email: 'raulpg@incope.org',
+    colorFondo: '#e0f2fe',
+    iniciales: 'RP',
+    notas: 'Coordinador de Seguridade e Saúde durante a execución da obra - INCOPE CONSULTORES S.L.'
+  },
+  {
+    id: 'ag-gabriel-llorente',
+    nombre: 'Gabriel Llorente Coello',
+    cargoHabitual: 'Jefe de Grupo de Obra',
+    entidad: 'ACCIONA CONSTRUCCION S.L.',
+    colegiado: '',
+    telefono: '672 06 75 78',
+    email: 'gabriel.llorente.coello@acciona.com',
+    colorFondo: '#ffffff',
+    iniciales: 'GL',
+    notas: 'Jefe de grupo (coordina varias obras) - ACCIONA CONSTRUCCION S.L.'
+  },
+  {
+    id: 'ag-david-hermida',
+    nombre: 'David Hermida Carballido',
+    cargoHabitual: 'Jefe de Obra (JO)',
+    entidad: 'ACCIONA CONSTRUCCION S.L.',
+    colegiado: '',
+    telefono: '667 58 23 36',
+    email: 'dahermida@acciona.com',
+    colorFondo: '#ffffff',
+    iniciales: 'DH',
+    notas: 'Jefe de Obra principal - ACCIONA CONSTRUCCION S.L.'
+  },
+  {
+    id: 'ag-mar-rodriguez',
+    nombre: 'Mar Rodríguez Fontán',
+    cargoHabitual: 'Responsable de Control de Calidade e Ensaios',
+    entidad: 'CYE CONTROL Y ESTUDIOS S.L.',
+    colegiado: 'Laboratorio de Ensaios Homologado',
+    telefono: '661 46 14 74',
+    email: 'mar.rodriguez@controlyestudios.com',
+    colorFondo: '#ffffff',
+    iniciales: 'MR',
+    notas: 'Control de Calidade e Ensaios de Materiais - CYE CONTROL Y ESTUDIOS S.L.'
   }
 ];
 
@@ -258,6 +354,137 @@ export const INITIAL_OBRAS = [
     plazoMeses: 12,
     estado: 'en_ejecucion',
     descripcion: 'Actuaciones de rehabilitación, consolidación de fábricas de cantería, reposición de carpinterías exteriores de iroko y puesta en valor del Castillo de San Felipe.'
+  },
+  {
+    id: 'obra-berton-p13',
+    expediente: 'BERTÓN P.13',
+    titulo: 'Construcción de Vivendas Protexidas Bertón Parcela 13',
+    situacion: 'O Bertón, Parcela 13, 15404 Ferrol',
+    promotor: 'Sociedade de Vivenda Pública de Galicia (VIPUGAL)',
+    contratista: 'ACCIONA CONSTRUCCION S.L.',
+    jefeObra: 'David Hermida Carballido',
+    direccionObra: 'UTE ANTA-BOG_Berton13 (Rosa Vilas, Sergio Beceiro e Baltasar Otero)',
+    direccionEjecucion: 'Rafael Vázquez Barros (DEM)',
+    coordinadorCSS: 'Raúl Pérez Garrote (INCOPE CONSULTORES S.L.)',
+    presupuestoAdjudicacion: '0,00 €',
+    presupuesto: 0,
+    financiacion: 'Sociedade de Vivenda Pública de Galicia (VIPUGAL) - Xunta de Galicia',
+    fechaInicio: '2025-03-01',
+    plazoMeses: 18,
+    estado: 'en_ejecucion',
+    descripcion: 'Edificación de vivendas de promoción pública con garaxes e rochos na Parcela 13 do polígono residencial do Bertón en Ferrol.',
+    agentes: [
+      {
+        agenteId: 'ag-rosa-vilas',
+        rol: 'DO',
+        nombre: 'Rosa Vilas Romalde',
+        cargo: 'Arquitecta Directora de Obra (DO)',
+        entidad: 'UTE ANTA-BOG_Berton13',
+        email: 'anta@coag.es',
+        telefono: '606 61 34 46',
+        iniciales: 'RV',
+        colorFondo: '#1e3a8a'
+      },
+      {
+        agenteId: 'ag-sergio-beceiro',
+        rol: 'DO',
+        nombre: 'Sergio Beceiro Lodeiro',
+        cargo: 'Arquitecto Director de Obra (DO)',
+        entidad: 'UTE ANTA-BOG_Berton13',
+        email: 'anta@coag.es',
+        telefono: '606 61 34 46',
+        iniciales: 'SB',
+        colorFondo: '#1e3a8a'
+      },
+      {
+        agenteId: 'ag-baltasar-otero',
+        rol: 'DO',
+        nombre: 'Baltasar Otero Gómez',
+        cargo: 'Arquitecto Director de Obra (DO)',
+        entidad: 'UTE ANTA-BOG_Berton13',
+        email: 'baltaotero@gmail.com',
+        telefono: '619 31 77 16',
+        iniciales: 'BO',
+        colorFondo: '#1e3a8a'
+      },
+      {
+        agenteId: 'ag-rafael-vazquez',
+        rol: 'DEM',
+        nombre: 'Rafael Vázquez Barros',
+        cargo: 'Director de Execución Material (DEM)',
+        entidad: 'Rafael Vázquez Barros',
+        email: 'rafaelvazquez@coatac.es',
+        telefono: '661 31 10 77',
+        iniciales: 'RB',
+        colorFondo: '#38bdf8'
+      },
+      {
+        agenteId: 'ag-raul-perez',
+        rol: 'CSS',
+        nombre: 'Raúl Pérez Garrote',
+        cargo: 'Coordinador de Seguridade e Saúde (CSS)',
+        entidad: 'INCOPE CONSULTORES S.L.',
+        email: 'raulpg@incope.org',
+        telefono: '683 50 10 75',
+        iniciales: 'RP',
+        colorFondo: '#e0f2fe'
+      },
+      {
+        agenteId: 'ag-gabriel-llorente',
+        rol: 'JO',
+        nombre: 'Gabriel Llorente Coello',
+        cargo: 'Jefe de Grupo de Obra',
+        entidad: 'ACCIONA CONSTRUCCION S.L.',
+        email: 'gabriel.llorente.coello@acciona.com',
+        telefono: '672 06 75 78',
+        iniciales: 'GL',
+        colorFondo: '#ffffff'
+      },
+      {
+        agenteId: 'ag-david-hermida',
+        rol: 'JO',
+        nombre: 'David Hermida Carballido',
+        cargo: 'Jefe de Obra (JO)',
+        entidad: 'ACCIONA CONSTRUCCION S.L.',
+        email: 'dahermida@acciona.com',
+        telefono: '667 58 23 36',
+        iniciales: 'DH',
+        colorFondo: '#ffffff'
+      },
+      {
+        agenteId: 'ag-jose-roberto-botana',
+        rol: 'Propiedade',
+        nombre: 'Jose Roberto Botana Corral',
+        cargo: 'Responsable Técnico da Propiedade',
+        entidad: 'VIPUGAL',
+        email: 'jose.roberto.botana.corral@vivendapublica.gal',
+        telefono: '881 95 85 69',
+        iniciales: 'JB',
+        colorFondo: '#0ea5e9'
+      },
+      {
+        agenteId: 'ag-fernando-lopez',
+        rol: 'Propiedade',
+        nombre: 'Fernando López Bellón',
+        cargo: 'Coordinador Técnico da Propiedade',
+        entidad: 'VIPUGAL',
+        email: 'fernando.lopez.bellon@vivendapublica.gal',
+        telefono: '981 54 19 53 - 609 12 30 14',
+        iniciales: 'FL',
+        colorFondo: '#0284c7'
+      },
+      {
+        agenteId: 'ag-mar-rodriguez',
+        rol: 'ControlCalidade',
+        nombre: 'Mar Rodríguez Fontán',
+        cargo: 'Responsable de Control de Calidade e Ensaios',
+        entidad: 'CYE CONTROL Y ESTUDIOS S.L.',
+        email: 'mar.rodriguez@controlyestudios.com',
+        telefono: '661 46 14 74',
+        iniciales: 'MR',
+        colorFondo: '#ffffff'
+      }
+    ]
   }
 ];
 

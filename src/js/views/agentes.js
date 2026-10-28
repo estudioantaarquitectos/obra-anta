@@ -549,6 +549,8 @@ export function getRolLabel(rolKey) {
     'DEM': 'Dirección de Execución Material (DEM)',
     'CSS': 'Coordinador de Seguridade e Saúde (CSS)',
     'JO': 'Xefe de Obra (JO)',
+    'Propiedade': 'Propiedade / Promotor',
+    'ControlCalidade': 'Control de Calidade e Ensaios',
     'Municipal': 'Supervisión Municipal / Concello',
     'Arqueoloxía': 'Arqueoloxía / Patrimonio',
     'Especialista': 'Asistencia Técnica / Especialista',

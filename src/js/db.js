@@ -169,6 +169,17 @@ class Database {
         'ag-maria-jose-gonzalez': 'MG',
         'ag-joaquin-ferrer': 'JF'
       };
+
+      // Incorporar automáticamente axentes novos definidos en INITIAL_AGENTES (evitando repetidos)
+      INITIAL_AGENTES.forEach(initAg => {
+        const exists = agentes.some(a => a.id === initAg.id || (a.email && initAg.email && a.email.toLowerCase().trim() === initAg.email.toLowerCase().trim()));
+        if (!exists) {
+          agentes.push(initAg);
+          agentesChanged = true;
+          syncAgenteToSupabase(initAg);
+        }
+      });
+
       agentes.forEach(a => {
         const seedAg = INITIAL_AGENTES.find(sa => sa.id === a.id);
         if (!a.colorFondo && seedAg?.colorFondo) {
@@ -190,6 +201,19 @@ class Database {
 
     if (!localStorage.getItem(STORAGE_KEYS.OBRAS)) {
       localStorage.setItem(STORAGE_KEYS.OBRAS, JSON.stringify(INITIAL_OBRAS));
+    } else {
+      const obras = this.getCollection(STORAGE_KEYS.OBRAS);
+      let obrasListChanged = false;
+      INITIAL_OBRAS.forEach(initO => {
+        if (!obras.some(o => o.id === initO.id)) {
+          obras.push(initO);
+          obrasListChanged = true;
+          syncObraToSupabase(initO);
+        }
+      });
+      if (obrasListChanged) {
+        this.setCollection(STORAGE_KEYS.OBRAS, obras);
+      }
     }
     if (!localStorage.getItem(STORAGE_KEYS.ACTIVE_OBRA)) {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_OBRA, 'obra-castillo-san-felipe');
