@@ -1350,3 +1350,17 @@ Quiero que esta sea una cifra también en moneda de euro, con dos céntimos
 
 ---
 
+## Conversación #45
+
+### 👤 Usuario:
+
+Varios cambios:
+- Siguen apareciendo los subtítulos en la vista general de Expedientes de Obra. ¿Se habrá sincronizado correctamente con Github/Vercel?
+- QUiero que Directorio de agentes y copias de seguridad sea un parámetro para configurar su acceso a grupos de terminados.
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
