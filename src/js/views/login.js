@@ -1,38 +1,36 @@
 /* ==========================================================================
    ANTA OBRA - Login View
-   Minimalist, clear, elegant authentication with default Admin credentials.
+   Clean, architectural, elegant authentication with official ANTA branding.
    ========================================================================== */
 
 import { auth } from '../auth.js';
 import { db } from '../db.js';
 import { showToast } from '../modal.js';
+import logoImg from '../../../LOGO_200px.png';
 
 export function renderLogin(container, router) {
-  const users = db.getUsers();
-
   container.innerHTML = `
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 1.5rem;">
-      <div class="card" style="width: 100%; max-width: 440px; box-shadow: var(--shadow-xl); border: 1px solid var(--border-light); overflow: hidden;">
+    <div style="min-height: 100vh; width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 25%, #ffffff 0%, #f1f5f9 60%, #e2e8f0 100%); padding: 1.5rem;">
+      <div class="card" style="width: 100%; max-width: 440px; background: #ffffff; border-radius: 16px; box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.1), 0 0 1px 1px rgba(0, 0, 0, 0.04); border: 1px solid #e2e8f0; overflow: hidden; margin: auto;">
         
-        <!-- Header Banner -->
-        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 2.25rem 2rem 2rem; color: white; text-align: center;">
-          <div style="width: 52px; height: 52px; background: rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; backdrop-filter: blur(4px);">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
+        <!-- Header Branding (Captura 2) -->
+        <div style="padding: 2.75rem 2rem 1.75rem; display: flex; flex-direction: column; align-items: center; text-align: center; border-bottom: 1px solid #f1f5f9; background: #ffffff;">
+          <div style="margin-bottom: 0.75rem;">
+            <img src="${logoImg}" alt="ANTA Arquitectos" style="width: 215px; max-width: 100%; height: auto; display: block;" />
           </div>
-          <h1 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.35rem;">ANTA OBRA</h1>
-          <p style="font-size: 0.85rem; opacity: 0.9; max-width: 300px; margin: 0 auto; line-height: 1.4;">
-            Gestión de Actas de Obra, Informes Mensuales y Dirección Facultativa
+          <div style="background-color: #1e293b; color: #ffffff; border-radius: 6px; text-align: center; padding: 5px 22px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); line-height: 1.2; user-select: none;">
+            SEGUIMIENTO DE OBRA
+          </div>
+          <p style="font-size: 0.83rem; color: #64748b; margin-top: 1.1rem; margin-bottom: 0; line-height: 1.45;">
+            Plataforma de Dirección de Obra, Actas e Informes
           </p>
         </div>
 
         <!-- Login Form -->
         <div class="card-body" style="padding: 2rem;">
           <form id="login-form">
-            <div class="form-group">
-              <label class="form-label required" for="login-username">Usuario</label>
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label required" for="login-username" style="font-weight: 600; font-size: 0.875rem; color: #334155; margin-bottom: 0.4rem; display: block;">Usuario</label>
               <div style="position: relative;">
                 <input 
                   type="text" 
@@ -41,16 +39,16 @@ export function renderLogin(container, router) {
                   placeholder="Nome de usuario" 
                   required 
                   autocomplete="username"
-                  style="padding-left: 2.5rem;"
+                  style="padding-left: 2.6rem; height: 44px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.92rem; width: 100%;"
                 />
-                <div style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">
+                <div style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; display: flex; align-items: center;">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </div>
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label required" for="login-password">Contrasinal</label>
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label class="form-label required" for="login-password" style="font-weight: 600; font-size: 0.875rem; color: #334155; margin-bottom: 0.4rem; display: block;">Contrasinal</label>
               <div style="position: relative;">
                 <input 
                   type="password" 
@@ -59,30 +57,29 @@ export function renderLogin(container, router) {
                   placeholder="••••••••" 
                   required 
                   autocomplete="current-password"
-                  style="padding-left: 2.5rem; padding-right: 2.5rem;"
+                  style="padding-left: 2.6rem; padding-right: 2.6rem; height: 44px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.92rem; width: 100%;"
                 />
-                <div style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">
+                <div style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; display: flex; align-items: center;">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
-                <button type="button" id="toggle-pwd" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); padding: 0.2rem;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <button type="button" id="toggle-pwd" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: #94a3b8; padding: 0.3rem; border: none; background: transparent; cursor: pointer; display: flex; align-items: center;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 </button>
               </div>
             </div>
 
-            <div id="login-error" style="display: none; background: var(--color-danger-bg); border: 1px solid var(--color-danger-border); color: var(--color-danger); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.82rem; margin-bottom: 1.25rem;">
+            <div id="login-error" style="display: none; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.84rem; margin-bottom: 1.25rem;">
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 0.95rem; font-weight: 600;">
-              Iniciar Sesión
+            <button type="submit" class="btn btn-primary" style="width: 100%; height: 46px; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.6rem; border-radius: 8px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); border: none; color: white;">
+              <span>Iniciar Sesión</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </button>
           </form>
-
         </div>
 
-        <div class="card-footer" style="justify-content: center; font-size: 0.78rem; color: var(--text-muted); background: #f8fafc;">
-          ANTA OBRA • Sistema de Dirección de Obra y Control de Calidad
+        <div class="card-footer" style="justify-content: center; font-size: 0.78rem; color: #94a3b8; background: #f8fafc; border-top: 1px solid #f1f5f9; padding: 1rem 1.5rem; text-align: center;">
+          ANTA OBRA • Sistema de Dirección de Obra e Control de Calidade
         </div>
 
       </div>

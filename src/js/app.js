@@ -153,7 +153,7 @@ class AppRouter {
 
   render() {
     if (this.currentRoute === 'login') {
-      this.appRoot.innerHTML = '<div id="view-container"></div>';
+      this.appRoot.innerHTML = '<div id="view-container" style="flex: 1; width: 100%; min-height: 100vh; display: flex; flex-direction: column;"></div>';
       renderLogin(document.getElementById('view-container'), this);
       return;
     }

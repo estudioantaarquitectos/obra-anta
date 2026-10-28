@@ -1372,13 +1372,29 @@ Me gustaría crear una nuevo tipo de documento, además de actas semanales, info
 Seguirá la plantilla de actas semanales, pero arriba a la derecha pondrá Reunión.
 Se podrá editar como las actas semanales, pero tendrá unos apartados y secciones definidas:
 1- Datos xerais da reunión:
-Proxecto:
-Emprazamento:
-Expediente nº:
-Contratista:
-Dirección de obra:
-Dirección de execución:
-Coordinador CSS:
+Proxecto:
+
+
+
+
+Emprazamento:
+
+
+Expediente nº:
+
+
+Contratista:
+
+
+
+Dirección de obra:
+
+
+Dirección de execución:
+
+
+Coordinador CSS:
+
 2- Datos xerais da reunión:
 Data:
 Hora:
@@ -1400,6 +1416,878 @@ En capturas 1 y 2
 - recuadro azul: nme gustaría uniformidad en los botones entre los distintos tipos de documentos.
 
 Notas: Me gustaría que también se viesen en filas, y con posibilidad de imprimirlas desde su edición
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #47
+
+### 👤 Usuario:
+
+Me gustaría crear una nuevo tipo de documento, además de actas semanales, informes mensuales y notas... Se llamará Reuniones.
+Seguirá la plantilla de actas semanales, pero arriba a la derecha pondrá Reunión.
+Se podrá editar como las actas semanales, pero tendrá unos apartados y secciones definidas:
+1- Datos xerais da reunión:
+Proxecto:
+
+
+
+
+Emprazamento:
+
+
+Expediente nº:
+
+
+Contratista:
+
+
+
+Dirección de obra:
+
+
+Dirección de execución:
+
+
+Coordinador CSS:
+
+2- Datos xerais da reunión:
+Data:
+Hora:
+Tipo de reunión: virtual/presencial
+Lugar: 
+3- Asistentes (igual que actas semanales) (marcar quién firma)
+4- Cuestións tratadas na reunión 
+4.1- (Aquí se podrán crear tantas secciones como sea necesario)
+...
+Se podrán añadir nuevos apartados  y secciones.
+
+5- Firmas
+6- Anexos (al igual que en los otros documentos se generará una separata y se adjuntarán los PDFS):
+
+Por otro lado. 
+En captura 1:
+- (recuadro en rojo): los títulos aparecen desplazados de las filas de abajo.
+En capturas 1 y 2
+- recuadro azul: nme gustaría uniformidad en los botones entre los distintos tipos de documentos.
+
+Notas: Me gustaría que también se viesen en filas, y con posibilidad de imprimirlas desde su edición
+
+### 🤖 Antigravity:
+
+Se han implementado y desplegado con éxito todas las solicitudes planteadas:
+
+---
+
+### 1. Nuevo Tipo de Documento: **Reuniones** (`Reunións`)
+- **Plantilla Oficial y Paridad 1:1 DOCX = PDF**:
+  - Comparte la plantilla oficial de Word ([plantilla_acta.docx](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/plantilla_acta.docx)), sustituyendo el rótulo superior derecho por **`REUNIÓN`**.
+  - Gestionado por el backend unificado [src/py/generar_acta.py](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/py/generar_acta.py) asegurando paridad absoluta en Word y PDF con separatas y anexos concatenados.
+- **Estructura oficial y editable en 6 apartados**:
+  1. **Datos xerais da obra**: Proxecto, Emprazamento, Expediente nº, Contratista, Dirección de obra, Dirección de execución, Coordinador CSS, Xefe de obra.
+  2. **Datos xerais da reunión**: Data, Hora, Tipo de reunión (*Presencial*, *Virtual / Remota*, *Híbrida*) e Lugar / Canle.
+  3. **Asistentes**: Listado completo de asistentes con indicación explícita de quién firma mediante casillas de verificación.
+  4. **Cuestións tratadas na reunión**: Estructura jerárquica con subapartados numerados (4.1, 4.2...), permitiendo añadir dinámicamente tantas secciones y apartados como sean precisos.
+  5. **Firmas**: Dilixencia y recuadros institucionales de firma para los intervinientes seleccionados.
+  6. **Anexos**: Separatas A4 de portadas oficiales intercaladas y concatenación automática de archivos PDF adjuntos.
+- **Integración completa en el sistema**:
+  - Pestaña **Reunións** en [src/js/views/expedienteView.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/expedienteView.js) y acceso en la barra lateral de [src/js/app.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/app.js) con contador dinámico.
+  - Editor especializado ([src/js/views/actaEditor.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaEditor.js)) y vista oficial imprimible ([src/js/views/actaPrint.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaPrint.js)).
+
+---
+
+### 2. Corrección de Alineación de Cabeceras (Captura 1, Recuadro Rojo)
+- Se ha unificado la cuadrícula CSS en [src/css/main.css](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/css/main.css) para `.actas-list-header` y `.acta-row-main`:
+  ```css
+  grid-template-columns: 140px 1fr 180px 105px 530px;
+  gap: 1rem;
+  padding: 0.65rem 1.25rem;
+  ```
+- Ahora los encabezados (`ACTA / DATA`, `ASISTENTES`, `ÚLTIMA EDICIÓN`, `ESTADO`, `ACCIÓNS`) quedan alineados con cada una de las columnas de datos de las filas.
+
+---
+
+### 3. Uniformidad de Botones entre Documentos (Capturas 1 y 2, Recuadro Azul)
+- Tanto en **Actas Semanales**, **Reunións** como en **Informes Mensuales** se dispone del mismo conjunto estandarizado y ordenado de botones de acción:
+  1. `Ver / PDF` (Abre el visor para imprimir o generar PDF)
+  2. `DOCX` (Descarga directa del documento Word oficial)
+  3. `PDF` (Descarga directa del PDF oficial convertido)
+  4. `Editar` (Abre el editor completo del documento)
+  5. `Copiar` (Duplica el documento con el siguiente número correlativo)
+  6. `Eliminar` (Confirmación modal y borrado)
+  7. Botón desplegable (*chevron*) a la derecha para ver los detalles sin salir de la lista.
+
+---
+
+### 4. Notas de Bitácora: Vista en Filas e Impresión Oficial
+- **Vista en Filas**:
+  - En la pestaña *Notas*, se ha incorporado un selector para alternar entre vista en **Filas** (tabla con columnas `Data`, `Categoría`, `Urxencia`, `Título e Contido`, `Autor`, `Última Edición` y `Accións`) y **Tarxetas**.
+  - Cada fila cuenta con su botón `Imprimir`, `Editar`, `Copiar` y `Eliminar`.
+- **Impresión desde la Edición**:
+  - Al editar cualquier nota (o crear una nueva) en el modal, se ha añadido en el pie el botón **`Imprimir Nota`**.
+  - Este botón genera de forma inmediata un documento oficial con membrete corporativo Vipugal / ANTA OBRA ([src/js/utils/printNota.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/utils/printNota.js)) con los datos actualizados del formulario.
+
+---
+
+### Verificación y Despliegue
+1. **Compilación y Pruebas**: `npm run build` ejecutado con éxito sin errores.
+2. **Validación Visual en Navegador**: Se han verificado todos los flujos mediante subagente de navegación:
+   - Alineación de columnas de Actas y botonera uniforme.
+   - Pestaña de Reunións, editor con sus 6 apartados y previsualización con rótulo `REUNIÓN`.
+   - Visualización de Notas en filas e impresión tanto desde la fila como desde el modal de edición.
+3. **Control de Versiones y Producción**:
+   - Cambios sincronizados y subidos al repositorio GitHub (`main`).
+   - Despliegue completado en Vercel: [https://anta-obra.vercel.app](https://anta-obra.vercel.app)
+4. **Agente MEMO**: Registro de conversaciones actualizado en [Memo/memo.md](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/Memo/memo.md).
+
+---
+
+## Conversación #48
+
+### 👤 Usuario:
+
+Una cosa: Cuando navego por la web y le doy a "Volver" sale de la app.... en lugar de volver al apartado anterior dentro de la web.
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #49
+
+### 👤 Usuario:
+
+Me gustaría crear una nuevo tipo de documento, además de actas semanales, informes mensuales y notas... Se llamará Reuniones.
+Seguirá la plantilla de actas semanales, pero arriba a la derecha pondrá Reunión.
+Se podrá editar como las actas semanales, pero tendrá unos apartados y secciones definidas:
+1- Datos xerais da reunión:
+Proxecto:
+
+
+
+
+Emprazamento:
+
+
+Expediente nº:
+
+
+Contratista:
+
+
+
+Dirección de obra:
+
+
+Dirección de execución:
+
+
+Coordinador CSS:
+
+2- Datos xerais da reunión:
+Data:
+Hora:
+Tipo de reunión: virtual/presencial
+Lugar: 
+3- Asistentes (igual que actas semanales) (marcar quién firma)
+4- Cuestións tratadas na reunión 
+4.1- (Aquí se podrán crear tantas secciones como sea necesario)
+...
+Se podrán añadir nuevos apartados  y secciones.
+
+5- Firmas
+6- Anexos (al igual que en los otros documentos se generará una separata y se adjuntarán los PDFS):
+
+Por otro lado. 
+En captura 1:
+- (recuadro en rojo): los títulos aparecen desplazados de las filas de abajo.
+En capturas 1 y 2
+- recuadro azul: nme gustaría uniformidad en los botones entre los distintos tipos de documentos.
+
+Notas: Me gustaría que también se viesen en filas, y con posibilidad de imprimirlas desde su edición
+
+### 🤖 Antigravity:
+
+Se han implementado y desplegado con éxito todas las solicitudes planteadas:
+
+---
+
+### 1. Nuevo Tipo de Documento: **Reuniones** (`Reunións`)
+- **Plantilla Oficial y Paridad 1:1 DOCX = PDF**:
+  - Comparte la plantilla oficial de Word ([plantilla_acta.docx](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/plantilla_acta.docx)), sustituyendo el rótulo superior derecho por **`REUNIÓN`**.
+  - Gestionado por el backend unificado [src/py/generar_acta.py](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/py/generar_acta.py) asegurando paridad absoluta en Word y PDF con separatas y anexos concatenados.
+- **Estructura oficial y editable en 6 apartados**:
+  1. **Datos xerais da obra**: Proxecto, Emprazamento, Expediente nº, Contratista, Dirección de obra, Dirección de execución, Coordinador CSS, Xefe de obra.
+  2. **Datos xerais da reunión**: Data, Hora, Tipo de reunión (*Presencial*, *Virtual / Remota*, *Híbrida*) e Lugar / Canle.
+  3. **Asistentes**: Listado completo de asistentes con indicación explícita de quién firma mediante casillas de verificación.
+  4. **Cuestións tratadas na reunión**: Estructura jerárquica con subapartados numerados (4.1, 4.2...), permitiendo añadir dinámicamente tantas secciones y apartados como sean precisos.
+  5. **Firmas**: Dilixencia y recuadros institucionales de firma para los intervinientes seleccionados.
+  6. **Anexos**: Separatas A4 de portadas oficiales intercaladas y concatenación automática de archivos PDF adjuntos.
+- **Integración completa en el sistema**:
+  - Pestaña **Reunións** en [src/js/views/expedienteView.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/expedienteView.js) y acceso en la barra lateral de [src/js/app.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/app.js) con contador dinámico.
+  - Editor especializado ([src/js/views/actaEditor.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaEditor.js)) y vista oficial imprimible ([src/js/views/actaPrint.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaPrint.js)).
+
+---
+
+### 2. Corrección de Alineación de Cabeceras (Captura 1, Recuadro Rojo)
+- Se ha unificado la cuadrícula CSS en [src/css/main.css](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/css/main.css) para `.actas-list-header` y `.acta-row-main`:
+  ```css
+  grid-template-columns: 140px 1fr 180px 105px 530px;
+  gap: 1rem;
+  padding: 0.65rem 1.25rem;
+  ```
+- Ahora los encabezados (`ACTA / DATA`, `ASISTENTES`, `ÚLTIMA EDICIÓN`, `ESTADO`, `ACCIÓNS`) quedan alineados con cada una de las columnas de datos de las filas.
+
+---
+
+### 3. Uniformidad de Botones entre Documentos (Capturas 1 y 2, Recuadro Azul)
+- Tanto en **Actas Semanales**, **Reunións** como en **Informes Mensuales** se dispone del mismo conjunto estandarizado y ordenado de botones de acción:
+  1. `Ver / PDF` (Abre el visor para imprimir o generar PDF)
+  2. `DOCX` (Descarga directa del documento Word oficial)
+  3. `PDF` (Descarga directa del PDF oficial convertido)
+  4. `Editar` (Abre el editor completo del documento)
+  5. `Copiar` (Duplica el documento con el siguiente número correlativo)
+  6. `Eliminar` (Confirmación modal y borrado)
+  7. Botón desplegable (*chevron*) a la derecha para ver los detalles sin salir de la lista.
+
+---
+
+### 4. Notas de Bitácora: Vista en Filas e Impresión Oficial
+- **Vista en Filas**:
+  - En la pestaña *Notas*, se ha incorporado un selector para alternar entre vista en **Filas** (tabla con columnas `Data`, `Categoría`, `Urxencia`, `Título e Contido`, `Autor`, `Última Edición` y `Accións`) y **Tarxetas**.
+  - Cada fila cuenta con su botón `Imprimir`, `Editar`, `Copiar` y `Eliminar`.
+- **Impresión desde la Edición**:
+  - Al editar cualquier nota (o crear una nueva) en el modal, se ha añadido en el pie el botón **`Imprimir Nota`**.
+  - Este botón genera de forma inmediata un documento oficial con membrete corporativo Vipugal / ANTA OBRA ([src/js/utils/printNota.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/utils/printNota.js)) con los datos actualizados del formulario.
+
+---
+
+### Verificación y Despliegue
+1. **Compilación y Pruebas**: `npm run build` ejecutado con éxito sin errores.
+2. **Validación Visual en Navegador**: Se han verificado todos los flujos mediante subagente de navegación:
+   - Alineación de columnas de Actas y botonera uniforme.
+   - Pestaña de Reunións, editor con sus 6 apartados y previsualización con rótulo `REUNIÓN`.
+   - Visualización de Notas en filas e impresión tanto desde la fila como desde el modal de edición.
+3. **Control de Versiones y Producción**:
+   - Cambios sincronizados y subidos al repositorio GitHub (`main`).
+   - Despliegue completado en Vercel: [https://anta-obra.vercel.app](https://anta-obra.vercel.app)
+4. **Agente MEMO**: Registro de conversaciones actualizado en [Memo/memo.md](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/Memo/memo.md).
+
+---
+
+## Conversación #50
+
+### 👤 Usuario:
+
+Según el PDF puedes crear esos Agentes y Equipo Técnico de Obra?
+Ignora los repetidos
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #51
+
+### 👤 Usuario:
+
+Me gustaría crear una nuevo tipo de documento, además de actas semanales, informes mensuales y notas... Se llamará Reuniones.
+Seguirá la plantilla de actas semanales, pero arriba a la derecha pondrá Reunión.
+Se podrá editar como las actas semanales, pero tendrá unos apartados y secciones definidas:
+1- Datos xerais da reunión:
+Proxecto:
+
+
+
+
+Emprazamento:
+
+
+Expediente nº:
+
+
+Contratista:
+
+
+
+Dirección de obra:
+
+
+Dirección de execución:
+
+
+Coordinador CSS:
+
+2- Datos xerais da reunión:
+Data:
+Hora:
+Tipo de reunión: virtual/presencial
+Lugar: 
+3- Asistentes (igual que actas semanales) (marcar quién firma)
+4- Cuestións tratadas na reunión 
+4.1- (Aquí se podrán crear tantas secciones como sea necesario)
+...
+Se podrán añadir nuevos apartados  y secciones.
+
+5- Firmas
+6- Anexos (al igual que en los otros documentos se generará una separata y se adjuntarán los PDFS):
+
+Por otro lado. 
+En captura 1:
+- (recuadro en rojo): los títulos aparecen desplazados de las filas de abajo.
+En capturas 1 y 2
+- recuadro azul: nme gustaría uniformidad en los botones entre los distintos tipos de documentos.
+
+Notas: Me gustaría que también se viesen en filas, y con posibilidad de imprimirlas desde su edición
+
+### 🤖 Antigravity:
+
+Se han implementado y desplegado con éxito todas las solicitudes planteadas:
+
+---
+
+### 1. Nuevo Tipo de Documento: **Reuniones** (`Reunións`)
+- **Plantilla Oficial y Paridad 1:1 DOCX = PDF**:
+  - Comparte la plantilla oficial de Word ([plantilla_acta.docx](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/plantilla_acta.docx)), sustituyendo el rótulo superior derecho por **`REUNIÓN`**.
+  - Gestionado por el backend unificado [src/py/generar_acta.py](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/py/generar_acta.py) asegurando paridad absoluta en Word y PDF con separatas y anexos concatenados.
+- **Estructura oficial y editable en 6 apartados**:
+  1. **Datos xerais da obra**: Proxecto, Emprazamento, Expediente nº, Contratista, Dirección de obra, Dirección de execución, Coordinador CSS, Xefe de obra.
+  2. **Datos xerais da reunión**: Data, Hora, Tipo de reunión (*Presencial*, *Virtual / Remota*, *Híbrida*) e Lugar / Canle.
+  3. **Asistentes**: Listado completo de asistentes con indicación explícita de quién firma mediante casillas de verificación.
+  4. **Cuestións tratadas na reunión**: Estructura jerárquica con subapartados numerados (4.1, 4.2...), permitiendo añadir dinámicamente tantas secciones y apartados como sean precisos.
+  5. **Firmas**: Dilixencia y recuadros institucionales de firma para los intervinientes seleccionados.
+  6. **Anexos**: Separatas A4 de portadas oficiales intercaladas y concatenación automática de archivos PDF adjuntos.
+- **Integración completa en el sistema**:
+  - Pestaña **Reunións** en [src/js/views/expedienteView.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/expedienteView.js) y acceso en la barra lateral de [src/js/app.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/app.js) con contador dinámico.
+  - Editor especializado ([src/js/views/actaEditor.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaEditor.js)) y vista oficial imprimible ([src/js/views/actaPrint.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaPrint.js)).
+
+---
+
+### 2. Corrección de Alineación de Cabeceras (Captura 1, Recuadro Rojo)
+- Se ha unificado la cuadrícula CSS en [src/css/main.css](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/css/main.css) para `.actas-list-header` y `.acta-row-main`:
+  ```css
+  grid-template-columns: 140px 1fr 180px 105px 530px;
+  gap: 1rem;
+  padding: 0.65rem 1.25rem;
+  ```
+- Ahora los encabezados (`ACTA / DATA`, `ASISTENTES`, `ÚLTIMA EDICIÓN`, `ESTADO`, `ACCIÓNS`) quedan alineados con cada una de las columnas de datos de las filas.
+
+---
+
+### 3. Uniformidad de Botones entre Documentos (Capturas 1 y 2, Recuadro Azul)
+- Tanto en **Actas Semanales**, **Reunións** como en **Informes Mensuales** se dispone del mismo conjunto estandarizado y ordenado de botones de acción:
+  1. `Ver / PDF` (Abre el visor para imprimir o generar PDF)
+  2. `DOCX` (Descarga directa del documento Word oficial)
+  3. `PDF` (Descarga directa del PDF oficial convertido)
+  4. `Editar` (Abre el editor completo del documento)
+  5. `Copiar` (Duplica el documento con el siguiente número correlativo)
+  6. `Eliminar` (Confirmación modal y borrado)
+  7. Botón desplegable (*chevron*) a la derecha para ver los detalles sin salir de la lista.
+
+---
+
+### 4. Notas de Bitácora: Vista en Filas e Impresión Oficial
+- **Vista en Filas**:
+  - En la pestaña *Notas*, se ha incorporado un selector para alternar entre vista en **Filas** (tabla con columnas `Data`, `Categoría`, `Urxencia`, `Título e Contido`, `Autor`, `Última Edición` y `Accións`) y **Tarxetas**.
+  - Cada fila cuenta con su botón `Imprimir`, `Editar`, `Copiar` y `Eliminar`.
+- **Impresión desde la Edición**:
+  - Al editar cualquier nota (o crear una nueva) en el modal, se ha añadido en el pie el botón **`Imprimir Nota`**.
+  - Este botón genera de forma inmediata un documento oficial con membrete corporativo Vipugal / ANTA OBRA ([src/js/utils/printNota.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/utils/printNota.js)) con los datos actualizados del formulario.
+
+---
+
+### Verificación y Despliegue
+1. **Compilación y Pruebas**: `npm run build` ejecutado con éxito sin errores.
+2. **Validación Visual en Navegador**: Se han verificado todos los flujos mediante subagente de navegación:
+   - Alineación de columnas de Actas y botonera uniforme.
+   - Pestaña de Reunións, editor con sus 6 apartados y previsualización con rótulo `REUNIÓN`.
+   - Visualización de Notas en filas e impresión tanto desde la fila como desde el modal de edición.
+3. **Control de Versiones y Producción**:
+   - Cambios sincronizados y subidos al repositorio GitHub (`main`).
+   - Despliegue completado en Vercel: [https://anta-obra.vercel.app](https://anta-obra.vercel.app)
+4. **Agente MEMO**: Registro de conversaciones actualizado en [Memo/memo.md](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/Memo/memo.md).
+
+---
+
+## Conversación #52
+
+### 👤 Usuario:
+
+Entiendo que todos los agentes son registros en SUPABASE ¿no?
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #53
+
+### 👤 Usuario:
+
+Me gustaría crear una nuevo tipo de documento, además de actas semanales, informes mensuales y notas... Se llamará Reuniones.
+Seguirá la plantilla de actas semanales, pero arriba a la derecha pondrá Reunión.
+Se podrá editar como las actas semanales, pero tendrá unos apartados y secciones definidas:
+1- Datos xerais da reunión:
+Proxecto:
+
+
+
+
+Emprazamento:
+
+
+Expediente nº:
+
+
+Contratista:
+
+
+
+Dirección de obra:
+
+
+Dirección de execución:
+
+
+Coordinador CSS:
+
+2- Datos xerais da reunión:
+Data:
+Hora:
+Tipo de reunión: virtual/presencial
+Lugar: 
+3- Asistentes (igual que actas semanales) (marcar quién firma)
+4- Cuestións tratadas na reunión 
+4.1- (Aquí se podrán crear tantas secciones como sea necesario)
+...
+Se podrán añadir nuevos apartados  y secciones.
+
+5- Firmas
+6- Anexos (al igual que en los otros documentos se generará una separata y se adjuntarán los PDFS):
+
+Por otro lado. 
+En captura 1:
+- (recuadro en rojo): los títulos aparecen desplazados de las filas de abajo.
+En capturas 1 y 2
+- recuadro azul: nme gustaría uniformidad en los botones entre los distintos tipos de documentos.
+
+Notas: Me gustaría que también se viesen en filas, y con posibilidad de imprimirlas desde su edición
+
+### 🤖 Antigravity:
+
+Se han implementado y desplegado con éxito todas las solicitudes planteadas:
+
+---
+
+### 1. Nuevo Tipo de Documento: **Reuniones** (`Reunións`)
+- **Plantilla Oficial y Paridad 1:1 DOCX = PDF**:
+  - Comparte la plantilla oficial de Word ([plantilla_acta.docx](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/plantilla_acta.docx)), sustituyendo el rótulo superior derecho por **`REUNIÓN`**.
+  - Gestionado por el backend unificado [src/py/generar_acta.py](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/py/generar_acta.py) asegurando paridad absoluta en Word y PDF con separatas y anexos concatenados.
+- **Estructura oficial y editable en 6 apartados**:
+  1. **Datos xerais da obra**: Proxecto, Emprazamento, Expediente nº, Contratista, Dirección de obra, Dirección de execución, Coordinador CSS, Xefe de obra.
+  2. **Datos xerais da reunión**: Data, Hora, Tipo de reunión (*Presencial*, *Virtual / Remota*, *Híbrida*) e Lugar / Canle.
+  3. **Asistentes**: Listado completo de asistentes con indicación explícita de quién firma mediante casillas de verificación.
+  4. **Cuestións tratadas na reunión**: Estructura jerárquica con subapartados numerados (4.1, 4.2...), permitiendo añadir dinámicamente tantas secciones y apartados como sean precisos.
+  5. **Firmas**: Dilixencia y recuadros institucionales de firma para los intervinientes seleccionados.
+  6. **Anexos**: Separatas A4 de portadas oficiales intercaladas y concatenación automática de archivos PDF adjuntos.
+- **Integración completa en el sistema**:
+  - Pestaña **Reunións** en [src/js/views/expedienteView.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/expedienteView.js) y acceso en la barra lateral de [src/js/app.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/app.js) con contador dinámico.
+  - Editor especializado ([src/js/views/actaEditor.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaEditor.js)) y vista oficial imprimible ([src/js/views/actaPrint.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaPrint.js)).
+
+---
+
+### 2. Corrección de Alineación de Cabeceras (Captura 1, Recuadro Rojo)
+- Se ha unificado la cuadrícula CSS en [src/css/main.css](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/css/main.css) para `.actas-list-header` y `.acta-row-main`:
+  ```css
+  grid-template-columns: 140px 1fr 180px 105px 530px;
+  gap: 1rem;
+  padding: 0.65rem 1.25rem;
+  ```
+- Ahora los encabezados (`ACTA / DATA`, `ASISTENTES`, `ÚLTIMA EDICIÓN`, `ESTADO`, `ACCIÓNS`) quedan alineados con cada una de las columnas de datos de las filas.
+
+---
+
+### 3. Uniformidad de Botones entre Documentos (Capturas 1 y 2, Recuadro Azul)
+- Tanto en **Actas Semanales**, **Reunións** como en **Informes Mensuales** se dispone del mismo conjunto estandarizado y ordenado de botones de acción:
+  1. `Ver / PDF` (Abre el visor para imprimir o generar PDF)
+  2. `DOCX` (Descarga directa del documento Word oficial)
+  3. `PDF` (Descarga directa del PDF oficial convertido)
+  4. `Editar` (Abre el editor completo del documento)
+  5. `Copiar` (Duplica el documento con el siguiente número correlativo)
+  6. `Eliminar` (Confirmación modal y borrado)
+  7. Botón desplegable (*chevron*) a la derecha para ver los detalles sin salir de la lista.
+
+---
+
+### 4. Notas de Bitácora: Vista en Filas e Impresión Oficial
+- **Vista en Filas**:
+  - En la pestaña *Notas*, se ha incorporado un selector para alternar entre vista en **Filas** (tabla con columnas `Data`, `Categoría`, `Urxencia`, `Título e Contido`, `Autor`, `Última Edición` y `Accións`) y **Tarxetas**.
+  - Cada fila cuenta con su botón `Imprimir`, `Editar`, `Copiar` y `Eliminar`.
+- **Impresión desde la Edición**:
+  - Al editar cualquier nota (o crear una nueva) en el modal, se ha añadido en el pie el botón **`Imprimir Nota`**.
+  - Este botón genera de forma inmediata un documento oficial con membrete corporativo Vipugal / ANTA OBRA ([src/js/utils/printNota.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/utils/printNota.js)) con los datos actualizados del formulario.
+
+---
+
+### Verificación y Despliegue
+1. **Compilación y Pruebas**: `npm run build` ejecutado con éxito sin errores.
+2. **Validación Visual en Navegador**: Se han verificado todos los flujos mediante subagente de navegación:
+   - Alineación de columnas de Actas y botonera uniforme.
+   - Pestaña de Reunións, editor con sus 6 apartados y previsualización con rótulo `REUNIÓN`.
+   - Visualización de Notas en filas e impresión tanto desde la fila como desde el modal de edición.
+3. **Control de Versiones y Producción**:
+   - Cambios sincronizados y subidos al repositorio GitHub (`main`).
+   - Despliegue completado en Vercel: [https://anta-obra.vercel.app](https://anta-obra.vercel.app)
+4. **Agente MEMO**: Registro de conversaciones actualizado en [Memo/memo.md](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/Memo/memo.md).
+
+---
+
+## Conversación #54
+
+### 👤 Usuario:
+
+Me gustaría que en la lista de expedientes (captura 2), apareciesen los axentes interviñentes como en los documentos internos, con los avatares (captura 1), eso si,sólo con DO, DE y CSS
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #55
+
+### 👤 Usuario:
+
+Me gustaría crear una nuevo tipo de documento, además de actas semanales, informes mensuales y notas... Se llamará Reuniones.
+Seguirá la plantilla de actas semanales, pero arriba a la derecha pondrá Reunión.
+Se podrá editar como las actas semanales, pero tendrá unos apartados y secciones definidas:
+1- Datos xerais da reunión:
+Proxecto:
+
+
+
+
+Emprazamento:
+
+
+Expediente nº:
+
+
+Contratista:
+
+
+
+Dirección de obra:
+
+
+Dirección de execución:
+
+
+Coordinador CSS:
+
+2- Datos xerais da reunión:
+Data:
+Hora:
+Tipo de reunión: virtual/presencial
+Lugar: 
+3- Asistentes (igual que actas semanales) (marcar quién firma)
+4- Cuestións tratadas na reunión 
+4.1- (Aquí se podrán crear tantas secciones como sea necesario)
+...
+Se podrán añadir nuevos apartados  y secciones.
+
+5- Firmas
+6- Anexos (al igual que en los otros documentos se generará una separata y se adjuntarán los PDFS):
+
+Por otro lado. 
+En captura 1:
+- (recuadro en rojo): los títulos aparecen desplazados de las filas de abajo.
+En capturas 1 y 2
+- recuadro azul: nme gustaría uniformidad en los botones entre los distintos tipos de documentos.
+
+Notas: Me gustaría que también se viesen en filas, y con posibilidad de imprimirlas desde su edición
+
+### 🤖 Antigravity:
+
+Se han implementado y desplegado con éxito todas las solicitudes planteadas:
+
+---
+
+### 1. Nuevo Tipo de Documento: **Reuniones** (`Reunións`)
+- **Plantilla Oficial y Paridad 1:1 DOCX = PDF**:
+  - Comparte la plantilla oficial de Word ([plantilla_acta.docx](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/plantilla_acta.docx)), sustituyendo el rótulo superior derecho por **`REUNIÓN`**.
+  - Gestionado por el backend unificado [src/py/generar_acta.py](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/py/generar_acta.py) asegurando paridad absoluta en Word y PDF con separatas y anexos concatenados.
+- **Estructura oficial y editable en 6 apartados**:
+  1. **Datos xerais da obra**: Proxecto, Emprazamento, Expediente nº, Contratista, Dirección de obra, Dirección de execución, Coordinador CSS, Xefe de obra.
+  2. **Datos xerais da reunión**: Data, Hora, Tipo de reunión (*Presencial*, *Virtual / Remota*, *Híbrida*) e Lugar / Canle.
+  3. **Asistentes**: Listado completo de asistentes con indicación explícita de quién firma mediante casillas de verificación.
+  4. **Cuestións tratadas na reunión**: Estructura jerárquica con subapartados numerados (4.1, 4.2...), permitiendo añadir dinámicamente tantas secciones y apartados como sean precisos.
+  5. **Firmas**: Dilixencia y recuadros institucionales de firma para los intervinientes seleccionados.
+  6. **Anexos**: Separatas A4 de portadas oficiales intercaladas y concatenación automática de archivos PDF adjuntos.
+- **Integración completa en el sistema**:
+  - Pestaña **Reunións** en [src/js/views/expedienteView.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/expedienteView.js) y acceso en la barra lateral de [src/js/app.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/app.js) con contador dinámico.
+  - Editor especializado ([src/js/views/actaEditor.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaEditor.js)) y vista oficial imprimible ([src/js/views/actaPrint.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaPrint.js)).
+
+---
+
+### 2. Corrección de Alineación de Cabeceras (Captura 1, Recuadro Rojo)
+- Se ha unificado la cuadrícula CSS en [src/css/main.css](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/css/main.css) para `.actas-list-header` y `.acta-row-main`:
+  ```css
+  grid-template-columns: 140px 1fr 180px 105px 530px;
+  gap: 1rem;
+  padding: 0.65rem 1.25rem;
+  ```
+- Ahora los encabezados (`ACTA / DATA`, `ASISTENTES`, `ÚLTIMA EDICIÓN`, `ESTADO`, `ACCIÓNS`) quedan alineados con cada una de las columnas de datos de las filas.
+
+---
+
+### 3. Uniformidad de Botones entre Documentos (Capturas 1 y 2, Recuadro Azul)
+- Tanto en **Actas Semanales**, **Reunións** como en **Informes Mensuales** se dispone del mismo conjunto estandarizado y ordenado de botones de acción:
+  1. `Ver / PDF` (Abre el visor para imprimir o generar PDF)
+  2. `DOCX` (Descarga directa del documento Word oficial)
+  3. `PDF` (Descarga directa del PDF oficial convertido)
+  4. `Editar` (Abre el editor completo del documento)
+  5. `Copiar` (Duplica el documento con el siguiente número correlativo)
+  6. `Eliminar` (Confirmación modal y borrado)
+  7. Botón desplegable (*chevron*) a la derecha para ver los detalles sin salir de la lista.
+
+---
+
+### 4. Notas de Bitácora: Vista en Filas e Impresión Oficial
+- **Vista en Filas**:
+  - En la pestaña *Notas*, se ha incorporado un selector para alternar entre vista en **Filas** (tabla con columnas `Data`, `Categoría`, `Urxencia`, `Título e Contido`, `Autor`, `Última Edición` y `Accións`) y **Tarxetas**.
+  - Cada fila cuenta con su botón `Imprimir`, `Editar`, `Copiar` y `Eliminar`.
+- **Impresión desde la Edición**:
+  - Al editar cualquier nota (o crear una nueva) en el modal, se ha añadido en el pie el botón **`Imprimir Nota`**.
+  - Este botón genera de forma inmediata un documento oficial con membrete corporativo Vipugal / ANTA OBRA ([src/js/utils/printNota.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/utils/printNota.js)) con los datos actualizados del formulario.
+
+---
+
+### Verificación y Despliegue
+1. **Compilación y Pruebas**: `npm run build` ejecutado con éxito sin errores.
+2. **Validación Visual en Navegador**: Se han verificado todos los flujos mediante subagente de navegación:
+   - Alineación de columnas de Actas y botonera uniforme.
+   - Pestaña de Reunións, editor con sus 6 apartados y previsualización con rótulo `REUNIÓN`.
+   - Visualización de Notas en filas e impresión tanto desde la fila como desde el modal de edición.
+3. **Control de Versiones y Producción**:
+   - Cambios sincronizados y subidos al repositorio GitHub (`main`).
+   - Despliegue completado en Vercel: [https://anta-obra.vercel.app](https://anta-obra.vercel.app)
+4. **Agente MEMO**: Registro de conversaciones actualizado en [Memo/memo.md](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/Memo/memo.md).
+
+---
+
+## Conversación #56
+
+### 👤 Usuario:
+
+Borro los informes mensuales y vuelven a aparecer
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #57
+
+### 👤 Usuario:
+
+Me gustaría crear una nuevo tipo de documento, además de actas semanales, informes mensuales y notas... Se llamará Reuniones.
+Seguirá la plantilla de actas semanales, pero arriba a la derecha pondrá Reunión.
+Se podrá editar como las actas semanales, pero tendrá unos apartados y secciones definidas:
+1- Datos xerais da reunión:
+Proxecto:
+
+
+
+
+Emprazamento:
+
+
+Expediente nº:
+
+
+Contratista:
+
+
+
+Dirección de obra:
+
+
+Dirección de execución:
+
+
+Coordinador CSS:
+
+2- Datos xerais da reunión:
+Data:
+Hora:
+Tipo de reunión: virtual/presencial
+Lugar: 
+3- Asistentes (igual que actas semanales) (marcar quién firma)
+4- Cuestións tratadas na reunión 
+4.1- (Aquí se podrán crear tantas secciones como sea necesario)
+...
+Se podrán añadir nuevos apartados  y secciones.
+
+5- Firmas
+6- Anexos (al igual que en los otros documentos se generará una separata y se adjuntarán los PDFS):
+
+Por otro lado. 
+En captura 1:
+- (recuadro en rojo): los títulos aparecen desplazados de las filas de abajo.
+En capturas 1 y 2
+- recuadro azul: nme gustaría uniformidad en los botones entre los distintos tipos de documentos.
+
+Notas: Me gustaría que también se viesen en filas, y con posibilidad de imprimirlas desde su edición
+
+### 🤖 Antigravity:
+
+Se han implementado y desplegado con éxito todas las solicitudes planteadas:
+
+---
+
+### 1. Nuevo Tipo de Documento: **Reuniones** (`Reunións`)
+- **Plantilla Oficial y Paridad 1:1 DOCX = PDF**:
+  - Comparte la plantilla oficial de Word ([plantilla_acta.docx](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/plantilla_acta.docx)), sustituyendo el rótulo superior derecho por **`REUNIÓN`**.
+  - Gestionado por el backend unificado [src/py/generar_acta.py](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/py/generar_acta.py) asegurando paridad absoluta en Word y PDF con separatas y anexos concatenados.
+- **Estructura oficial y editable en 6 apartados**:
+  1. **Datos xerais da obra**: Proxecto, Emprazamento, Expediente nº, Contratista, Dirección de obra, Dirección de execución, Coordinador CSS, Xefe de obra.
+  2. **Datos xerais da reunión**: Data, Hora, Tipo de reunión (*Presencial*, *Virtual / Remota*, *Híbrida*) e Lugar / Canle.
+  3. **Asistentes**: Listado completo de asistentes con indicación explícita de quién firma mediante casillas de verificación.
+  4. **Cuestións tratadas na reunión**: Estructura jerárquica con subapartados numerados (4.1, 4.2...), permitiendo añadir dinámicamente tantas secciones y apartados como sean precisos.
+  5. **Firmas**: Dilixencia y recuadros institucionales de firma para los intervinientes seleccionados.
+  6. **Anexos**: Separatas A4 de portadas oficiales intercaladas y concatenación automática de archivos PDF adjuntos.
+- **Integración completa en el sistema**:
+  - Pestaña **Reunións** en [src/js/views/expedienteView.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/expedienteView.js) y acceso en la barra lateral de [src/js/app.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/app.js) con contador dinámico.
+  - Editor especializado ([src/js/views/actaEditor.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaEditor.js)) y vista oficial imprimible ([src/js/views/actaPrint.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/views/actaPrint.js)).
+
+---
+
+### 2. Corrección de Alineación de Cabeceras (Captura 1, Recuadro Rojo)
+- Se ha unificado la cuadrícula CSS en [src/css/main.css](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/css/main.css) para `.actas-list-header` y `.acta-row-main`:
+  ```css
+  grid-template-columns: 140px 1fr 180px 105px 530px;
+  gap: 1rem;
+  padding: 0.65rem 1.25rem;
+  ```
+- Ahora los encabezados (`ACTA / DATA`, `ASISTENTES`, `ÚLTIMA EDICIÓN`, `ESTADO`, `ACCIÓNS`) quedan alineados con cada una de las columnas de datos de las filas.
+
+---
+
+### 3. Uniformidad de Botones entre Documentos (Capturas 1 y 2, Recuadro Azul)
+- Tanto en **Actas Semanales**, **Reunións** como en **Informes Mensuales** se dispone del mismo conjunto estandarizado y ordenado de botones de acción:
+  1. `Ver / PDF` (Abre el visor para imprimir o generar PDF)
+  2. `DOCX` (Descarga directa del documento Word oficial)
+  3. `PDF` (Descarga directa del PDF oficial convertido)
+  4. `Editar` (Abre el editor completo del documento)
+  5. `Copiar` (Duplica el documento con el siguiente número correlativo)
+  6. `Eliminar` (Confirmación modal y borrado)
+  7. Botón desplegable (*chevron*) a la derecha para ver los detalles sin salir de la lista.
+
+---
+
+### 4. Notas de Bitácora: Vista en Filas e Impresión Oficial
+- **Vista en Filas**:
+  - En la pestaña *Notas*, se ha incorporado un selector para alternar entre vista en **Filas** (tabla con columnas `Data`, `Categoría`, `Urxencia`, `Título e Contido`, `Autor`, `Última Edición` y `Accións`) y **Tarxetas**.
+  - Cada fila cuenta con su botón `Imprimir`, `Editar`, `Copiar` y `Eliminar`.
+- **Impresión desde la Edición**:
+  - Al editar cualquier nota (o crear una nueva) en el modal, se ha añadido en el pie el botón **`Imprimir Nota`**.
+  - Este botón genera de forma inmediata un documento oficial con membrete corporativo Vipugal / ANTA OBRA ([src/js/utils/printNota.js](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/src/js/utils/printNota.js)) con los datos actualizados del formulario.
+
+---
+
+### Verificación y Despliegue
+1. **Compilación y Pruebas**: `npm run build` ejecutado con éxito sin errores.
+2. **Validación Visual en Navegador**: Se han verificado todos los flujos mediante subagente de navegación:
+   - Alineación de columnas de Actas y botonera uniforme.
+   - Pestaña de Reunións, editor con sus 6 apartados y previsualización con rótulo `REUNIÓN`.
+   - Visualización de Notas en filas e impresión tanto desde la fila como desde el modal de edición.
+3. **Control de Versiones y Producción**:
+   - Cambios sincronizados y subidos al repositorio GitHub (`main`).
+   - Despliegue completado en Vercel: [https://anta-obra.vercel.app](https://anta-obra.vercel.app)
+4. **Agente MEMO**: Registro de conversaciones actualizado en [Memo/memo.md](file:///f:/Onedrive/ANTIGRAVITY/ANTA_OBRA/Memo/memo.md).
+
+---
+
+## Conversación #58
+
+### 👤 Usuario:
+
+En el PDF o DOCx de las reuniones (o en otro tipo de documento) no debe aparecer la columan firma en la tabla de asistentes. Es algo interno para que aparecan abajo.
+Por cierto. SI no hay ningun asistente con firma marcada, desaparece el punto de Firmas en el resultado final.
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #59
+
+### 👤 Usuario:
+
+Me recibes?
+
+### 🤖 Antigravity:
+
+¡Te recibo alto y claro! 
+
+Tengo el contexto y el historial de [Memo/memo.md](file:///g:/OneDrive/ANTIGRAVITY/ANTA_OBRA/Memo/memo.md) completamente cargados y sincronizados.
+
+Estoy listo, ¿en qué nos ponemos a trabajar?
+
+---
+
+## Conversación #60
+
+### 👤 Usuario:
+
+Por que me sale esto?
+
+### 🤖 Antigravity:
+
+Ese mensaje y el aviso en rojo `(X) AGQ` de la barra inferior provienen de una extensión instalada en el editor llamada **Antigravity Quota (AGQ)** (cuyo objetivo es mostrar el porcentaje o consumo de cuota de los modelos en la barra de estado).
+
+---
+
+### ¿Por qué aparece?
+La extensión **AGQ** intenta rastrear en segundo plano los procesos de Windows para conectarse al servicio interno de Antigravity (`language_server`) y leer las estadísticas de uso. Si no encuentra el proceso con el nombre exacto que espera (o tras un reinicio de sesión/servidor), salta esa alerta:
+> *"Could not find Antigravity process. Is it running?"*
+
+### ¿Afecta al funcionamiento?
+**No, en absoluto.** 
+Antigravity y el asistente están funcionando al 100% y con normalidad (de hecho estamos hablando y ejecutando comandos directamente ahora mismo). Solo afecta al widget visual de esa extensión concreta en la barra inferior.
+
+---
+
+### ¿Cómo solucionarlo o quitarlo?
+
+1. **Recargar la ventana del editor** (la mayoría de las veces se engancha de nuevo):
+   - Pulsa `Ctrl + Shift + P`.
+   - Escribe y selecciona: `Developer: Reload Window` *(Recargar ventana)*.
+
+2. **Si no necesitas ver ese contador de cuota**:
+   - Abre la pestaña de extensiones (`Ctrl + Shift + X`).
+   - Busca `Antigravity Quota`.
+   - Haz clic en **Desactivar** (Disable) para que no vuelva a molestarte la ventana emergente.
+
+---
+
+## Conversación #61
+
+### 👤 Usuario:
+
+Vale, pues vamos con la web:
+
+Esta página de Login no mola.
+POnla central, y con el logo de ANTA como la captura 2
 
 ### 🤖 Antigravity:
 

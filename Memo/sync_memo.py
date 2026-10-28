@@ -28,12 +28,18 @@ def sync_memo():
         existing_convs[num] = cleaned
 
     app_data_dir = os.environ.get('USERPROFILE', '')
-    brain_dir = Path(app_data_dir) / '.gemini' / 'antigravity-ide' / 'brain'
+    possible_dirs = [
+        Path(app_data_dir) / '.gemini' / 'antigravity' / 'brain',
+        Path(app_data_dir) / '.gemini' / 'antigravity-ide' / 'brain',
+    ]
 
     # Locate transcripts
-    transcript_files = list(brain_dir.glob('*/.system_generated/logs/transcript_full.jsonl'))
-    if not transcript_files:
-        transcript_files = list(brain_dir.glob('*/.system_generated/logs/transcript.jsonl'))
+    transcript_files = []
+    for b_dir in possible_dirs:
+        if b_dir.exists():
+            transcript_files.extend(list(b_dir.glob('*/.system_generated/logs/transcript_full.jsonl')))
+            if not transcript_files:
+                transcript_files.extend(list(b_dir.glob('*/.system_generated/logs/transcript.jsonl')))
 
     if not transcript_files:
         print("No transcript files found.")

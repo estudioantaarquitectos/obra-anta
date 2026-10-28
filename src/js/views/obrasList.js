@@ -20,9 +20,9 @@ function getObraFacultativos(obra, allAgentes = []) {
     if (!rawAg) return;
     const agId = rawAg.id || rawAg.agenteId;
     const matched = (agId && allAgentes.find(a => a.id === agId)) ||
-                    allAgentes.find(a => a.nombre && rawAg.nombre && a.nombre.trim().toLowerCase() === rawAg.nombre.trim().toLowerCase()) ||
-                    rawAg;
-    
+      allAgentes.find(a => a.nombre && rawAg.nombre && a.nombre.trim().toLowerCase() === rawAg.nombre.trim().toLowerCase()) ||
+      rawAg;
+
     const uniqueKey = matched.id || (matched.nombre ? matched.nombre.trim().toLowerCase() : String(Math.random()));
     if (addedKeys.has(uniqueKey)) return;
     addedKeys.add(uniqueKey);
@@ -99,7 +99,7 @@ export function renderObrasList(container, router) {
   function getFilteredObras() {
     if (!searchQuery.trim()) return obras;
     const q = searchQuery.toLowerCase().trim();
-    return obras.filter(o => 
+    return obras.filter(o =>
       (o.expediente || '').toLowerCase().includes(q) ||
       (o.titulo || '').toLowerCase().includes(q) ||
       (o.situacion || '').toLowerCase().includes(q) ||
@@ -236,20 +236,20 @@ export function renderObrasList(container, router) {
               </thead>
               <tbody>
                 ${filtered.map(obra => {
-                  const actasCount = db.getActas(obra.id).length;
-                  const informesCount = db.getInformes(obra.id).length;
-                  const notasCount = db.getNotas(obra.id).length;
-                  
-                  let statusBadge = `<span class="badge badge-success" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-green"></span> En execución</span>`;
-                  if (obra.estado === 'con_desviacions') {
-                    statusBadge = `<span class="badge badge-warning" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-yellow"></span> Con desviacións</span>`;
-                  } else if (obra.estado === 'comprometida') {
-                    statusBadge = `<span class="badge badge-danger" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-red"></span> Comprometida</span>`;
-                  } else if (obra.estado === 'finalizada') {
-                    statusBadge = `<span class="badge badge-neutral" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;">Finalizada</span>`;
-                  }
+      const actasCount = db.getActas(obra.id).length;
+      const informesCount = db.getInformes(obra.id).length;
+      const notasCount = db.getNotas(obra.id).length;
 
-                  return `
+      let statusBadge = `<span class="badge badge-success" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-green"></span> En execución</span>`;
+      if (obra.estado === 'con_desviacions') {
+        statusBadge = `<span class="badge badge-warning" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-yellow"></span> Con desviacións</span>`;
+      } else if (obra.estado === 'comprometida') {
+        statusBadge = `<span class="badge badge-danger" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-red"></span> Comprometida</span>`;
+      } else if (obra.estado === 'finalizada') {
+        statusBadge = `<span class="badge badge-neutral" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;">Finalizada</span>`;
+      }
+
+      return `
                     <tr class="obra-table-row">
                       <td style="white-space: nowrap;">
                         <span class="badge badge-info" style="font-weight: 700; font-family: monospace; font-size: 0.8rem; letter-spacing: 0.02em;">
@@ -274,16 +274,16 @@ export function renderObrasList(container, router) {
 
                       <td style="vertical-align: middle;">
                         ${(() => {
-                          const facultativos = getObraFacultativos(obra, allAgentes);
-                          if (facultativos.length === 0) {
-                            return `<span style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">Sen axentes DO/DE/CSS</span>`;
-                          }
-                          return `
+          const facultativos = getObraFacultativos(obra, allAgentes);
+          if (facultativos.length === 0) {
+            return `<span style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">Sen axentes DO/DE/CSS</span>`;
+          }
+          return `
                             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                               ${facultativos.map(ag => renderAgentAvatarHtml(ag, { size: 30, cargo: ag.cargo })).join('')}
                             </div>
                           `;
-                        })()}
+        })()}
                       </td>
 
                       <td style="text-align: center; vertical-align: middle;">
@@ -319,7 +319,7 @@ export function renderObrasList(container, router) {
                       </td>
                     </tr>
                   `;
-                }).join('')}
+    }).join('')}
               </tbody>
             </table>
           </div>
