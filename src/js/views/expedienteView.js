@@ -8,7 +8,8 @@ import { db } from '../db.js';
 import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
 import { openExpedienteEditorModal } from './expedienteEditorModal.js';
-import { renderAgentAvatarHtml, getApartado1Titulos } from '../utils/avatar.js';
+import { renderAgentAvatarHtml, getApartado1Titulos, renderUserModifierHtml, getUserDisplayName, formatModificationDate } from '../utils/avatar.js';
+import { formatCurrency } from '../utils/currency.js';
 
 export function renderExpedienteView(container, router, params = {}) {
   const obraId = params.id || db.getActiveObraId();
@@ -82,7 +83,7 @@ export function renderExpedienteView(container, router, params = {}) {
             </div>
             
             <div style="font-size: 0.82rem; color: var(--text-muted);">
-              Presupuesto: <strong style="color: var(--color-success);">${obra.presupuestoAdjudicacion || '894.520,00 €'}</strong>
+              Presupuesto: <strong style="color: var(--color-success);">${formatCurrency(obra.presupuestoAdjudicacion || obra.presupuesto || '894.520,00 €')}</strong>
             </div>
           </div>
 
@@ -214,7 +215,8 @@ export function renderExpedienteView(container, router, params = {}) {
           <div class="actas-list-header">
             <div style="min-width: 140px;">Acta / Data</div>
             <div style="flex: 1; padding: 0 0.75rem;">Asistentes</div>
-            <div style="min-width: 110px; text-align: center;">Estado</div>
+            <div style="min-width: 160px;">Última Edición</div>
+            <div style="min-width: 100px; text-align: center;">Estado</div>
             <div style="min-width: 220px; text-align: right; padding-right: 36px;">Accións</div>
           </div>
 
@@ -253,8 +255,13 @@ export function renderExpedienteView(container, router, params = {}) {
                       }).join('')}
                     </div>
 
+                    <!-- Última Edición -->
+                    <div class="acta-col-toggle" data-id="${acta.id}" style="min-width: 160px; cursor: pointer;">
+                      ${renderUserModifierHtml(acta.modificadoPor || acta.creadoPor || 'Admin', acta.fechaModificacion || acta.fechaCreacion || acta.fecha)}
+                    </div>
+
                     <!-- Estado (Borrador / Cerrada) -->
-                    <div style="min-width: 110px; text-align: center;">
+                    <div style="min-width: 100px; text-align: center;">
                       ${isFirmada ? `
                         <span class="badge badge-success" style="font-size: 0.78rem;"><span class="status-dot status-dot-green"></span> Cerrada</span>
                       ` : `
@@ -290,6 +297,15 @@ export function renderExpedienteView(container, router, params = {}) {
                   <!-- Fila Expandida / Detalles -->
                   ${isExpanded ? `
                     <div class="acta-row-details">
+                      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; padding: 0.5rem 0.85rem; background: rgba(241, 245, 249, 0.75); border: 1px solid var(--border-light); border-radius: 6px; font-size: 0.78rem; color: var(--text-secondary);">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="color: var(--text-muted);">Última modificación:</span>
+                          <strong style="color: var(--text-main);">${escapeHtml(getUserDisplayName(acta.modificadoPor || acta.creadoPor || 'Admin'))}</strong>
+                          <span style="color: var(--text-muted); font-size: 0.74rem;">${formatModificationDate(acta.fechaModificacion || acta.fechaCreacion)}</span>
+                        </div>
+                        ${acta.creadoPor ? `<div style="font-size: 0.74rem; color: var(--text-muted);">Creada por: <strong>${escapeHtml(getUserDisplayName(acta.creadoPor))}</strong></div>` : ''}
+                      </div>
+
                       <div style="display: grid; grid-template-columns: 1fr 1.35fr; gap: 1.5rem; margin-bottom: 1.25rem;">
                         
                         <!-- Columna Asistentes con nomes á dereita do avatar -->
@@ -441,11 +457,12 @@ export function renderExpedienteView(container, router, params = {}) {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 140px;">Nº Informe</th>
-                  <th style="width: 180px;">Período / Mes</th>
-                  <th style="width: 170px;">Avance Executado</th>
-                  <th style="width: 150px;">Estado Xeral</th>
-                  <th style="width: 110px;">Data Emisión</th>
+                  <th style="width: 130px;">Nº Informe</th>
+                  <th style="width: 160px;">Período / Mes</th>
+                  <th style="width: 150px;">Avance Executado</th>
+                  <th style="width: 130px;">Estado Xeral</th>
+                  <th style="width: 160px;">Última Edición</th>
+                  <th style="width: 105px;">Data Emisión</th>
                   <th class="col-actions">Accións</th>
                 </tr>
               </thead>
@@ -493,6 +510,10 @@ export function renderExpedienteView(container, router, params = {}) {
                       </td>
 
                       <td>${statusBadge}</td>
+
+                      <td>
+                        ${renderUserModifierHtml(inf.modificadoPor || inf.creadoPor || 'Rosa Vilas Romalde', inf.fechaModificacion || inf.fechaCreacion || inf.datosXerais?.dataInforme)}
+                      </td>
 
                       <td style="font-size: 0.85rem; color: var(--text-secondary);">
                         ${inf.datosXerais?.dataInforme || '-'}
@@ -609,12 +630,16 @@ export function renderExpedienteView(container, router, params = {}) {
                     ${escapeHtml(nota.contenido)}
                   </div>
 
-                  <div class="card-footer" style="padding: 0.75rem 1.25rem; justify-content: space-between;">
-                    <div style="font-size: 0.76rem; color: var(--text-muted);">
-                      Autor: <strong style="color: var(--text-main);">${escapeHtml(nota.autor || 'DO')}</strong>
+                  <div class="card-footer" style="padding: 0.75rem 1.25rem; justify-content: space-between; align-items: flex-end; gap: 0.5rem;">
+                    <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem; min-width: 0;">
+                      <div>Autor: <strong style="color: var(--text-main);">${escapeHtml(nota.autor || 'DO')}</strong></div>
+                      <div style="display: flex; align-items: center; gap: 4px; font-size: 0.74rem;">
+                        <span style="color: var(--text-muted); font-size: 0.71rem;">Modificado:</span>
+                        ${renderUserModifierHtml(nota.modificadoPor || nota.autor, nota.fechaModificacion || nota.fecha)}
+                      </div>
                     </div>
 
-                    <div style="display: flex; gap: 0.35rem;">
+                    <div style="display: flex; gap: 0.35rem; flex-shrink: 0;">
                       <button class="btn btn-ghost btn-sm btn-duplicate-nota" data-id="${nota.id}" title="Duplicar nota">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                       </button>
@@ -668,7 +693,7 @@ export function renderExpedienteView(container, router, params = {}) {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
               <div>
                 <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Presupuesto Adjudicación</div>
-                <div style="color: var(--color-success); font-weight: 700;">${obra.presupuestoAdjudicacion || '894.520,00 €'}</div>
+                <div style="color: var(--color-success); font-weight: 700;">${formatCurrency(obra.presupuestoAdjudicacion || obra.presupuesto || '894.520,00 €')}</div>
               </div>
               <div>
                 <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Plazo Contratado</div>

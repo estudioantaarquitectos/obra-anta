@@ -6,6 +6,7 @@
 import { db } from '../db.js';
 import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
+import { renderUserModifierHtml } from '../utils/avatar.js';
 
 export function renderNotas(container, router) {
   let notas = db.getNotas();
@@ -105,10 +106,14 @@ export function renderNotas(container, router) {
                     ` : ''}
                   </div>
 
-                  <div class="card-footer" style="padding: 0.75rem 1.25rem; justify-content: space-between;">
-                    <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">
-                      ✍️ ${escapeHtml(nota.autor || 'Dirección de Obra')}
-                    </span>
+                  <div class="card-footer" style="padding: 0.75rem 1.25rem; justify-content: space-between; align-items: flex-end; gap: 0.5rem;">
+                    <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem; min-width: 0;">
+                      <div>✍️ Autor: <strong style="color: var(--text-main);">${escapeHtml(nota.autor || 'Dirección de Obra')}</strong></div>
+                      <div style="display: flex; align-items: center; gap: 4px; font-size: 0.74rem;">
+                        <span style="color: var(--text-muted); font-size: 0.71rem;">Modificado:</span>
+                        ${renderUserModifierHtml(nota.modificadoPor || nota.autor, nota.fechaModificacion || nota.fecha)}
+                      </div>
+                    </div>
 
                     <div style="display: flex; gap: 0.35rem;">
                       ${canCreate ? `

@@ -7,6 +7,7 @@
 import { db } from '../db.js';
 import { modal, showToast } from '../modal.js';
 import { getRolLabel } from './agentes.js';
+import { formatCurrency, parseCurrency } from '../utils/currency.js';
 
 export const AGENTE_ROLES = [
   { id: 'DO', label: 'Dirección de Obra (DO)' },
@@ -134,7 +135,13 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
         <div class="form-grid-2">
           <div class="form-group" style="margin-bottom: 0.75rem;">
             <label class="form-label">Presupuesto de Adjudicación</label>
-            <input type="text" id="exp-presupuesto" class="form-control" value="${escapeHtml(defaultData.presupuestoAdjudicacion || '')}" placeholder="894.520,00 €" />
+            <input 
+              type="text" 
+              id="exp-presupuesto" 
+              class="form-control" 
+              value="${escapeHtml(defaultData.presupuestoAdjudicacion || defaultData.presupuesto ? formatCurrency(defaultData.presupuestoAdjudicacion || defaultData.presupuesto) : '')}" 
+              placeholder="8.121.870,27 €" 
+            />
           </div>
           <div class="form-group" style="margin-bottom: 0.75rem;">
             <label class="form-label">Financiación / Programa</label>
@@ -475,6 +482,17 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
     };
   }
 
+  // Auto-format Presupuesto input on blur
+  const presInput = backdrop.querySelector('#exp-presupuesto');
+  if (presInput) {
+    presInput.addEventListener('blur', () => {
+      const val = presInput.value.trim();
+      if (val) {
+        presInput.value = formatCurrency(val);
+      }
+    });
+  }
+
   // Cancel Expediente Modal
   backdrop.querySelector('#btn-cancel-expediente').onclick = () => modalInstance.close();
 
@@ -518,6 +536,10 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
       ? arqAgentes.map(a => a.nombre).join(', ')
       : (defaultData.arqueologo || '');
 
+    const rawPresupuesto = backdrop.querySelector('#exp-presupuesto').value.trim();
+    const formattedPresupuesto = rawPresupuesto ? formatCurrency(rawPresupuesto) : '';
+    const numericPresupuesto = rawPresupuesto ? parseCurrency(rawPresupuesto) : 0;
+
     const payload = {
       id: defaultData.id,
       expediente: backdrop.querySelector('#exp-codigo').value.trim(),
@@ -527,7 +549,8 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
       estado: backdrop.querySelector('#exp-estado').value,
       contratista: backdrop.querySelector('#exp-contratista').value.trim(),
       jefeObra: jefeObraStr,
-      presupuestoAdjudicacion: backdrop.querySelector('#exp-presupuesto').value.trim(),
+      presupuestoAdjudicacion: formattedPresupuesto,
+      presupuesto: numericPresupuesto,
       financiacion: backdrop.querySelector('#exp-financiacion').value.trim(),
       fechaInicio: backdrop.querySelector('#exp-fechaInicio').value,
       plazoMeses: parseInt(backdrop.querySelector('#exp-plazoMeses').value, 10) || 12,

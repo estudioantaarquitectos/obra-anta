@@ -197,3 +197,102 @@ export function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Resolves any user reference (ID, username, or full name) into a friendly display name
+ */
+export function getUserDisplayName(userRef) {
+  if (!userRef) return 'Admin';
+  const str = String(userRef).trim();
+  if (!str) return 'Admin';
+
+  if (str === 'usr-admin' || str.toLowerCase() === 'admin') return 'Admin';
+  if (str === 'usr-rosa' || str.toLowerCase() === 'rosa') return 'Rosa Vilas Romalde';
+  if (str === 'usr-sergio' || str.toLowerCase() === 'sergio') return 'Sergio Beceiro Lodeiro';
+
+  try {
+    const rawUsers = typeof localStorage !== 'undefined' ? localStorage.getItem('anta_obra_users') : null;
+    if (rawUsers) {
+      const users = JSON.parse(rawUsers);
+      const found = users.find(u => String(u.id) === str || String(u.username).toLowerCase() === str.toLowerCase());
+      if (found && found.name) return found.name;
+    }
+    const rawAgentes = typeof localStorage !== 'undefined' ? localStorage.getItem('anta_obra_agentes') : null;
+    if (rawAgentes) {
+      const agentes = JSON.parse(rawAgentes);
+      const found = agentes.find(a => String(a.id) === str || String(a.nombre).toLowerCase() === str.toLowerCase());
+      if (found && found.nombre) return found.nombre;
+    }
+  } catch {}
+
+  return str;
+}
+
+/**
+ * Formats ISO date or YYYY-MM-DD into a localized readable date with hours if present
+ */
+export function formatModificationDate(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) {
+      const parts = String(isoStr).split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return String(isoStr);
+    }
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    if (String(isoStr).includes('T')) {
+      return `${day}/${month}/${year} ${hours}:${mins}`;
+    }
+    return `${day}/${month}/${year}`;
+  } catch {
+    return String(isoStr);
+  }
+}
+
+/**
+ * Renders a compact, visually appealing user modifier badge with initials and timestamp
+ */
+export function renderUserModifierHtml(userRef, dateStr, options = {}) {
+  const displayName = getUserDisplayName(userRef);
+  const formattedDate = formatModificationDate(dateStr);
+  const initials = getAgentInitials(displayName);
+  const colors = getAgentAvatarColors(null, displayName);
+
+  return `
+    <div style="display: flex; align-items: center; gap: 0.45rem; ${options.style || ''}" title="Última modificación por ${escapeHtml(displayName)}${formattedDate ? ' (' + formattedDate + ')' : ''}">
+      <div style="
+        width: 22px; 
+        height: 22px; 
+        border-radius: 4px; 
+        background-color: ${colors.bg}; 
+        color: ${colors.text}; 
+        border: ${colors.border}; 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-weight: 700; 
+        font-size: 10px; 
+        flex-shrink: 0;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+      ">
+        ${initials}
+      </div>
+      <div style="min-width: 0; line-height: 1.25;">
+        <div style="font-weight: 600; font-size: 0.82rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">
+          ${escapeHtml(displayName)}
+        </div>
+        ${formattedDate ? `
+          <div style="font-size: 0.71rem; color: var(--text-muted); white-space: nowrap;">
+            ${formattedDate}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+

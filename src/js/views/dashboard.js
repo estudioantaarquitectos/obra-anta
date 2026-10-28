@@ -7,6 +7,7 @@
 import { db } from '../db.js';
 import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
+import { renderUserModifierHtml } from '../utils/avatar.js';
 
 export function renderDashboard(container, router) {
   let actas = db.getActas();
@@ -211,11 +212,12 @@ export function renderDashboard(container, router) {
                     />
                   </th>
                   <th style="width: 100px;">Nº Acta</th>
-                  <th style="width: 120px;">Fecha</th>
+                  <th style="width: 110px;">Fecha</th>
                   <th>Asuntos Tratados / Obra</th>
-                  <th style="width: 150px;">Asistentes</th>
-                  <th style="width: 100px; text-align: center;">Fotos</th>
-                  <th style="width: 110px;">Estado</th>
+                  <th style="width: 150px;">Última Edición</th>
+                  <th style="width: 140px;">Asistentes</th>
+                  <th style="width: 70px; text-align: center;">Fotos</th>
+                  <th style="width: 100px;">Estado</th>
                   <th class="col-actions">Acciones</th>
                 </tr>
               </thead>
@@ -259,6 +261,10 @@ export function renderDashboard(container, router) {
                             ${acta.obra}
                           </span>
                         </div>
+                      </td>
+
+                      <td>
+                        ${renderUserModifierHtml(acta.modificadoPor || acta.creadoPor || 'Admin', acta.fechaModificacion || acta.fechaCreacion || acta.fecha)}
                       </td>
 
                       <td>

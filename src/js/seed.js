@@ -14,7 +14,8 @@ export const INITIAL_GROUPS = [
       'actas:view', 'actas:create', 'actas:edit', 'actas:delete', 'actas:export',
       'informes:view', 'informes:create', 'informes:edit', 'informes:delete', 'informes:export',
       'notas:view', 'notas:create', 'notas:edit', 'notas:delete',
-      'users:manage', 'groups:manage', 'settings:manage'
+      'agentes:view', 'agentes:manage',
+      'users:manage', 'groups:manage', 'backup:manage', 'settings:manage'
     ]
   },
   {
@@ -25,6 +26,7 @@ export const INITIAL_GROUPS = [
       'actas:view', 'actas:create', 'actas:edit', 'actas:delete', 'actas:export',
       'informes:view', 'informes:create', 'informes:edit', 'informes:delete', 'informes:export',
       'notas:view', 'notas:create', 'notas:edit', 'notas:delete',
+      'agentes:view', 'agentes:manage',
       'settings:manage'
     ]
   },
@@ -390,9 +392,9 @@ export const INITIAL_ACTAS = [
       }
     ],
     estado: 'firmada',
-    creadoPor: 'usr-rosa',
+    creadoPor: 'Rosa Vilas Romalde',
     fechaCreacion: '2025-09-09T14:30:00Z',
-    modificadoPor: 'usr-sergio',
+    modificadoPor: 'Sergio Beceiro Lodeiro',
     fechaModificacion: '2025-09-09T18:00:00Z'
   },
   {
@@ -436,9 +438,9 @@ export const INITIAL_ACTAS = [
     ],
     fotos: [],
     estado: 'firmada',
-    creadoPor: 'usr-rosa',
+    creadoPor: 'Rosa Vilas Romalde',
     fechaCreacion: '2025-09-02T12:00:00Z',
-    modificadoPor: 'usr-rosa',
+    modificadoPor: 'Rosa Vilas Romalde',
     fechaModificacion: '2025-09-02T16:00:00Z'
   }
 ];
@@ -543,8 +545,10 @@ export const INITIAL_INFORMES = [
     actasAnexasIds: ['acta-16'],
     anexosPdf: [],
     estado: 'enviado',
-    creadoPor: 'usr-rosa',
-    fechaCreacion: '2025-08-31T14:00:00Z'
+    creadoPor: 'Rosa Vilas Romalde',
+    fechaCreacion: '2025-08-31T14:00:00Z',
+    modificadoPor: 'Rosa Vilas Romalde',
+    fechaModificacion: '2025-08-31T17:30:00Z'
   },
   {
     id: 'inf-2',
@@ -645,8 +649,10 @@ export const INITIAL_INFORMES = [
     actasAnexasIds: ['acta-16', 'acta-17'],
     anexosPdf: [],
     estado: 'enviado',
-    creadoPor: 'usr-rosa',
-    fechaCreacion: '2025-10-31T17:00:00Z'
+    creadoPor: 'Rosa Vilas Romalde',
+    fechaCreacion: '2025-10-31T17:00:00Z',
+    modificadoPor: 'Sergio Beceiro Lodeiro',
+    fechaModificacion: '2025-10-31T18:45:00Z'
   },
   {
     id: 'inf-3',
@@ -747,8 +753,10 @@ export const INITIAL_INFORMES = [
     actasAnexasIds: ['acta-16', 'acta-17'],
     anexosPdf: [],
     estado: 'enviado',
-    creadoPor: 'usr-rosa',
-    fechaCreacion: '2026-01-31T18:30:00Z'
+    creadoPor: 'Rosa Vilas Romalde',
+    fechaCreacion: '2026-01-31T18:30:00Z',
+    modificadoPor: 'Rosa Vilas Romalde',
+    fechaModificacion: '2026-01-31T19:15:00Z'
   }
 ];
 
@@ -762,6 +770,8 @@ export const INITIAL_NOTAS = [
     urgencia: 'media',
     contenido: 'Conversación con el técnico de Patrimonio Cultural. Indican que remitirán el visto bueno por escrito el lunes para la fotogrametría del pozo.',
     autor: 'Rosa Vilas Romalde',
+    modificadoPor: 'Rosa Vilas Romalde',
+    fechaModificacion: '2025-09-12T11:20:00Z',
     vinculadoA: 'acta-17'
   },
   {
@@ -773,6 +783,8 @@ export const INITIAL_NOTAS = [
     urgencia: 'alta',
     contenido: 'Recordar a la empresa constructora que la empresa acreditada RERA debe aportar el plan de desamiantado antes de la próxima visita del CSS.',
     autor: 'Juan Carlos Bello Criado',
+    modificadoPor: 'Juan Carlos Bello Criado',
+    fechaModificacion: '2025-09-10T09:15:00Z',
     vinculadoA: 'acta-17'
   },
   {
@@ -784,6 +796,8 @@ export const INITIAL_NOTAS = [
     urgencia: 'baja',
     contenido: 'El carpintero traerá los perfiles y el despiece de los marcos para comparar in situ con el vano existente.',
     autor: 'Sergio Beceiro Lodeiro',
+    modificadoPor: 'Sergio Beceiro Lodeiro',
+    fechaModificacion: '2025-09-08T16:40:00Z',
     vinculadoA: 'acta-17'
   }
 ];

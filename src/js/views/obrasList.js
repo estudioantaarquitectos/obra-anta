@@ -9,6 +9,7 @@ import { db } from '../db.js';
 import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
 import { openExpedienteEditorModal } from './expedienteEditorModal.js';
+import { formatCurrency } from '../utils/currency.js';
 
 export function renderObrasList(container, router) {
   let obras = db.getObras();
@@ -71,9 +72,6 @@ export function renderObrasList(container, router) {
             <div class="metric-data">
               <div class="metric-label">Expedientes Activos</div>
               <div class="metric-value">${obras.length}</div>
-              <div class="metric-trend">
-                <span>Castillo de San Felipe (Ferrol)</span>
-              </div>
             </div>
           </div>
 
@@ -84,9 +82,6 @@ export function renderObrasList(container, router) {
             <div class="metric-data">
               <div class="metric-label">Actas de Obra</div>
               <div class="metric-value">${allActas.length}</div>
-              <div class="metric-trend">
-                <span>Visitas e reunións periódicas</span>
-              </div>
             </div>
           </div>
 
@@ -97,9 +92,6 @@ export function renderObrasList(container, router) {
             <div class="metric-data">
               <div class="metric-label">Informes Mensuais</div>
               <div class="metric-value">${allInformes.length}</div>
-              <div class="metric-trend">
-                <span>Informes oficiais periódicos</span>
-              </div>
             </div>
           </div>
 
@@ -110,9 +102,6 @@ export function renderObrasList(container, router) {
             <div class="metric-data">
               <div class="metric-label">Notas de Bitácora</div>
               <div class="metric-value">${allNotas.length}</div>
-              <div class="metric-trend">
-                <span>Incidencias e chamadas</span>
-              </div>
             </div>
           </div>
         </div>
@@ -185,7 +174,7 @@ export function renderObrasList(container, router) {
                           ${escapeHtml(obra.expediente || 'AVS 03007 25/05')}
                         </span>
                         <div style="font-size: 0.78rem; color: var(--color-success); font-weight: 700; margin-top: 0.25rem;">
-                          ${escapeHtml(obra.presupuestoAdjudicacion || '894.520,00 €')}
+                          ${escapeHtml(formatCurrency(obra.presupuestoAdjudicacion || obra.presupuesto || '894.520,00 €'))}
                         </div>
                       </td>
 

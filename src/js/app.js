@@ -80,6 +80,8 @@ class AppRouter {
     const informesCount = activeObra ? db.getInformes(activeObra.id).length : db.getInformes().length;
     const notasCount = activeObra ? db.getNotas(activeObra.id).length : db.getNotas().length;
     const canManageUsers = auth.can('users:manage') || auth.isAdmin();
+    const canViewAgentes = auth.can('agentes:view') || auth.isAdmin();
+    const canManageBackups = auth.can('backup:manage') || auth.can('settings:manage') || auth.isAdmin();
 
     const isExpedienteActive = this.currentRoute === 'expediente';
     const currentTab = this.currentParams.tab || 'actas';
@@ -134,12 +136,14 @@ class AppRouter {
               <span class="nav-badge">${obrasCount}</span>
             </a>
 
-            <!-- Directorio Central de Agentes -->
-            <a href="javascript:void(0)" class="nav-item ${this.currentRoute === 'agentes' ? 'active' : ''}" data-route="agentes">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              <span>Directorio de Agentes</span>
-              <span class="nav-badge">${agentesCount}</span>
-            </a>
+            <!-- Directorio Central de Agentes (Condicional por permiso) -->
+            ${canViewAgentes ? `
+              <a href="javascript:void(0)" class="nav-item ${this.currentRoute === 'agentes' ? 'active' : ''}" data-route="agentes">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span>Directorio de Agentes</span>
+                <span class="nav-badge">${agentesCount}</span>
+              </a>
+            ` : ''}
 
             <!-- Expediente Activo y sus 3 secciones (Actas, Informes, Notas) -->
             ${activeObra ? `
@@ -166,19 +170,23 @@ class AppRouter {
               </a>
             ` : ''}
 
-            ${canManageUsers ? `
+            ${(canManageUsers || canManageBackups) ? `
               <div class="nav-section-title" style="margin-top: 1.25rem;">Administración</div>
+            ` : ''}
 
+            ${canManageUsers ? `
               <a href="javascript:void(0)" class="nav-item ${this.currentRoute === 'usuarios' ? 'active' : ''}" data-route="usuarios">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 <span>Usuarios y Grupos</span>
               </a>
             ` : ''}
 
-            <a href="javascript:void(0)" class="nav-item ${this.currentRoute === 'settings' ? 'active' : ''}" data-route="settings">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
-              <span>Copias de Seguridade</span>
-            </a>
+            ${canManageBackups ? `
+              <a href="javascript:void(0)" class="nav-item ${this.currentRoute === 'settings' ? 'active' : ''}" data-route="settings">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                <span>Copias de Seguridade</span>
+              </a>
+            ` : ''}
           </nav>
 
           <!-- Sidebar Footer: Logged in User Profile -->
@@ -266,9 +274,19 @@ class AppRouter {
         renderUsuarios(viewContainer, this);
         break;
       case 'agentes':
+        if (!auth.can('agentes:view') && !auth.isAdmin()) {
+          showToast('Non dispón de permisos para acceder ao Directorio de Agentes', 'error');
+          this.navigate('dashboard');
+          return;
+        }
         renderAgentes(viewContainer, this);
         break;
       case 'settings':
+        if (!auth.can('backup:manage') && !auth.can('settings:manage') && !auth.isAdmin()) {
+          showToast('Non dispón de permisos para acceder a Copias de Seguridade', 'error');
+          this.navigate('dashboard');
+          return;
+        }
         renderSettings(viewContainer, this);
         break;
       default:

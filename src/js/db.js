@@ -23,6 +23,7 @@ import {
   syncGrupoToSupabase,
   deleteGrupoFromSupabase
 } from './supabaseClient.js';
+import { formatCurrency, parseCurrency } from './utils/currency.js';
 
 const STORAGE_KEYS = {
   USERS: 'anta_obra_users',
@@ -129,6 +130,29 @@ class Database {
   }
 
   checkMigrations() {
+    if (!localStorage.getItem(STORAGE_KEYS.GROUPS)) {
+      localStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(INITIAL_GROUPS));
+    } else {
+      const groups = this.getCollection(STORAGE_KEYS.GROUPS);
+      let groupsChanged = false;
+      groups.forEach(g => {
+        if (!g.permissions) g.permissions = [];
+        if (g.id === 'admin') {
+          ['agentes:view', 'agentes:manage', 'backup:manage'].forEach(p => {
+            if (!g.permissions.includes(p)) { g.permissions.push(p); groupsChanged = true; }
+          });
+        } else if (g.id === 'direccion_obra') {
+          ['agentes:view', 'agentes:manage'].forEach(p => {
+            if (!g.permissions.includes(p)) { g.permissions.push(p); groupsChanged = true; }
+          });
+        }
+      });
+      if (groupsChanged) {
+        this.setCollection(STORAGE_KEYS.GROUPS, groups);
+        groups.forEach(g => syncGrupoToSupabase(g));
+      }
+    }
+
     if (!localStorage.getItem(STORAGE_KEYS.AGENTES)) {
       localStorage.setItem(STORAGE_KEYS.AGENTES, JSON.stringify(INITIAL_AGENTES));
     } else {
@@ -188,6 +212,17 @@ class Database {
           if (ag.id === 'ag-joaquin-ferrer' && (ag.iniciales === 'JC' || !ag.iniciales)) { ag.iniciales = 'JF'; obrasChanged = true; }
         });
       }
+
+      // Normalizar presupuesto a moneda Euro (€) con dos decimales
+      if (o.presupuestoAdjudicacion || o.presupuesto) {
+        const formatted = formatCurrency(o.presupuestoAdjudicacion || o.presupuesto);
+        const num = parseCurrency(o.presupuestoAdjudicacion || o.presupuesto);
+        if (o.presupuestoAdjudicacion !== formatted || o.presupuesto !== num) {
+          o.presupuestoAdjudicacion = formatted;
+          o.presupuesto = num;
+          obrasChanged = true;
+        }
+      }
     });
     if (obrasChanged) {
       this.setCollection(STORAGE_KEYS.OBRAS, obras);
@@ -210,6 +245,11 @@ class Database {
       if (!a.apartados || !Array.isArray(a.apartados) || a.apartados.length === 0) {
         const norm = normalizeActa(a);
         a.apartados = norm.apartados;
+        actasChanged = true;
+      }
+      if (!a.modificadoPor) {
+        a.modificadoPor = a.numero == 17 ? 'Sergio Beceiro Lodeiro' : 'Rosa Vilas Romalde';
+        a.fechaModificacion = a.fechaModificacion || (a.fecha ? `${a.fecha}T18:00:00Z` : new Date().toISOString());
         actasChanged = true;
       }
     });
@@ -236,6 +276,11 @@ class Database {
           i.obraTitulo = fullOfficialTitle;
           infChanged = true;
         }
+        if (!i.modificadoPor) {
+          i.modificadoPor = i.numero == 2 ? 'Sergio Beceiro Lodeiro' : 'Rosa Vilas Romalde';
+          i.fechaModificacion = i.fechaModificacion || (i.datosXerais?.dataInforme ? `${i.datosXerais.dataInforme}T19:00:00Z` : new Date().toISOString());
+          infChanged = true;
+        }
       });
     }
     if (infChanged) this.setCollection(STORAGE_KEYS.INFORMES, informes);
@@ -245,6 +290,11 @@ class Database {
     notas.forEach(n => {
       if (!n.obraId) {
         n.obraId = defaultObraId;
+        notasChanged = true;
+      }
+      if (!n.modificadoPor) {
+        n.modificadoPor = n.autor || 'Rosa Vilas Romalde';
+        n.fechaModificacion = n.fechaModificacion || (n.fecha ? `${n.fecha}T12:00:00Z` : new Date().toISOString());
         notasChanged = true;
       }
     });
@@ -340,6 +390,10 @@ class Database {
   }
 
   saveObra(obra) {
+    if (obra.presupuestoAdjudicacion || obra.presupuesto) {
+      obra.presupuestoAdjudicacion = formatCurrency(obra.presupuestoAdjudicacion || obra.presupuesto);
+      obra.presupuesto = parseCurrency(obra.presupuestoAdjudicacion);
+    }
     const obras = this.getObras();
     const existingIndex = obras.findIndex(o => String(o.id) === String(obra.id));
     
@@ -504,25 +558,33 @@ class Database {
     const actas = this.getCollection(STORAGE_KEYS.ACTAS);
     const existingIndex = actas.findIndex(a => String(a.id) === String(acta.id));
     const normalized = normalizeActa(acta);
+    const currentUser = this.getCurrentUserModifier();
+    const now = new Date().toISOString();
     
+    let saved;
     if (existingIndex >= 0) {
-      actas[existingIndex] = {
+      saved = {
         ...actas[existingIndex],
         ...normalized,
-        fechaModificacion: new Date().toISOString()
+        modificadoPor: currentUser,
+        fechaModificacion: now
       };
+      actas[existingIndex] = saved;
     } else {
-      actas.unshift({
+      saved = {
         ...normalized,
         id: normalized.id || `acta-${Date.now()}`,
         obraId: normalized.obraId || this.getActiveObraId(),
-        fechaCreacion: new Date().toISOString(),
-        fechaModificacion: new Date().toISOString()
-      });
+        creadoPor: currentUser,
+        modificadoPor: currentUser,
+        fechaCreacion: now,
+        fechaModificacion: now
+      };
+      actas.unshift(saved);
     }
     this.setCollection(STORAGE_KEYS.ACTAS, actas);
-    syncActaToSupabase(normalized);
-    return normalized;
+    syncActaToSupabase(saved);
+    return saved;
   }
 
   deleteActa(id) {
@@ -569,13 +631,16 @@ class Database {
   saveInforme(informe) {
     const informes = this.getCollection(STORAGE_KEYS.INFORMES);
     const existingIndex = informes.findIndex(i => String(i.id) === String(informe.id));
+    const currentUser = this.getCurrentUserModifier();
+    const now = new Date().toISOString();
     
     let saved;
     if (existingIndex >= 0) {
       saved = {
         ...informes[existingIndex],
         ...informe,
-        fechaModificacion: new Date().toISOString()
+        modificadoPor: currentUser,
+        fechaModificacion: now
       };
       informes[existingIndex] = saved;
     } else {
@@ -583,8 +648,10 @@ class Database {
         ...informe,
         id: informe.id || `inf-${Date.now()}`,
         obraId: informe.obraId || this.getActiveObraId(),
-        fechaCreacion: new Date().toISOString(),
-        fechaModificacion: new Date().toISOString()
+        creadoPor: currentUser,
+        modificadoPor: currentUser,
+        fechaCreacion: now,
+        fechaModificacion: now
       };
       informes.unshift(saved);
     }
@@ -636,17 +703,29 @@ class Database {
   saveNota(nota) {
     const notas = this.getNotas();
     const existingIndex = notas.findIndex(n => String(n.id) === String(nota.id));
+    const currentUser = this.getCurrentUserModifier();
+    const now = new Date().toISOString();
     
     let saved;
     if (existingIndex >= 0) {
-      saved = { ...notas[existingIndex], ...nota };
+      saved = {
+        ...notas[existingIndex],
+        ...nota,
+        modificadoPor: currentUser,
+        fechaModificacion: now
+      };
       notas[existingIndex] = saved;
     } else {
       saved = {
         ...nota,
         id: nota.id || `not-${Date.now()}`,
         obraId: nota.obraId || this.getActiveObraId(),
-        fecha: nota.fecha || new Date().toISOString().split('T')[0]
+        fecha: nota.fecha || now.split('T')[0],
+        autor: nota.autor || currentUser,
+        creadoPor: currentUser,
+        modificadoPor: currentUser,
+        fechaCreacion: now,
+        fechaModificacion: now
       };
       notas.unshift(saved);
     }
@@ -803,6 +882,14 @@ class Database {
     } else {
       localStorage.removeItem(STORAGE_KEYS.SESSION);
     }
+  }
+
+  getCurrentUserModifier() {
+    const session = this.getSession();
+    if (session && (session.name || session.username)) {
+      return session.name || session.username;
+    }
+    return 'Admin';
   }
 
   /* ----------------- BACKUP / RESTORE ----------------- */
@@ -1082,5 +1169,5 @@ export function normalizeActa(acta) {
   return clone;
 }
 
-export { getAgentInitials, getAgentAvatarColors, renderAgentAvatarHtml, getApartado1Titulos } from './utils/avatar.js';
+export { getAgentInitials, getAgentAvatarColors, renderAgentAvatarHtml, getApartado1Titulos, getUserDisplayName, formatModificationDate, renderUserModifierHtml } from './utils/avatar.js';
 

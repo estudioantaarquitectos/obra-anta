@@ -4,6 +4,7 @@
    ============================================================================== */
 
 import { createClient } from '@supabase/supabase-js';
+import { formatCurrency, parseCurrency } from './utils/currency.js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -61,24 +62,30 @@ export async function fetchAllFromSupabase() {
         notas: a.notas
       })) : null,
 
-      obras: obRes.data ? obRes.data.map(o => ({
-        ...(o.datos || {}),
-        id: o.id,
-        expediente: o.expediente,
-        titulo: o.titulo,
-        situacion: o.situacion,
-        promotor: o.promotor,
-        contratista: o.contratista,
-        jefeObra: o.jefe_obra,
-        direccionObra: o.direccion_obra,
-        direccionEjecucion: o.direccion_ejecucion,
-        coordinadorCSS: o.coordinador_css,
-        agentes: o.agentes || [],
-        presupuesto: o.presupuesto,
-        plazoMeses: o.plazo_meses,
-        fechaInicio: o.fecha_inicio,
-        estado: o.estado
-      })) : null,
+      obras: obRes.data ? obRes.data.map(o => {
+        const rawPres = o.presupuesto !== null && o.presupuesto !== undefined
+          ? o.presupuesto
+          : (o.datos?.presupuestoAdjudicacion || o.datos?.presupuesto || 0);
+        return {
+          ...(o.datos || {}),
+          id: o.id,
+          expediente: o.expediente,
+          titulo: o.titulo,
+          situacion: o.situacion,
+          promotor: o.promotor,
+          contratista: o.contratista,
+          jefeObra: o.jefe_obra,
+          direccionObra: o.direccion_obra,
+          direccionEjecucion: o.direccion_ejecucion,
+          coordinadorCSS: o.coordinador_css,
+          agentes: o.agentes || [],
+          presupuesto: parseCurrency(rawPres),
+          presupuestoAdjudicacion: formatCurrency(rawPres),
+          plazoMeses: o.plazo_meses,
+          fechaInicio: o.fecha_inicio,
+          estado: o.estado
+        };
+      }) : null,
 
       actas: acRes.data ? acRes.data.map(a => ({
         ...(a.datos || {}),
@@ -198,7 +205,9 @@ export async function syncObraToSupabase(obra) {
       direccion_ejecucion: obra.direccionEjecucion,
       coordinador_css: obra.coordinadorCSS,
       agentes: obra.agentes || [],
-      presupuesto: typeof obra.presupuesto === 'number' ? obra.presupuesto : 0,
+      presupuesto: typeof obra.presupuesto === 'number'
+        ? obra.presupuesto
+        : parseCurrency(obra.presupuestoAdjudicacion || obra.presupuesto || 0),
       plazo_meses: typeof obra.plazoMeses === 'number' ? obra.plazoMeses : 12,
       fecha_inicio: obra.fechaInicio || null,
       estado: obra.estado || 'en_curso',

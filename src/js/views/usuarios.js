@@ -27,6 +27,11 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'notas:edit', label: 'Editar Notas de Obra', module: 'Notas de Obra' },
   { id: 'notas:delete', label: 'Eliminar Notas de Obra', module: 'Notas de Obra' },
 
+  { id: 'agentes:view', label: 'Ver e acceder ao Directorio de Agentes', module: 'Directorio de Agentes' },
+  { id: 'agentes:manage', label: 'Crear, editar e eliminar Agentes no directorio', module: 'Directorio de Agentes' },
+
+  { id: 'backup:manage', label: 'Acceso a Copias de Seguridade e Restauración', module: 'Copias de Seguridade' },
+
   { id: 'users:manage', label: 'Gestionar Usuarios', module: 'Administración' },
   { id: 'groups:manage', label: 'Gestionar Grupos y Permisos', module: 'Administración' },
   { id: 'settings:manage', label: 'Configuración general de Obra', module: 'Administración' }

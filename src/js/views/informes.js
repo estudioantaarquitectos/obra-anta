@@ -6,6 +6,7 @@
 import { db } from '../db.js';
 import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
+import { renderUserModifierHtml } from '../utils/avatar.js';
 
 export function renderInformes(container, router) {
   let informes = db.getInformes();
@@ -70,8 +71,9 @@ export function renderInformes(container, router) {
                   <th style="width: 160px;">Período / Mes</th>
                   <th>Proxecto e Emplazamento</th>
                   <th style="width: 170px;">Avance Executado</th>
-                  <th style="width: 150px;">Estado Xeral</th>
-                  <th style="width: 110px;">Data Emisión</th>
+                  <th style="width: 140px;">Estado Xeral</th>
+                  <th style="width: 160px;">Última Edición</th>
+                  <th style="width: 105px;">Data Emisión</th>
                   <th class="col-actions">Accións</th>
                 </tr>
               </thead>
@@ -133,6 +135,10 @@ export function renderInformes(container, router) {
 
                       <td>
                         ${statusBadge}
+                      </td>
+
+                      <td>
+                        ${renderUserModifierHtml(inf.modificadoPor || inf.creadoPor || 'Rosa Vilas Romalde', inf.fechaModificacion || inf.fechaCreacion || inf.datosXerais?.dataInforme)}
                       </td>
 
                       <td>

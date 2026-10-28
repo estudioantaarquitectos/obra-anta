@@ -10,6 +10,19 @@ import { isSupabaseConfigured } from '../supabaseClient.js';
 import { API_BASE } from '../exportDocx.js';
 
 export function renderSettings(container, router) {
+  if (!auth.can('backup:manage') && !auth.can('settings:manage') && !auth.isAdmin()) {
+    container.innerHTML = `
+      <div class="content-wrapper">
+        <div class="empty-state">
+          <div class="empty-title" style="color: var(--color-danger);">Acceso restringido</div>
+          <div class="empty-desc">O seu grupo de usuario non dispón de permisos para acceder ás Copias de Seguridade e Mantemento do Sistema.</div>
+          <button class="btn btn-primary" onclick="window.history.back()">Volver</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   function render() {
     let backupSizeBytes = 0;
     try {

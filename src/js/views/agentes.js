@@ -5,14 +5,29 @@
    ========================================================================== */
 
 import { db } from '../db.js';
+import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
 import { renderAgentAvatarHtml } from '../utils/avatar.js';
 
 export function renderAgentes(container, router) {
+  if (!auth.can('agentes:view') && !auth.isAdmin()) {
+    container.innerHTML = `
+      <div class="content-wrapper">
+        <div class="empty-state">
+          <div class="empty-title" style="color: var(--color-danger);">Acceso restringido</div>
+          <div class="empty-desc">O seu grupo de usuario non dispón de permisos para acceder ao Directorio de Agentes.</div>
+          <button class="btn btn-primary" onclick="window.history.back()">Volver</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   let searchTerm = '';
   let entityFilter = 'todas';
 
   function render() {
+    const canManageAgentes = auth.can('agentes:manage') || auth.isAdmin();
     const agentes = db.getAgentes();
     const obras = db.getObras();
 
@@ -53,12 +68,14 @@ export function renderAgentes(container, router) {
             </p>
           </div>
 
-          <div>
-            <button class="btn btn-primary" id="btn-create-agente">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-              Novo Agente
-            </button>
-          </div>
+          ${canManageAgentes ? `
+            <div>
+              <button class="btn btn-primary" id="btn-create-agente">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                Novo Agente
+              </button>
+            </div>
+          ` : ''}
         </div>
 
         <!-- Filter & Search Toolbar -->
@@ -174,17 +191,19 @@ export function renderAgentes(container, router) {
 
                   </div>
 
-                  <!-- Footer Actions -->
-                  <div class="card-footer" style="padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem; border-top: 1px solid var(--border-light);">
-                    <button class="btn btn-secondary btn-sm btn-edit-agente" data-id="${agente.id}">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      Editar
-                    </button>
-                    <button class="btn btn-secondary btn-sm btn-delete-agente" data-id="${agente.id}" data-name="${escapeHtml(agente.nombre)}" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35);">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                      Eliminar
-                    </button>
-                  </div>
+                  <!-- Footer Actions (solo si canManageAgentes) -->
+                  ${canManageAgentes ? `
+                    <div class="card-footer" style="padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem; border-top: 1px solid var(--border-light);">
+                      <button class="btn btn-secondary btn-sm btn-edit-agente" data-id="${agente.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Editar
+                      </button>
+                      <button class="btn btn-secondary btn-sm btn-delete-agente" data-id="${agente.id}" data-name="${escapeHtml(agente.nombre)}" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35);">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Eliminar
+                      </button>
+                    </div>
+                  ` : ''}
 
                 </div>
               `;

@@ -1261,3 +1261,92 @@ he creado un usuario nuevo y no me deja entrar en la WEB
 
 ---
 
+## Conversación #40
+
+### 👤 Usuario:
+
+Si, por supuesto: en supabase
+
+### 🤖 Antigravity:
+
+He lanzado la compilación de producción para validar la nueva arquitectura de autenticación y sincronización con Supabase. Esperamos unos instantes a que finalice.
+
+---
+
+## Conversación #41
+
+### 👤 Usuario:
+
+/memo Ponme al día
+
+### 🤖 Antigravity:
+
+Se repasó el estado completo del proyecto tras consultar `Memo/memo.md` (41 conversaciones) y `Memo/DATOS_IMPLANTACION_Y_CAMBIO_DE_EQUIPO.md`:
+1. **Arquitectura activa en la nube**: Frontend en Vercel (`anta-obra.vercel.app`), backend en Render Docker (`anta-backend-1x7v.onrender.com`), base de datos PostgreSQL y Storage de archivos (`anta-files`) en Supabase, y repositorio GitHub (`estudioantaarquitectos/obra-anta`).
+2. **Paridad 1:1 en documentos oficiales**: Plantillas `ejemplo_modificado_acta_semanal.docx` y `ejemplo_modificado_informe_mensual.docx` pobladas directamente con LibreOffice headless y ReportLab.
+3. **Últimas mejoras consolidadas**: Autenticación multi-usuario remota (`findUsuarioInSupabase`), formato de importes con céntimos y cálculo automático del `% acumulado`, reparación de botones en modales y sustitución de la tarjeta de configuración obsoleta por **Copias de Seguridade**.
+
+---
+
+## Conversación #42
+
+### 👤 Usuario:
+
+Me gustaría saber qué usuario fué el último en modificar un acta o informe o nota. Es decir que aparezca en las listas de cada uno de esos elementos
+
+### 🤖 Antigravity:
+
+Se ha implementado el seguimiento y visualización del usuario que realizó la última modificación en todas las listas de **Actas**, **Informes Mensuales** y **Notas de Bitácora**:
+
+1. **Gestión y Registro Automático en `src/js/db.js`**:
+   - Se añadió el método `getCurrentUserModifier()` que obtiene el usuario con sesión activa (`auth.getUser()` / `db.getSession()`).
+   - Al guardar o editar mediante `saveActa`, `saveInforme` o `saveNota`, el sistema registra automáticamente los metadatos:
+     - `modificadoPor`: Nombre o usuario de la persona autenticada.
+     - `fechaModificacion`: Marca de tiempo ISO exacta.
+     - `creadoPor` y `fechaCreacion`: Registrados en el momento de creación inicial.
+   - Migración automática en `checkMigrations()` para que los registros existentes en almacenamiento local cuenten de inmediato con usuarios y fechas asignadas.
+
+2. **Componente Visual de Modificador (`src/js/utils/avatar.js`)**:
+   - `renderUserModifierHtml(userRef, dateStr)`: Genera un indicador con la insignia de iniciales cromáticas del usuario, su nombre completo en negrita y la fecha y hora formateadas (`dd/mm/aaaa hh:mm`).
+   - `getUserDisplayName(userRef)`: Resuelve identificadores y referencias (`usr-sergio`, `usr-rosa`, etc.) a nombres legibles oficiales (`Sergio Beceiro Lodeiro`, `Rosa Vilas Romalde`, `Admin`).
+
+3. **Visualización en Listas y Vistas**:
+   - **Actas de Obra**:
+     - En `src/js/views/expedienteView.js` (Pestaña Actas) y en `src/js/views/dashboard.js`: Incorporada la columna destacada **"Última Edición"** en la cabecera y en cada fila colapsada. Al desplegar el acordeón, se incluye además un banner superior con la autoría de creación y última edición.
+   - **Informes Mensuales**:
+     - En `src/js/views/expedienteView.js` (Pestaña Informes) y `src/js/views/informes.js`: Añadida la columna **"Última Edición"** a la tabla de informes mensuales, mostrando avatar de iniciales, nombre del editor y fecha/hora.
+   - **Notas de Bitácora**:
+     - En `src/js/views/expedienteView.js` (Pestaña Notas) y `src/js/views/notas.js`: El pie de cada tarjeta muestra ahora de forma diferenciada el **Autor original** y la **Última modificación** con su insignia cromática, nombre y fecha.
+
+4. **Verificación y Pruebas**:
+   - Compilación de producción con Vite: limpia y sin errores (`npm run build`).
+   - Verificación visual integral mediante subagente de navegador confirmando la presencia y diseño de la columna "Última Edición" en las vistas de Dashboard, Expediente (Actas, Informes y Notas), Informes y Notas.
+
+---
+
+## Conversación #43
+
+### 👤 Usuario:
+
+EN la captura:
+Te marco en rojo lo que no debe aparecer:
+Vamos a eliminar esos subtítulos,
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #44
+
+### 👤 Usuario:
+
+Quiero que esta sea una cifra también en moneda de euro, con dos céntimos
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
