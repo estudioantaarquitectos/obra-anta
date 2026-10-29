@@ -142,7 +142,7 @@ export function renderActaPrint(container, router, params = {}) {
           ${isReunion ? `
             <!-- 1. SECTION 1: DATOS XERAIS DA OBRA -->
             <div class="dt05-section">
-              <div class="dt05-sec-header">1.- DATOS XERAIS DA OBRA:</div>
+              <div class="dt05-sec-header">1.- DATOS XERAIS DA OBRA</div>
               <div class="dt05-info-grid">
                 <div class="dt05-info-row">
                   <span class="dt05-lbl">Proxecto:</span>
@@ -181,7 +181,7 @@ export function renderActaPrint(container, router, params = {}) {
 
             <!-- 2. SECTION 2: DATOS XERAIS DA REUNIÓN -->
             <div class="dt05-section" style="margin-top: 14px;">
-              <div class="dt05-sec-header">2.- DATOS XERAIS DA REUNIÓN:</div>
+              <div class="dt05-sec-header">2.- DATOS XERAIS DA REUNIÓN</div>
               <div class="dt05-info-grid">
                 <div class="dt05-info-row">
                   <span class="dt05-lbl">Data:</span>
@@ -204,17 +204,23 @@ export function renderActaPrint(container, router, params = {}) {
 
             <!-- 3. SECTION 3: ASISTENTES -->
             <div class="dt05-section" style="margin-top: 14px;">
-              <div class="dt05-sec-header">3.- ASISTENTES:</div>
-              <table class="dt05-table" style="margin-top: 8px;">
+              <div class="dt05-sec-header">3.- ASISTENTES</div>
+              <table class="dt05-table-accent1" style="margin-top: 8px;">
                 <thead>
                   <tr>
-                    <th style="width: 38%;">Nome e Apelidos</th>
-                    <th style="width: 32%;">Cargo / Función</th>
-                    <th style="width: 30%;">Entidade Representada</th>
+                    <th style="width: 35%;">Nome e Apelidos</th>
+                    <th style="width: 36%;">Cargo / Función</th>
+                    <th style="width: 29%;">Entidade Representada</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').map(asist => `
+                  ${asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').length === 0 ? `
+                    <tr>
+                      <td colspan="3" style="font-style: italic; color: #64748b; text-align: center; padding: 10px;">
+                        Non constan asistentes rexistrados.
+                      </td>
+                    </tr>
+                  ` : asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').map(asist => `
                     <tr>
                       <td style="font-weight: 600; color: #0f172a; vertical-align: middle;">
                         ${escapeHtml(asist.nombre || asist.nome || '')}
@@ -233,14 +239,14 @@ export function renderActaPrint(container, router, params = {}) {
 
             <!-- 4. SECTION 4: CUESTIÓNS TRATADAS NA REUNIÓN -->
             <div class="dt05-section" style="margin-top: 14px;">
-              <div class="dt05-sec-header">4.- CUESTIÓNS TRATADAS NA REUNIÓN:</div>
+              <div class="dt05-sec-header">4.- CUESTIÓNS TRATADAS NA REUNIÓN</div>
               ${renderApartadosHtmlModern(acta, 4)}
             </div>
 
             <!-- 5. SECTION 5: DILIXENCIA DE FIRMAS (Sólo si hay asistentes con firma marcada) -->
             ${hasFirmas ? `
               <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
-                <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS:</div>
+                <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS</div>
                 <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
                   En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta de reunión:
                 </div>
@@ -248,10 +254,11 @@ export function renderActaPrint(container, router, params = {}) {
                   ${firmantes.map(f => `
                     <div class="acta-modern-firma-card">
                       <div>
-                        <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
-                        <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+                        <div class="acta-modern-firma-role">${escapeHtml(f.cargo || 'Asistente')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}:</div>
+                        <div class="acta-modern-firma-name">${escapeHtml(f.nombre || f.texto || '')}</div>
                       </div>
                       <div class="acta-modern-firma-space"></div>
+                      <div style="font-size: 8pt; color: #94a3b8; margin-top: 2px;">Asdo.: ____________________________</div>
                     </div>
                   `).join('')}
                 </div>
@@ -260,7 +267,7 @@ export function renderActaPrint(container, router, params = {}) {
           ` : `
             <!-- 2. SECTION 1: DATOS XERAIS (Audio 4: DO and DE strictly separated) -->
             <div class="dt05-section">
-              <div class="dt05-sec-header">1.- DATOS XERAIS:</div>
+              <div class="dt05-sec-header">1.- DATOS XERAIS</div>
               
               <div class="dt05-info-grid">
                 <div class="dt05-info-row">
@@ -316,18 +323,24 @@ export function renderActaPrint(container, router, params = {}) {
 
             <!-- 3. SECTION 2: ASISTENTES -->
             <div class="dt05-section">
-              <div class="dt05-sec-header">2.- ASISTENTES:</div>
+              <div class="dt05-sec-header">2.- ASISTENTES</div>
               
-              <table class="dt05-table" style="margin-top: 8px;">
+              <table class="dt05-table-accent1" style="margin-top: 8px;">
                 <thead>
                   <tr>
-                    <th style="width: 38%;">Nome e Apelidos</th>
-                    <th style="width: 32%;">Cargo / Función</th>
-                    <th style="width: 30%;">Entidade Representada</th>
+                    <th style="width: 35%;">Nome e Apelidos</th>
+                    <th style="width: 36%;">Cargo / Función</th>
+                    <th style="width: 29%;">Entidade Representada</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').map(asist => `
+                  ${asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').length === 0 ? `
+                    <tr>
+                      <td colspan="3" style="font-style: italic; color: #64748b; text-align: center; padding: 10px;">
+                        Non constan asistentes rexistrados.
+                      </td>
+                    </tr>
+                  ` : asistentes.filter(a => a.asistio !== false && a.asiste !== false && a.estado !== 'non_asiste').map(asist => `
                     <tr>
                       <td style="font-weight: 600; color: #0f172a; vertical-align: middle;">
                         ${escapeHtml(asist.nombre || asist.nome || '')}
@@ -346,14 +359,14 @@ export function renderActaPrint(container, router, params = {}) {
 
             <!-- 4. SECTION 3: CUESTIÓNS TRATADAS NA VISITA / REUNIÓN -->
             <div class="dt05-section">
-              <div class="dt05-sec-header">3.- CUESTIÓNS TRATADAS NA VISITA / REUNIÓN:</div>
+              <div class="dt05-sec-header">3.- CUESTIÓNS TRATADAS NA VISITA / REUNIÓN</div>
               ${renderApartadosHtmlModern(acta, 3)}
             </div>
 
             <!-- 5. INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS) -->
             ${hasCSS ? `
               <div class="dt05-section" style="margin-top: 14px;">
-                <div class="dt05-sec-header">${numCSS}.- INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS):</div>
+                <div class="dt05-sec-header">${numCSS}.- INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS)</div>
                 <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; padding: 10px 12px; border-radius: 4px; font-size: 9pt; line-height: 1.45;">
                   ${renderListOrText(acta.indicacionesSeguridad)}
                 </div>
@@ -363,7 +376,7 @@ export function renderActaPrint(container, router, params = {}) {
             <!-- 6. PRÓXIMAS ACTUACIÓNS PREVISTAS -->
             ${hasPrevistas ? `
               <div class="dt05-section" style="margin-top: 14px;">
-                <div class="dt05-sec-header">${numPrevistas}.- PRÓXIMAS ACTUACIÓNS PREVISTAS:</div>
+                <div class="dt05-sec-header">${numPrevistas}.- PRÓXIMAS ACTUACIÓNS PREVISTAS</div>
                 <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #1e3a8a; padding: 10px 12px; border-radius: 4px; font-size: 9pt; line-height: 1.45;">
                   ${renderListOrText(acta.actuacionesPrevistas)}
                 </div>
@@ -373,7 +386,7 @@ export function renderActaPrint(container, router, params = {}) {
             <!-- 7. DILIXENCIA DE FIRMAS (Sólo si hasFirmas) -->
             ${hasFirmas ? `
               <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
-                <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS:</div>
+                <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS</div>
                 <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
                   En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta:
                 </div>
@@ -382,10 +395,11 @@ export function renderActaPrint(container, router, params = {}) {
                   ${firmantes.map(f => `
                     <div class="acta-modern-firma-card">
                       <div>
-                        <div class="acta-modern-firma-name">Fdo.: ${escapeHtml(f.texto || f.nombre || '')}</div>
-                        <div class="acta-modern-firma-role">${escapeHtml(f.cargo || '')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}</div>
+                        <div class="acta-modern-firma-role">${escapeHtml(f.cargo || 'Asistente')}${f.entidad ? ` (${escapeHtml(f.entidad)})` : ''}:</div>
+                        <div class="acta-modern-firma-name">${escapeHtml(f.nombre || f.texto || '')}</div>
                       </div>
                       <div class="acta-modern-firma-space"></div>
+                      <div style="font-size: 8pt; color: #94a3b8; margin-top: 2px;">Asdo.: ____________________________</div>
                     </div>
                   `).join('')}
                 </div>
@@ -396,7 +410,7 @@ export function renderActaPrint(container, router, params = {}) {
           <!-- 8. ANEXO REPORTAXE FOTOGRÁFICO EN MODO GRID 2x2 (Audio 2) -->
           ${numFotos ? `
             <div class="dt05-section" style="margin-top: 22px; page-break-before: auto;">
-              <div class="dt05-sec-header">${numFotos}.- ANEXO: REPORTAXE FOTOGRÁFICO:</div>
+              <div class="dt05-sec-header">${numFotos}.- ANEXO: REPORTAXE FOTOGRÁFICO</div>
               <div style="font-size: 8pt; color: #64748b; margin-bottom: 6px;">
                 Imaxes capturadas na visita de obra (distribución uniforme en cuadrícula de 4 fotos por páxina, respectando a proporción orixinal):
               </div>
@@ -420,12 +434,12 @@ export function renderActaPrint(container, router, params = {}) {
           <!-- 9. ANEXO DOCUMENTOS PDF ADXUNTOS (Audio 1) -->
           ${numAnexos ? `
             <div class="dt05-section" style="margin-top: 22px; page-break-inside: avoid;">
-              <div class="dt05-sec-header">${numAnexos}.- ANEXO: DOCUMENTOS PDF ADXUNTOS:</div>
+              <div class="dt05-sec-header">${numAnexos}.- ANEXO: DOCUMENTOS PDF ADXUNTOS</div>
               <div style="font-size: 8pt; color: #64748b; margin-bottom: 8px;">
                 Relación de documentos complementarios incorporados correlativamente ao final do PDF oficial, cada un precedido pola súa folla de separata institucional:
               </div>
               
-              <table class="dt05-table">
+              <table class="dt05-table-accent1">
                 <thead>
                   <tr>
                     <th style="width: 45px; text-align: center;">Nº</th>
@@ -550,22 +564,22 @@ function renderApartadosHtmlModern(acta, secBase = 3) {
   const apartados = acta.apartados || [];
   if (apartados.length > 0) {
     return apartados.map((ap, apIdx) => {
-      const cleanTitle = (ap.titulo || `APARTADO ${apIdx + 1}`).replace(/^\d+(\.\d+)*[_.\s-]+/, '');
+      const cleanTitle = (ap.titulo || `APARTADO ${apIdx + 1}`).replace(/^\d+(\.\d+)*[_.\s-]+/, '').trim();
       return `
-        <div style="margin-top: 14px; margin-bottom: 8px;">
-          <div style="font-weight: 700; font-size: 9.5pt; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; font-style: italic;">
-            ${secBase}.${apIdx + 1}.- ${escapeHtml(cleanTitle)}
+        <div class="dt05-apartado-block" style="margin-top: 12px; margin-bottom: 8px;">
+          <div class="dt05-h2-header">
+            ${escapeHtml(cleanTitle)}
           </div>
           ${(ap.secciones || []).map((sec) => {
-            const cleanSec = (sec.titulo || '').replace(/^\d+(\.\d+)*[_.\s-]+/, '');
+            const cleanSec = (sec.titulo || '').replace(/^\d+(\.\d+)*[_.\s-]+/, '').trim();
             return `
-              <div style="margin-top: 8px; margin-left: 2px;">
+              <div class="dt05-seccion-block" style="margin-top: 6px;">
                 ${cleanSec ? `
-                  <div style="font-weight: 700; font-size: 9pt; color: #0f172a; margin-bottom: 3px;">
+                  <div class="dt05-h3-header">
                     ${escapeHtml(cleanSec)}
                   </div>
                 ` : ''}
-                <div style="font-size: 8.5pt; color: #334155; line-height: 1.5; text-align: justify;">
+                <div class="dt05-normal-p">
                   ${renderSectionTextModern(sec.texto)}
                 </div>
               </div>
@@ -582,15 +596,13 @@ function renderApartadosHtmlModern(acta, secBase = 3) {
     out += `
       <div style="margin-top: 10px;">
         ${acta.cuestionesTratadas.map((c, i) => `
-          <div style="margin-top: 10px; margin-left: 2px;">
-            <div style="font-weight: 700; font-size: 9.5pt; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; font-style: italic; margin-bottom: 6px;">
-              ${secBase}.${i + 1}.- ${escapeHtml(c.subtitulo || 'Tema tratado')}
+          <div class="dt05-apartado-block" style="margin-top: 10px;">
+            <div class="dt05-h2-header">
+              ${escapeHtml((c.subtitulo || 'Tema tratado').replace(/^\d+(\.\d+)*[_.\s-]+/, '').trim())}
             </div>
-            <div style="font-size: 8.5pt; color: #334155; line-height: 1.5;">
+            <div class="dt05-normal-p">
               ${(Array.isArray(c.puntos) ? c.puntos : (c.puntos || '').split('\n')).filter(Boolean).map(p => `
-                <div style="margin-bottom: 4px;">
-                  • ${escapeHtml(p)}
-                </div>
+                <div style="margin-bottom: 4px;">• ${escapeHtml(p)}</div>
               `).join('')}
             </div>
           </div>
@@ -598,7 +610,7 @@ function renderApartadosHtmlModern(acta, secBase = 3) {
       </div>
     `;
   }
-  return out || '<div style="font-size: 8.5pt; color: #94a3b8; font-style: italic;">Non se rexistraron cuestións específicas nesta visita.</div>';
+  return out || '<div class="dt05-normal-p" style="font-style: italic; color: #94a3b8;">Non se rexistraron cuestións específicas nesta visita.</div>';
 }
 
 function renderSectionTextModern(text) {

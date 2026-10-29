@@ -308,17 +308,97 @@
 
 .dt05-section {
   margin-bottom: 14px;
-  page-break-inside: avoid;
+  page-break-inside: auto;
+  break-inside: auto;
 }
 
 .dt05-sec-header {
+  font-size: 12pt;
+  font-weight: bold;
+  color: #0F4761;
+  border-bottom: 1pt solid #4C94D8;
+  padding-bottom: 2px;
+  margin-top: 18pt;
+  margin-bottom: 4pt;
+  text-transform: uppercase;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.dt05-h2-header {
+  font-size: 11pt;
+  font-style: italic;
+  font-weight: normal;
+  color: #0F4761;
+  border-bottom: 0.5pt solid #4C94D8;
+  padding-bottom: 2px;
+  margin-top: 8pt;
+  margin-bottom: 4pt;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.dt05-h3-header {
   font-size: 10pt;
   font-weight: bold;
-  color: #0f172a;
-  border-bottom: 1.5px solid #0284c7;
-  padding-bottom: 2px;
-  margin-bottom: 6px;
-  text-transform: uppercase;
+  color: #000000;
+  margin-left: 1cm;
+  margin-top: 8pt;
+  margin-bottom: 4pt;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.dt05-normal-p {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  color: #000000;
+  margin-left: 1cm;
+  margin-top: 6pt;
+  margin-bottom: 0;
+  line-height: 1.35;
+}
+
+.dt05-normal-p p {
+  margin: 0 0 6pt 0;
+}
+
+.dt05-rich-content {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  color: #000000;
+  line-height: 1.35;
+}
+
+.dt05-rich-content p {
+  margin: 0 0 6pt 0;
+}
+
+.dt05-table-accent1 {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0 10px;
+  font-size: 8.5pt;
+}
+
+.dt05-table-accent1 th,
+.dt05-table-accent1 td {
+  border: 0.5pt solid #83CAEB;
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.dt05-table-accent1 thead th {
+  border-bottom: 1.5pt solid #45B0E1;
+  background: transparent;
+  font-weight: bold;
+  color: #475569;
+}
+
+.dt05-table-accent1 tbody td:first-child {
+  font-weight: bold;
+  color: #0F172A;
 }
 
 .dt05-info-grid {
@@ -746,23 +826,29 @@
 
 .acta-modern-firma-name {
   font-weight: 700;
-  font-size: 9pt;
-  color: #0f172a;
+  font-size: 8.5pt;
+  color: #0F172A;
+  margin-top: 2px;
 }
 
 .acta-modern-firma-role {
-  font-size: 8pt;
-  color: #64748b;
+  font-size: 8.5pt;
+  font-weight: 700;
+  color: #1E3A8A;
 }
 
 /* ==========================================
    NATIVE PRINT MEDIA QUERIES (@media print)
    ========================================== */
 @media print {
-  body {
+  html, body {
     background: white !important;
     color: black !important;
-    font-size: 9.5pt !important;
+    font-size: 10pt !important;
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
   /* Hide app chrome, sidebar, topbar, buttons */
@@ -777,11 +863,14 @@
     display: none !important;
   }
 
-  #app, .app-container, .app-main, .content-wrapper, .document-preview-container {
+  #app, #view-container, .app-container, .app-main, .content-wrapper, .document-preview-container {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
     display: block !important;
     background: white !important;
   }
@@ -792,14 +881,32 @@
     padding: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
     margin: 0 !important;
   }
 
-  .acta-photo-item-print {
+  .dt05-section {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  .dt05-sec-header,
+  .dt05-h2-header,
+  .dt05-h3-header {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .acta-photo-item-print,
+  .acta-photo-card {
+    page-break-inside: avoid;
     break-inside: avoid;
   }
 
-  .acta-firmas-box {
+  .acta-firmas-box,
+  .acta-modern-firma-card {
+    page-break-inside: avoid;
     break-inside: avoid;
   }
 
