@@ -188,7 +188,7 @@ export function renderNotas(container, router) {
         <div class="form-grid-2">
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label">Autor</label>
-            <input type="text" id="nota-autor" class="form-control" value="${escapeHtml(existing?.autor || currentUser?.name || 'Dirección de Obra')}" />
+            <input type="text" id="nota-autor" class="form-control" value="${escapeHtml(existing?.autor || '')}" placeholder="Ex: Dirección de Obra" />
           </div>
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label">Vincular a Acta (opcional)</label>

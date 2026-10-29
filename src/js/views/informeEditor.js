@@ -20,7 +20,7 @@ function formatDate(dateStr) {
 }
 
 export function renderInformeEditor(container, router, params = {}) {
-  const isEditing = Boolean(params && params.id);
+  let isEditing = Boolean(params && params.id);
   const settings = db.getSettings();
   const obraId = (params && params.obraId) || db.getActiveObraId();
   const currentObra = db.getObraById(obraId) || db.getActiveObra();
@@ -56,18 +56,18 @@ export function renderInformeEditor(container, router, params = {}) {
         emprazamento: currentObra ? currentObra.situacion : settings.situacion,
         expediente: currentObra ? currentObra.expediente : (settings.expediente || ''),
         contratista: currentObra ? currentObra.contratista : settings.contratista,
-        direccionObra: currentObra ? currentObra.direccionObra : (settings.direccionObra || 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)'),
-        direccionEjecucion: currentObra ? currentObra.direccionEjecucion : (settings.direccionEjecucion || 'Ana Gallego Núñez (DEM)'),
-        mesInformado: 'Outubro 2025',
+        direccionObra: currentObra ? currentObra.direccionObra : (settings.direccionObra || ''),
+        direccionEjecucion: currentObra ? currentObra.direccionEjecucion : (settings.direccionEjecucion || ''),
+        mesInformado: '',
         dataInforme: new Date().toISOString().split('T')[0]
       },
       resumoExecutivo: {
-        estadoXeral: 'en_prazo',
-        avancePrevisto: 45,
-        avanceExecutado: 45,
+        estadoXeral: '',
+        avancePrevisto: '',
+        avanceExecutado: '',
         principaisFitos: '',
         principaisIncidencias: '',
-        riscosDetectados: 'Risco de prazo / custo / técnico'
+        riscosDetectados: ''
       },
       traballosExecutados: {
         executadosMes: '',
@@ -75,28 +75,28 @@ export function renderInformeEditor(container, router, params = {}) {
         previstosProximoMes: '',
         controlXeometricoCualitativo: '',
         coordinacionOrganismos: '',
-        obraNonAcreditada: 'Non hai obra non acreditada.'
+        obraNonAcreditada: ''
       },
       condicionantesModificacions: {
         circunstanciasSobrevidas: '',
         desfasesMedicions: '',
         previsionModificados: {
-          situacion: 'non_hai',
+          situacion: '',
           descricionBreve: '',
           impactoPrazoCusto: ''
         }
       },
       seguimentoOrzamentario: {
         controlEconomico: {
-          orzamentoAdxudicacion: 894520.00,
-          importeCertificadoAcumulado: 402534.00,
-          porcentaxeAcumulada: 45.0,
-          certificacionMes: 44726.00,
-          desviacionEstimada: '0.0%'
+          orzamentoAdxudicacion: 0,
+          importeCertificadoAcumulado: 0,
+          porcentaxeAcumulada: 0,
+          certificacionMes: 0,
+          desviacionEstimada: ''
         },
         controlPrazo: {
-          situacion: 'en_prazo',
-          desviacionSemanas: 0,
+          situacion: '',
+          desviacionSemanas: '',
           causas: '',
           medidasCorrectoras: '',
           previsionReestimacion: '',
@@ -111,7 +111,7 @@ export function renderInformeEditor(container, router, params = {}) {
         ensaiosAnexos: ''
       },
       seguridadeSaude: {
-        situacionXeral: 'correcta',
+        situacionXeral: '',
         incidenciasRelevantes: ''
       },
       reportaxeFotografica: [],
@@ -120,13 +120,13 @@ export function renderInformeEditor(container, router, params = {}) {
         certificadoTerminacionFase: ''
       },
       conclusion: {
-        estado: 'favorable',
+        estado: '',
         comentariosFinais: ''
       },
       anexos: {
-        actasVisitas: true,
-        planObraActualizado: true,
-        informesEnsaios: true,
+        actasVisitas: false,
+        planObraActualizado: false,
+        informesEnsaios: false,
         outrosAnexos: ''
       },
       estado: 'borrador'
@@ -135,7 +135,7 @@ export function renderInformeEditor(container, router, params = {}) {
 
   function render() {
     const ce = infData.seguimentoOrzamentario?.controlEconomico || {};
-    const orzamentoVal = parseCurrency(ce.orzamentoAdxudicacion !== undefined ? ce.orzamentoAdxudicacion : 894520);
+    const orzamentoVal = parseCurrency(ce.orzamentoAdxudicacion !== undefined ? ce.orzamentoAdxudicacion : 0);
     const acumuladoVal = parseCurrency(ce.importeCertificadoAcumulado !== undefined ? ce.importeCertificadoAcumulado : 0);
     const mesVal = parseCurrency(ce.certificacionMes !== undefined ? ce.certificacionMes : 0);
     const pctCalculada = orzamentoVal > 0 ? (acumuladoVal / orzamentoVal) * 100 : 0;
@@ -164,9 +164,13 @@ export function renderInformeEditor(container, router, params = {}) {
                   Ver Oficial
                 </button>
               ` : ''}
-              <button type="button" class="btn btn-primary" id="btn-save-informe">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-informe" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-save-back-informe">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                Gardar Informe
+                Guardar y volver
               </button>
             </div>
           </div>
@@ -236,11 +240,11 @@ export function renderInformeEditor(container, router, params = {}) {
                   <div class="form-grid-2" style="margin-top: 1rem;">
                     <div class="form-group">
                       <label class="form-label required">Avance executado (% actual)</label>
-                      <input type="number" id="avance-executado" class="form-control" value="${infData.resumoExecutivo?.avanceExecutado || 0}" min="0" max="100" step="0.1" />
+                      <input type="number" id="avance-executado" class="form-control" value="${infData.resumoExecutivo?.avanceExecutado ?? ''}" min="0" max="100" step="0.1" placeholder="0" />
                     </div>
                     <div class="form-group">
                       <label class="form-label required">Avance previsto no cronograma (%)</label>
-                      <input type="number" id="avance-previsto" class="form-control" value="${infData.resumoExecutivo?.avancePrevisto || 0}" min="0" max="100" step="0.1" />
+                      <input type="number" id="avance-previsto" class="form-control" value="${infData.resumoExecutivo?.avancePrevisto ?? ''}" min="0" max="100" step="0.1" placeholder="0" />
                     </div>
                   </div>
 
@@ -462,7 +466,7 @@ export function renderInformeEditor(container, router, params = {}) {
                 <div class="form-grid-3" style="margin-top: 1rem;">
                   <div class="form-group">
                     <label class="form-label">Desviación estimada (+/- semanas)</label>
-                    <input type="number" id="prazo-semanas" class="form-control" value="${infData.seguimentoOrzamentario?.controlPrazo?.desviacionSemanas || 0}" />
+                    <input type="number" id="prazo-semanas" class="form-control" value="${infData.seguimentoOrzamentario?.controlPrazo?.desviacionSemanas ?? ''}" placeholder="0" />
                   </div>
                   <div class="form-group">
                     <label class="form-label">Causas</label>
@@ -1135,22 +1139,23 @@ export function renderInformeEditor(container, router, params = {}) {
       };
     });
 
-    // Delete Acta PDF
+    // Delete Acta PDF (con advertencia obligatoria de borrado)
     container.querySelectorAll('.inf-btn-delete-acta-pdf').forEach(btn => {
       btn.onclick = () => {
         const idx = parseInt(btn.dataset.index, 10);
         const item = infData.actasPdf[idx];
-        modal.confirm({
-          title: 'Eliminar Acta en PDF',
-          message: `¿Desea eliminar o arquivo da acta "${item?.nombre || 'Acta PDF'}"?`,
-          confirmText: 'Eliminar',
-          confirmClass: 'btn-danger',
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Acta en PDF',
+          message: '¿Está seguro de que desea eliminar este archivo de acta en PDF?',
+          itemName: item?.nombre || item?.archivo || 'Acta PDF',
+          confirmText: 'Eliminar acta PDF',
           onConfirm: async () => {
             collectData();
             if (item?.id) {
               await db.deletePdfFile(item.id);
             }
             infData.actasPdf.splice(idx, 1);
+            window.__antaEditorDirty = true;
             render();
             showToast('Acta semanal en PDF eliminada', 'info');
           }
@@ -1213,18 +1218,28 @@ export function renderInformeEditor(container, router, params = {}) {
       };
     }
 
-    // Photo delete buttons
+    // Photo delete buttons (con advertencia obligatoria de borrado)
     container.querySelectorAll('.inf-remove-photo').forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
         const card = btn.closest('.photo-card');
         const idx = parseInt(card.dataset.index, 10);
-        collectData();
-        if (infData.reportaxeFotografica && infData.reportaxeFotografica[idx]) {
-          infData.reportaxeFotografica.splice(idx, 1);
-          render();
-          showToast('Foto eliminada da reportaxe', 'info');
-        }
+        const desc = card.querySelector('.inf-photo-desc')?.value.trim() || infData.reportaxeFotografica?.[idx]?.descripcion || `Fotografía #${idx + 1}`;
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Fotografía',
+          message: '¿Está seguro de que desea eliminar esta fotografía de la reportaje?',
+          itemName: desc,
+          confirmText: 'Eliminar fotografía',
+          onConfirm: () => {
+            collectData();
+            if (infData.reportaxeFotografica && infData.reportaxeFotografica[idx]) {
+              infData.reportaxeFotografica.splice(idx, 1);
+              window.__antaEditorDirty = true;
+              render();
+              showToast('Foto eliminada da reportaxe', 'info');
+            }
+          }
+        });
       };
     });
 
@@ -1339,22 +1354,23 @@ export function renderInformeEditor(container, router, params = {}) {
       };
     });
 
-    // Delete PDF Annex
+    // Delete PDF Annex (con advertencia obligatoria de borrado)
     container.querySelectorAll('.inf-btn-delete-pdf').forEach(btn => {
       btn.onclick = () => {
         const idx = parseInt(btn.dataset.index, 10);
         const item = infData.anexosPdf[idx];
-        modal.confirm({
-          title: 'Eliminar Anexo PDF',
-          message: `¿Desea eliminar o documento anexo "${item?.nombre || 'PDF'}"?`,
-          confirmText: 'Eliminar',
-          confirmClass: 'btn-danger',
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Anexo PDF',
+          message: '¿Está seguro de que desea eliminar este documento anexo en PDF?',
+          itemName: item?.nombre || item?.archivo || 'Documento PDF',
+          confirmText: 'Eliminar anexo PDF',
           onConfirm: async () => {
             collectData();
             if (item?.id) {
               await db.deletePdfFile(item.id);
             }
             infData.anexosPdf.splice(idx, 1);
+            window.__antaEditorDirty = true;
             render();
             showToast('Documento anexo eliminado', 'info');
           }
@@ -1371,43 +1387,6 @@ export function renderInformeEditor(container, router, params = {}) {
       };
     }
 
-    // Photo input
-    const photoInput = container.querySelector('#inf-photo-file-input');
-    if (photoInput) {
-      photoInput.onchange = async (e) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
-        collectData();
-
-        for (const file of files) {
-          try {
-            const compressed = await db.compressImage(file);
-            infData.reportaxeFotografica.push({
-              id: `rf-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-              url: compressed,
-              data: infData.datosXerais?.dataInforme || new Date().toISOString().split('T')[0],
-              descripcion: '',
-              categoria: 'DT-05'
-            });
-          } catch (err) {
-            console.error('Error photo:', err);
-          }
-        }
-        render();
-        showToast('Fotos engadidas á reportaxe', 'success');
-      };
-    }
-
-    container.querySelectorAll('.inf-remove-photo').forEach(btn => {
-      btn.onclick = (e) => {
-        const card = e.target.closest('.photo-card');
-        const idx = parseInt(card.dataset.index, 10);
-        collectData();
-        infData.reportaxeFotografica.splice(idx, 1);
-        render();
-      };
-    });
-
     // Preview
     const prevBtn = container.querySelector('#btn-preview');
     if (prevBtn) {
@@ -1423,29 +1402,62 @@ export function renderInformeEditor(container, router, params = {}) {
       router.navigate('expediente', { id: infData.obraId || currentObra?.id, tab: 'informes' });
     };
 
-    // Save with confirmSave
-    container.querySelector('#btn-save-informe').onclick = () => {
+    // Función común de validación y guardado de Informe (permanecer abierto o volver al listado)
+    const handleSaveInforme = (returnToList = false) => {
       const data = collectData();
       if (!data.obraId && currentObra) {
         data.obraId = currentObra.id;
       }
 
-      if (!data.datosXerais.mesInformado) {
-        showToast('Debe indicar o mes ou período informado', 'error');
+      if (!data.numero || isNaN(data.numero)) {
+        showToast('Debe indicar un número de informe válido', 'error');
         return;
       }
 
+      const infLabel = data.datosXerais?.mesInformado || `Nº ${data.numero}`;
+
       modal.confirmSave({
         title: 'Confirmar Gardado de Informe Mensual',
-        message: `¿Desea gardar as modificacións do informe para ${data.datosXerais.mesInformado}?`,
+        message: `¿Desea gardar as modificacións do informe (${infLabel})?`,
         details: `Inclúe ${(data.actasPdf || []).length} actas semanais en PDF e ${(data.anexosPdf || []).length} anexos PDF.`,
+        confirmText: returnToList ? 'Confirmar, Guardar y Volver' : 'Confirmar y Guardar',
         onConfirm: () => {
-          db.saveInforme(data);
-          showToast(`Informe de ${data.datosXerais.mesInformado} gardado`, 'success');
-          router.navigate('expediente', { id: data.obraId, tab: 'informes' });
+          const saved = db.saveInforme(data);
+          window.__antaEditorDirty = false;
+          showToast(`Informe (${infLabel}) gardado con éxito`, 'success');
+
+          if (returnToList) {
+            router.navigate('expediente', { id: data.obraId, tab: 'informes' });
+          } else {
+            isEditing = true;
+            if (saved && saved.id) {
+              infData.id = saved.id;
+              const newParams = { ...params, id: saved.id };
+              if (router && typeof router.serializeRouteToHash === 'function') {
+                const targetHash = router.serializeRouteToHash('informe-editor', newParams);
+                window.history.replaceState({ route: 'informe-editor', params: newParams }, '', targetHash);
+                router.currentParams = newParams;
+              }
+            }
+            const scrollPos = window.scrollY;
+            render();
+            window.scrollTo(0, scrollPos);
+          }
         }
       });
     };
+
+    // Botón Guardar (permanece abierto)
+    const btnSaveOnly = container.querySelector('#btn-save-informe');
+    if (btnSaveOnly) {
+      btnSaveOnly.onclick = () => handleSaveInforme(false);
+    }
+
+    // Botón Guardar y volver (vuelve al listado)
+    const btnSaveAndBack = container.querySelector('#btn-save-back-informe');
+    if (btnSaveAndBack) {
+      btnSaveAndBack.onclick = () => handleSaveInforme(true);
+    }
   }
 
   render();

@@ -8,6 +8,7 @@ import { INITIAL_USERS, INITIAL_GROUPS, INITIAL_SETTINGS, INITIAL_AGENTES, INITI
 import {
   isSupabaseConfigured,
   fetchAllFromSupabase,
+  saveSystemSyncToSupabase,
   syncAgenteToSupabase,
   deleteAgenteFromSupabase,
   syncObraToSupabase,
@@ -40,31 +41,80 @@ const STORAGE_KEYS = {
   SESSION: 'anta_obra_session'
 };
 
+const LEGACY_DELETED_IDS = {
+  obras: ['obra-berton-p13'],
+  agentes: ['ag-ana-gallego', 'ag-juan-carlos-bello', 'ag-miguel-lopez', 'ag-maria-jose-gonzalez', 'ag-joaquin-ferrer'],
+  actas: ['acta-16', 'acta-17', 'reu-1793188354466'],
+  reuniones: ['reu-1793188354466'],
+  informes: ['inf-1', 'inf-2', 'inf-3'],
+  notas: ['not-1', 'not-2', 'not-3'],
+  usuarios: ['usr-rosa', 'usr-sergio', 'usr-ana', 'usr-juancarlos', 'usr-miguel', 'usr-maria'],
+  grupos: []
+};
+
 class Database {
   constructor() {
+    this._pendingDeletes = [];
     this.init();
   }
 
+  _trackDelete(promise) {
+    if (promise && typeof promise.then === 'function') {
+      const tracked = promise.catch(() => {}).finally(() => {
+        this._pendingDeletes = this._pendingDeletes.filter(p => p !== tracked);
+      });
+      this._pendingDeletes.push(tracked);
+    }
+    return promise;
+  }
+
   getDeletedIds() {
-    return this.getCollection(STORAGE_KEYS.DELETED_IDS, {
+    const raw = this.getCollection(STORAGE_KEYS.DELETED_IDS, {
       obras: [],
       agentes: [],
       actas: [],
       reuniones: [],
       informes: [],
-      notas: []
+      notas: [],
+      usuarios: [],
+      grupos: []
     });
+    const result = {};
+    const categories = ['obras', 'agentes', 'actas', 'reuniones', 'informes', 'notas', 'usuarios', 'grupos'];
+    categories.forEach(cat => {
+      const list = Array.isArray(raw[cat]) ? raw[cat].map(String) : [];
+      const legacy = (LEGACY_DELETED_IDS[cat] || []).map(String);
+      result[cat] = Array.from(new Set([...list, ...legacy]));
+    });
+    return result;
   }
 
-  markDeleted(type, id) {
+  markDeleted(type, id, syncRemote = true) {
     if (!type || !id) return;
     const deleted = this.getDeletedIds();
     if (!deleted[type]) deleted[type] = [];
     const strId = String(id);
     if (!deleted[type].includes(strId)) {
       deleted[type].push(strId);
-      this.setCollection(STORAGE_KEYS.DELETED_IDS, deleted);
     }
+    this.setCollection(STORAGE_KEYS.DELETED_IDS, deleted);
+    if (syncRemote) {
+      this._trackDelete(saveSystemSyncToSupabase({ deletedIds: deleted }));
+    }
+  }
+
+  markMultipleDeleted(type, ids = []) {
+    if (!type || !Array.isArray(ids) || ids.length === 0) return;
+    const deleted = this.getDeletedIds();
+    if (!deleted[type]) deleted[type] = [];
+    ids.forEach(id => {
+      const strId = String(id);
+      if (strId && !deleted[type].includes(strId)) {
+        deleted[type].push(strId);
+      }
+    });
+    this.setCollection(STORAGE_KEYS.DELETED_IDS, deleted);
+    this._trackDelete(saveSystemSyncToSupabase({ deletedIds: deleted }));
   }
 
   isDeleted(type, id) {
@@ -78,8 +128,12 @@ class Database {
     if (!type || !id) return;
     const deleted = this.getDeletedIds();
     if (!deleted[type]) return;
+    const prevLen = deleted[type].length;
     deleted[type] = deleted[type].filter(item => String(item) !== String(id));
-    this.setCollection(STORAGE_KEYS.DELETED_IDS, deleted);
+    if (deleted[type].length !== prevLen) {
+      this.setCollection(STORAGE_KEYS.DELETED_IDS, deleted);
+      this._trackDelete(saveSystemSyncToSupabase({ deletedIds: deleted, replaceDeletedIds: true }));
+    }
   }
 
   init() {
@@ -87,7 +141,7 @@ class Database {
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
       this.seed();
     } else {
-      // Migration: Ensure OBRAS, AGENTES and relations exist
+      // Migration: Ensure OBRAS, AGENTES and relations exist and purge deleted items
       this.checkMigrations();
     }
     // Background hydration from Supabase Cloud
@@ -97,94 +151,198 @@ class Database {
   async hydrateFromSupabase() {
     if (!isSupabaseConfigured) return;
     try {
+      if (this._pendingDeletes && this._pendingDeletes.length > 0) {
+        await Promise.allSettled([...this._pendingDeletes]);
+      }
       const data = await fetchAllFromSupabase();
       if (!data) return;
       let updated = false;
 
+      // 1. Sincronizar lista de IDs eliminados (tombstones) entre nube y local (unión estricta para que NUNCA reaparezcan)
+      const localDeleted = this.getDeletedIds();
+      const remoteDeleted = data.deletedIds || {};
+      const mergedDeleted = { ...localDeleted };
+      let deletedChanged = false;
+
+      const categories = ['obras', 'agentes', 'actas', 'reuniones', 'informes', 'notas', 'usuarios', 'grupos'];
+      categories.forEach(cat => {
+        const rList = Array.isArray(remoteDeleted[cat]) ? remoteDeleted[cat].map(String) : [];
+        const lList = Array.isArray(localDeleted[cat]) ? localDeleted[cat].map(String) : [];
+        const legacyList = (LEGACY_DELETED_IDS[cat] || []).map(String);
+        const combined = Array.from(new Set([...rList, ...lList, ...legacyList]));
+        if (
+          combined.length !== lList.length ||
+          combined.length !== rList.length ||
+          combined.some(id => !lList.includes(id) || !rList.includes(id))
+        ) {
+          deletedChanged = true;
+        }
+        mergedDeleted[cat] = combined;
+      });
+
+      this.setCollection(STORAGE_KEYS.DELETED_IDS, mergedDeleted);
+
       if (Array.isArray(data.agentes)) {
-        const validAgentes = data.agentes.filter(a => !this.isDeleted('agentes', a.id));
-        data.agentes.forEach(a => {
+        const validAgentes = [];
+        for (const a of data.agentes) {
           if (this.isDeleted('agentes', a.id)) {
             deleteAgenteFromSupabase(a.id);
+          } else {
+            validAgentes.push(a);
           }
-        });
-        if (validAgentes.length > 0 || (data.agentes.length === 0 && this.getAgentes().length === 0)) {
+        }
+        if (validAgentes.length > 0 || data.agentes.length === 0) {
           this.setCollection(STORAGE_KEYS.AGENTES, validAgentes);
           updated = true;
         }
       }
 
       if (Array.isArray(data.obras)) {
-        const validObras = data.obras.filter(o => !this.isDeleted('obras', o.id));
-        data.obras.forEach(o => {
+        const currentAgentes = this.getAgentes();
+        const validObras = [];
+        for (const o of data.obras) {
           if (this.isDeleted('obras', o.id)) {
             deleteObraFromSupabase(o.id);
+          } else {
+            if (Array.isArray(o.agentes) && currentAgentes.length > 0) {
+              o.agentes.forEach(oa => {
+                const dbAg = currentAgentes.find(a => String(a.id) === String(oa.agenteId || oa.id));
+                if (dbAg) {
+                  oa.nombre = dbAg.nombre || oa.nombre;
+                  oa.cargo = dbAg.cargoHabitual || oa.cargo;
+                  oa.entidad = dbAg.entidad || oa.entidad;
+                  oa.email = dbAg.email || oa.email;
+                  oa.telefono = dbAg.telefono || oa.telefono;
+                }
+              });
+            }
+            validObras.push(o);
           }
-        });
+        }
         if (validObras.length > 0) {
           this.setCollection(STORAGE_KEYS.OBRAS, validObras);
-          if (this.isDeleted('obras', this.getActiveObraId())) {
+          const currentActiveId = this.getActiveObraId();
+          if (this.isDeleted('obras', currentActiveId) || !validObras.some(o => String(o.id) === String(currentActiveId))) {
             this.setActiveObraId(validObras[0].id);
+          } else {
+            this.setActiveObraId(currentActiveId);
           }
           updated = true;
         }
       }
 
       if (Array.isArray(data.actas)) {
-        const validActas = data.actas.filter(a => !this.isDeleted('actas', a.id));
-        data.actas.forEach(a => {
-          if (this.isDeleted('actas', a.id)) deleteActaFromSupabase(a.id);
-        });
+        const validActas = [];
+        for (const a of data.actas) {
+          if (this.isDeleted('actas', a.id)) {
+            deleteActaFromSupabase(a.id);
+          } else {
+            validActas.push(normalizeActa(a));
+          }
+        }
         this.setCollection(STORAGE_KEYS.ACTAS, validActas);
         updated = true;
       }
 
+      if (Array.isArray(data.reuniones)) {
+        const validReuniones = [];
+        for (const r of data.reuniones) {
+          if (this.isDeleted('reuniones', r.id)) {
+            deleteActaFromSupabase(r.id);
+          } else {
+            validReuniones.push(normalizeReunion(r));
+          }
+        }
+        this.setCollection(STORAGE_KEYS.REUNIONES, validReuniones);
+        updated = true;
+      }
+
       if (Array.isArray(data.informes)) {
-        const validInformes = data.informes.filter(i => !this.isDeleted('informes', i.id));
-        data.informes.forEach(i => {
-          if (this.isDeleted('informes', i.id)) deleteInformeFromSupabase(i.id);
-        });
+        const validInformes = [];
+        for (const i of data.informes) {
+          if (this.isDeleted('informes', i.id)) {
+            deleteInformeFromSupabase(i.id);
+          } else {
+            validInformes.push(i);
+          }
+        }
         this.setCollection(STORAGE_KEYS.INFORMES, validInformes);
         updated = true;
       }
 
       if (Array.isArray(data.notas)) {
-        const validNotas = data.notas.filter(n => !this.isDeleted('notas', n.id));
-        data.notas.forEach(n => {
-          if (this.isDeleted('notas', n.id)) deleteNotaFromSupabase(n.id);
-        });
+        const validNotas = [];
+        for (const n of data.notas) {
+          if (this.isDeleted('notas', n.id)) {
+            deleteNotaFromSupabase(n.id);
+          } else {
+            validNotas.push(n);
+          }
+        }
         this.setCollection(STORAGE_KEYS.NOTAS, validNotas);
         updated = true;
       }
 
-      if (Array.isArray(data.grupos) && data.grupos.length > 0) {
-        const localGroups = this.getGroups();
-        const mergedGroups = [...localGroups];
-        for (const remoteG of data.grupos) {
-          const idx = mergedGroups.findIndex(g => String(g.id) === String(remoteG.id));
-          if (idx >= 0) {
-            mergedGroups[idx] = { ...mergedGroups[idx], ...remoteG };
-          } else {
-            mergedGroups.push(remoteG);
-          }
-        }
+      // Sincronización bidireccional de Grupos (local <-> Supabase)
+      const deletedGroupsSet = new Set(mergedDeleted.grupos || []);
+      const localGroups = this.getGroups().filter(g => g && !deletedGroupsSet.has(String(g.id)));
+      const remoteGroups = Array.isArray(data.grupos)
+        ? data.grupos.filter(g => g && !deletedGroupsSet.has(String(g.id)))
+        : [];
+      const mergedGroupsMap = new Map();
+      localGroups.forEach(g => mergedGroupsMap.set(String(g.id), g));
+      remoteGroups.forEach(remoteG => {
+        const key = String(remoteG.id);
+        const existing = mergedGroupsMap.get(key);
+        mergedGroupsMap.set(key, existing ? { ...existing, ...remoteG } : remoteG);
+      });
+      const mergedGroups = Array.from(mergedGroupsMap.values());
+      if (mergedGroups.length > 0) {
         this.setCollection(STORAGE_KEYS.GROUPS, mergedGroups);
         updated = true;
       }
 
-      if (Array.isArray(data.usuarios) && data.usuarios.length > 0) {
-        const localUsers = this.getUsers();
-        const mergedUsers = [...localUsers];
-        for (const remoteU of data.usuarios) {
-          const idx = mergedUsers.findIndex(u => String(u.id) === String(remoteU.id) || u.username?.toLowerCase() === remoteU.username?.toLowerCase());
-          if (idx >= 0) {
-            mergedUsers[idx] = { ...mergedUsers[idx], ...remoteU };
-          } else {
-            mergedUsers.push(remoteU);
-          }
+      // Sincronización bidireccional de Usuarios (local <-> Supabase)
+      const mockTestUserIds = new Set(['usr-rosa', 'usr-sergio', 'usr-ana', 'usr-juancarlos', 'usr-miguel', 'usr-maria']);
+      const deletedUsersSet = new Set(mergedDeleted.usuarios || []);
+      const localUsers = this.getUsers().filter(
+        u => u && !mockTestUserIds.has(String(u.id)) && !deletedUsersSet.has(String(u.id))
+      );
+      const remoteUsers = Array.isArray(data.usuarios)
+        ? data.usuarios.filter(u => u && !mockTestUserIds.has(String(u.id)) && !deletedUsersSet.has(String(u.id)))
+        : [];
+
+      const mergedUsers = [...localUsers];
+      for (const remoteU of remoteUsers) {
+        const idx = mergedUsers.findIndex(
+          u =>
+            String(u.id) === String(remoteU.id) ||
+            (u.username && remoteU.username && u.username.trim().toLowerCase() === remoteU.username.trim().toLowerCase())
+        );
+        if (idx >= 0) {
+          mergedUsers[idx] = { ...mergedUsers[idx], ...remoteU };
+        } else {
+          mergedUsers.push(remoteU);
         }
+      }
+
+      if (mergedUsers.length > 0) {
         this.setCollection(STORAGE_KEYS.USERS, mergedUsers);
         updated = true;
+      }
+
+      // Si hay usuarios o grupos locales que aún no estaban en Supabase, subirlos automáticamente
+      const remoteUserIds = new Set(remoteUsers.map(u => String(u.id)));
+      const hasUnsyncedLocalUsers = mergedUsers.some(u => !remoteUserIds.has(String(u.id))) || remoteUsers.length === 0;
+      const remoteGroupIds = new Set(remoteGroups.map(g => String(g.id)));
+      const hasUnsyncedLocalGroups = mergedGroups.some(g => !remoteGroupIds.has(String(g.id))) || remoteGroups.length === 0;
+
+      if (hasUnsyncedLocalUsers || hasUnsyncedLocalGroups || deletedChanged) {
+        saveSystemSyncToSupabase({
+          usuarios: mergedUsers,
+          grupos: mergedGroups,
+          deletedIds: mergedDeleted
+        });
       }
 
       if (updated && typeof window !== 'undefined') {
@@ -209,10 +367,26 @@ class Database {
   }
 
   checkMigrations() {
+    // Limpieza única v3: asegurar que todos los LEGACY_DELETED_IDS estén aplicados y purgar cualquier elemento eliminado de localStorage
+    if (!localStorage.getItem('anta_obra_clean_v3')) {
+      const currentDeleted = this.getDeletedIds();
+      if (Array.isArray(currentDeleted.reuniones)) {
+        currentDeleted.reuniones = currentDeleted.reuniones.filter(id => id !== 'reu-1');
+      }
+      if (Array.isArray(currentDeleted.actas)) {
+        currentDeleted.actas = currentDeleted.actas.filter(id => id !== 'reu-1');
+      }
+      if (Array.isArray(currentDeleted.obras)) {
+        currentDeleted.obras = currentDeleted.obras.filter(id => id !== 'obra-castillo-san-felipe');
+      }
+      this.setCollection(STORAGE_KEYS.DELETED_IDS, currentDeleted);
+      localStorage.setItem('anta_obra_clean_v3', '1');
+    }
+
     if (!localStorage.getItem(STORAGE_KEYS.GROUPS)) {
       localStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(INITIAL_GROUPS));
     } else {
-      const groups = this.getCollection(STORAGE_KEYS.GROUPS);
+      const groups = this.getCollection(STORAGE_KEYS.GROUPS).filter(g => !this.isDeleted('grupos', g?.id));
       let groupsChanged = false;
       groups.forEach(g => {
         if (!g.permissions) g.permissions = [];
@@ -235,16 +409,12 @@ class Database {
     if (!localStorage.getItem(STORAGE_KEYS.AGENTES)) {
       localStorage.setItem(STORAGE_KEYS.AGENTES, JSON.stringify(INITIAL_AGENTES));
     } else {
-      const agentes = this.getCollection(STORAGE_KEYS.AGENTES);
-      let agentesChanged = false;
+      const rawAgentes = this.getCollection(STORAGE_KEYS.AGENTES);
+      const agentes = rawAgentes.filter(a => a && !this.isDeleted('agentes', a.id));
+      let agentesChanged = agentes.length !== rawAgentes.length;
       const oldSaxonMap = {
         'ag-rosa-vilas': 'RV',
-        'ag-sergio-beceiro': 'SB',
-        'ag-ana-gallego': 'AG',
-        'ag-juan-carlos-bello': 'JB',
-        'ag-miguel-lopez': 'ML',
-        'ag-maria-jose-gonzalez': 'MG',
-        'ag-joaquin-ferrer': 'JF'
+        'ag-sergio-beceiro': 'SB'
       };
 
       agentes.forEach(a => {
@@ -253,7 +423,7 @@ class Database {
           a.colorFondo = seedAg.colorFondo;
           agentesChanged = true;
         }
-        if (oldSaxonMap[a.id] && (!a.iniciales || a.iniciales === 'RR' || a.iniciales === 'SL' || a.iniciales === 'AN' || a.iniciales === 'JC' || a.iniciales === 'MR' || a.iniciales === 'MN')) {
+        if (oldSaxonMap[a.id] && (!a.iniciales || a.iniciales === 'RR' || a.iniciales === 'SL')) {
           a.iniciales = oldSaxonMap[a.id];
           agentesChanged = true;
         } else if (!a.iniciales && seedAg?.iniciales) {
@@ -273,24 +443,19 @@ class Database {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_OBRA, 'obra-castillo-san-felipe');
     }
 
-    // Ensure all obras have an agentes array and updated initials
-    const obras = this.getCollection(STORAGE_KEYS.OBRAS);
-    let obrasChanged = false;
+    // Ensure all obras are filtered of deleted items and have an agentes array
+    const rawObras = this.getCollection(STORAGE_KEYS.OBRAS);
+    const obras = rawObras.filter(o => o && !this.isDeleted('obras', o.id));
+    let obrasChanged = obras.length !== rawObras.length;
     obras.forEach(o => {
       if (!o.agentes || !Array.isArray(o.agentes) || o.agentes.length === 0) {
         const seedObra = INITIAL_OBRAS.find(initO => initO.id === o.id) || INITIAL_OBRAS[0];
-        o.agentes = seedObra.agentes ? JSON.parse(JSON.stringify(seedObra.agentes)) : [];
+        o.agentes = seedObra?.agentes ? JSON.parse(JSON.stringify(seedObra.agentes)) : [];
         obrasChanged = true;
       } else {
-        o.agentes.forEach(ag => {
-          if (ag.id === 'ag-rosa-vilas' && (ag.iniciales === 'RR' || !ag.iniciales)) { ag.iniciales = 'RV'; obrasChanged = true; }
-          if (ag.id === 'ag-sergio-beceiro' && (ag.iniciales === 'SL' || !ag.iniciales)) { ag.iniciales = 'SB'; obrasChanged = true; }
-          if (ag.id === 'ag-ana-gallego' && (ag.iniciales === 'AN' || !ag.iniciales)) { ag.iniciales = 'AG'; obrasChanged = true; }
-          if (ag.id === 'ag-juan-carlos-bello' && (ag.iniciales === 'JC' || !ag.iniciales)) { ag.iniciales = 'JB'; obrasChanged = true; }
-          if (ag.id === 'ag-miguel-lopez' && (ag.iniciales === 'MR' || !ag.iniciales)) { ag.iniciales = 'ML'; obrasChanged = true; }
-          if (ag.id === 'ag-maria-jose-gonzalez' && (ag.iniciales === 'MN' || !ag.iniciales)) { ag.iniciales = 'MG'; obrasChanged = true; }
-          if (ag.id === 'ag-joaquin-ferrer' && (ag.iniciales === 'JC' || !ag.iniciales)) { ag.iniciales = 'JF'; obrasChanged = true; }
-        });
+        const prevAgLen = o.agentes.length;
+        o.agentes = o.agentes.filter(ag => !this.isDeleted('agentes', ag.agenteId || ag.id));
+        if (o.agentes.length !== prevAgLen) obrasChanged = true;
       }
 
       // Normalizar presupuesto a moneda Euro (€) con dos decimales
@@ -305,42 +470,56 @@ class Database {
       }
     });
     if (obrasChanged) {
-      this.setCollection(STORAGE_KEYS.OBRAS, obras);
+      this.setCollection(STORAGE_KEYS.OBRAS, obras.length > 0 ? obras : INITIAL_OBRAS);
     }
 
-    // Ensure all actas have an obraId and normalized apartados
+    // Purgar actas eliminadas y separar reuniones filtradas
     const defaultObraId = 'obra-castillo-san-felipe';
-    const actas = this.getCollection(STORAGE_KEYS.ACTAS);
-    let actasChanged = false;
+    const rawActas = this.getCollection(STORAGE_KEYS.ACTAS);
+    const leakedReuniones = rawActas.filter(
+      a => (a?.tipoDocumento === 'reunion' || String(a?.id || '').startsWith('reu-')) && !this.isDeleted('reuniones', a?.id)
+    );
+    const actas = rawActas.filter(
+      a => a && !(a?.tipoDocumento === 'reunion' || String(a?.id || '').startsWith('reu-')) && !this.isDeleted('actas', a.id)
+    );
+    let actasChanged = actas.length !== rawActas.length;
     actas.forEach(a => {
       if (!a.obraId) {
         a.obraId = defaultObraId;
         actasChanged = true;
       }
-      if (!a.obra || a.obra.includes('NextGenEU')) {
-        a.obra = 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
-        a.obraTitulo = a.obra;
-        actasChanged = true;
-      }
-      if (!a.apartados || !Array.isArray(a.apartados) || a.apartados.length === 0) {
+      if (!Array.isArray(a.apartados)) {
         const norm = normalizeActa(a);
         a.apartados = norm.apartados;
         actasChanged = true;
       }
       if (!a.modificadoPor) {
-        a.modificadoPor = a.numero == 17 ? 'Sergio Beceiro Lodeiro' : 'Rosa Vilas Romalde';
+        a.modificadoPor = a.creadoPor || 'Admin';
         a.fechaModificacion = a.fechaModificacion || (a.fecha ? `${a.fecha}T18:00:00Z` : new Date().toISOString());
         actasChanged = true;
       }
     });
     if (actasChanged) this.setCollection(STORAGE_KEYS.ACTAS, actas);
 
+    const rawReuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
+    const currentReuniones = rawReuniones.filter(r => r && !this.isDeleted('reuniones', r.id));
+    let reuChanged = currentReuniones.length !== rawReuniones.length;
+    leakedReuniones.forEach(lr => {
+      if (!currentReuniones.some(r => String(r.id) === String(lr.id)) && !this.isDeleted('reuniones', lr.id)) {
+        currentReuniones.push(normalizeReunion(lr));
+        reuChanged = true;
+      }
+    });
+    if (reuChanged || !localStorage.getItem(STORAGE_KEYS.REUNIONES)) {
+      this.setCollection(STORAGE_KEYS.REUNIONES, currentReuniones);
+    }
+
     if (!localStorage.getItem(STORAGE_KEYS.INFORMES)) {
       localStorage.setItem(STORAGE_KEYS.INFORMES, JSON.stringify(INITIAL_INFORMES));
     } else {
-      let informes = this.getCollection(STORAGE_KEYS.INFORMES);
-      let infChanged = false;
-      const fullOfficialTitle = 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
+      const rawInformes = this.getCollection(STORAGE_KEYS.INFORMES);
+      const informes = rawInformes.filter(i => i && !this.isDeleted('informes', i.id));
+      let infChanged = informes.length !== rawInformes.length;
       informes.forEach((i, idx) => {
         if (!i.obraId) {
           i.obraId = defaultObraId;
@@ -350,13 +529,8 @@ class Database {
           i.numero = idx + 1;
           infChanged = true;
         }
-        if (i.datosXerais && i.datosXerais.proxecto && i.datosXerais.proxecto.includes('NextGenEU')) {
-          i.datosXerais.proxecto = fullOfficialTitle;
-          i.obraTitulo = fullOfficialTitle;
-          infChanged = true;
-        }
         if (!i.modificadoPor) {
-          i.modificadoPor = i.numero == 2 ? 'Sergio Beceiro Lodeiro' : 'Rosa Vilas Romalde';
+          i.modificadoPor = i.creadoPor || 'Admin';
           i.fechaModificacion = i.fechaModificacion || (i.datosXerais?.dataInforme ? `${i.datosXerais.dataInforme}T19:00:00Z` : new Date().toISOString());
           infChanged = true;
         }
@@ -364,29 +538,25 @@ class Database {
       if (infChanged) this.setCollection(STORAGE_KEYS.INFORMES, informes);
     }
 
-    const notas = this.getCollection(STORAGE_KEYS.NOTAS);
-    let notasChanged = false;
+    const rawNotas = this.getCollection(STORAGE_KEYS.NOTAS);
+    const notas = rawNotas.filter(n => n && !this.isDeleted('notas', n.id));
+    let notasChanged = notas.length !== rawNotas.length;
     notas.forEach(n => {
       if (!n.obraId) {
         n.obraId = defaultObraId;
         notasChanged = true;
       }
       if (!n.modificadoPor) {
-        n.modificadoPor = n.autor || 'Rosa Vilas Romalde';
+        n.modificadoPor = n.autor || 'Admin';
         n.fechaModificacion = n.fechaModificacion || (n.fecha ? `${n.fecha}T12:00:00Z` : new Date().toISOString());
         notasChanged = true;
       }
     });
     if (notasChanged) this.setCollection(STORAGE_KEYS.NOTAS, notas);
 
-    if (!localStorage.getItem(STORAGE_KEYS.REUNIONES)) {
-      localStorage.setItem(STORAGE_KEYS.REUNIONES, JSON.stringify(INITIAL_REUNIONES));
-    }
-
     // Purge mock test users (usr-rosa, usr-ana, etc.) preserving Admin and any user created by Admin
     const users = this.getCollection(STORAGE_KEYS.USERS);
-    const mockTestUserIds = ['usr-rosa', 'usr-sergio', 'usr-ana', 'usr-juancarlos', 'usr-miguel', 'usr-maria'];
-    const filteredUsers = users.filter(u => !mockTestUserIds.includes(u.id));
+    const filteredUsers = users.filter(u => u && !this.isDeleted('usuarios', u.id));
     if (filteredUsers.length !== users.length) {
       this.setCollection(STORAGE_KEYS.USERS, filteredUsers.length > 0 ? filteredUsers : INITIAL_USERS);
     }
@@ -419,18 +589,18 @@ class Database {
 
   /* ----------------- OBRAS Y EXPEDIENTES ----------------- */
   getObras() {
-    return this.getCollection(STORAGE_KEYS.OBRAS);
+    return this.getCollection(STORAGE_KEYS.OBRAS).filter(o => o && !this.isDeleted('obras', o.id));
   }
 
   getObraById(id) {
-    if (!id) return null;
+    if (!id || this.isDeleted('obras', id)) return null;
     const obras = this.getObras();
     return obras.find(o => String(o.id) === String(id)) || null;
   }
 
   getActiveObraId() {
     let activeId = localStorage.getItem(STORAGE_KEYS.ACTIVE_OBRA);
-    if (!activeId) {
+    if (!activeId || this.isDeleted('obras', activeId)) {
       const obras = this.getObras();
       if (obras.length > 0) {
         activeId = obras[0].id;
@@ -522,47 +692,49 @@ class Database {
     // Cascade delete related records & mark tombstones
     const actas = this.getActas().filter(a => String(a.obraId) === strId);
     actas.forEach(a => {
-      this.markDeleted('actas', a.id);
-      deleteActaFromSupabase(a.id);
+      this.markDeleted('actas', a.id, false);
+      this._trackDelete(deleteActaFromSupabase(a.id));
     });
     this.setCollection(STORAGE_KEYS.ACTAS, this.getActas().filter(a => String(a.obraId) !== strId));
 
     const reuniones = this.getReuniones().filter(r => String(r.obraId) === strId);
     reuniones.forEach(r => {
-      this.markDeleted('reuniones', r.id);
-      deleteActaFromSupabase(r.id);
+      this.markDeleted('reuniones', r.id, false);
+      this._trackDelete(deleteActaFromSupabase(r.id));
     });
     this.setCollection(STORAGE_KEYS.REUNIONES, this.getReuniones().filter(r => String(r.obraId) !== strId));
 
     const informes = this.getInformes().filter(i => String(i.obraId) === strId);
     informes.forEach(i => {
-      this.markDeleted('informes', i.id);
-      deleteInformeFromSupabase(i.id);
+      this.markDeleted('informes', i.id, false);
+      this._trackDelete(deleteInformeFromSupabase(i.id));
     });
     this.setCollection(STORAGE_KEYS.INFORMES, this.getInformes().filter(i => String(i.obraId) !== strId));
 
     const notas = this.getNotas().filter(n => String(n.obraId) === strId);
     notas.forEach(n => {
-      this.markDeleted('notas', n.id);
-      deleteNotaFromSupabase(n.id);
+      this.markDeleted('notas', n.id, false);
+      this._trackDelete(deleteNotaFromSupabase(n.id));
     });
     this.setCollection(STORAGE_KEYS.NOTAS, this.getNotas().filter(n => String(n.obraId) !== strId));
+
+    this._trackDelete(saveSystemSyncToSupabase({ deletedIds: this.getDeletedIds() }));
 
     // If active was deleted, set another active
     if (String(this.getActiveObraId()) === strId) {
       this.setActiveObraId(filtered[0].id);
     }
-    deleteObraFromSupabase(strId);
+    this._trackDelete(deleteObraFromSupabase(strId));
     return true;
   }
 
   /* ----------------- AGENTES Y EQUIPO TÉCNICO ----------------- */
   getAgentes() {
-    return this.getCollection(STORAGE_KEYS.AGENTES);
+    return this.getCollection(STORAGE_KEYS.AGENTES).filter(a => a && !this.isDeleted('agentes', a.id));
   }
 
   getAgenteById(id) {
-    if (!id) return null;
+    if (!id || this.isDeleted('agentes', id)) return null;
     const agentes = this.getAgentes();
     return agentes.find(a => String(a.id) === String(id)) || null;
   }
@@ -595,17 +767,22 @@ class Database {
     const obras = this.getObras();
     let obrasUpdated = false;
     obras.forEach(o => {
+      let thisObraModified = false;
       if (o.agentes && Array.isArray(o.agentes)) {
         o.agentes.forEach(oa => {
-          if (String(oa.agenteId) === String(saved.id)) {
+          if (String(oa.agenteId || oa.id) === String(saved.id)) {
             oa.nombre = saved.nombre;
             oa.cargo = saved.cargoHabitual || oa.cargo;
             oa.entidad = saved.entidad || oa.entidad;
             oa.email = saved.email || oa.email;
             oa.telefono = saved.telefono || oa.telefono;
             obrasUpdated = true;
+            thisObraModified = true;
           }
         });
+      }
+      if (thisObraModified) {
+        syncObraToSupabase(o);
       }
     });
     if (obrasUpdated) {
@@ -638,7 +815,7 @@ class Database {
       this.setCollection(STORAGE_KEYS.OBRAS, obras);
     }
 
-    deleteAgenteFromSupabase(strId);
+    this._trackDelete(deleteAgenteFromSupabase(strId));
     return true;
   }
 
@@ -653,19 +830,22 @@ class Database {
 
   /* ----------------- ACTAS DE OBRA ----------------- */
   getActas(obraId = null) {
-    const actas = this.getCollection(STORAGE_KEYS.ACTAS);
+    const actas = this.getCollection(STORAGE_KEYS.ACTAS).filter(
+      a => a && !(a?.tipoDocumento === 'reunion' || String(a?.id || '').startsWith('reu-')) && !this.isDeleted('actas', a.id)
+    );
     const filtered = obraId ? actas.filter(a => String(a.obraId) === String(obraId)) : actas;
     return filtered.map(normalizeActa);
   }
 
   getActaById(id) {
+    if (!id || this.isDeleted('actas', id)) return null;
     const actas = this.getCollection(STORAGE_KEYS.ACTAS);
-    const found = actas.find(a => String(a.id) === String(id));
+    const found = actas.find(a => a && String(a.id) === String(id) && !this.isDeleted('actas', a.id));
     return found ? normalizeActa(found) : null;
   }
 
   saveActa(acta) {
-    const actas = this.getCollection(STORAGE_KEYS.ACTAS);
+    const actas = this.getCollection(STORAGE_KEYS.ACTAS).filter(a => a && !this.isDeleted('actas', a.id));
     const existingIndex = actas.findIndex(a => String(a.id) === String(acta.id));
     const normalized = normalizeActa(acta);
     const currentUser = this.getCurrentUserModifier();
@@ -702,19 +882,19 @@ class Database {
     const strId = String(id);
     this.markDeleted('actas', strId);
     let actas = this.getCollection(STORAGE_KEYS.ACTAS);
-    actas = actas.filter(a => String(a.id) !== strId);
+    actas = actas.filter(a => a && String(a.id) !== strId && !this.isDeleted('actas', a.id));
     this.setCollection(STORAGE_KEYS.ACTAS, actas);
-    deleteActaFromSupabase(strId);
+    this._trackDelete(deleteActaFromSupabase(strId));
     return true;
   }
 
   deleteMultipleActas(ids) {
-    ids.forEach(id => this.markDeleted('actas', id));
+    this.markMultipleDeleted('actas', ids);
     const idSet = new Set(ids.map(String));
     let actas = this.getCollection(STORAGE_KEYS.ACTAS);
-    actas = actas.filter(a => !idSet.has(String(a.id)));
+    actas = actas.filter(a => a && !idSet.has(String(a.id)) && !this.isDeleted('actas', a.id));
     this.setCollection(STORAGE_KEYS.ACTAS, actas);
-    ids.forEach(id => deleteActaFromSupabase(id));
+    ids.forEach(id => this._trackDelete(deleteActaFromSupabase(id)));
     return true;
   }
 
@@ -730,19 +910,20 @@ class Database {
 
   /* ----------------- REUNIONES OFICIAIS ----------------- */
   getReuniones(obraId = null) {
-    const reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
+    const reuniones = this.getCollection(STORAGE_KEYS.REUNIONES).filter(r => r && !this.isDeleted('reuniones', r.id));
     const filtered = obraId ? reuniones.filter(r => String(r.obraId) === String(obraId)) : reuniones;
     return filtered.map(normalizeReunion);
   }
 
   getReunionById(id) {
+    if (!id || this.isDeleted('reuniones', id)) return null;
     const reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
-    const found = reuniones.find(r => String(r.id) === String(id));
+    const found = reuniones.find(r => r && String(r.id) === String(id) && !this.isDeleted('reuniones', r.id));
     return found ? normalizeReunion(found) : null;
   }
 
   saveReunion(reunion) {
-    const reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
+    const reuniones = this.getCollection(STORAGE_KEYS.REUNIONES).filter(r => r && !this.isDeleted('reuniones', r.id));
     const existingIndex = reuniones.findIndex(r => String(r.id) === String(reunion.id));
     const normalized = normalizeReunion(reunion);
     const currentUser = this.getCurrentUserModifier();
@@ -779,19 +960,19 @@ class Database {
     const strId = String(id);
     this.markDeleted('reuniones', strId);
     let reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
-    reuniones = reuniones.filter(r => String(r.id) !== strId);
+    reuniones = reuniones.filter(r => r && String(r.id) !== strId && !this.isDeleted('reuniones', r.id));
     this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
-    deleteActaFromSupabase(strId);
+    this._trackDelete(deleteActaFromSupabase(strId));
     return true;
   }
 
   deleteMultipleReuniones(ids) {
-    ids.forEach(id => this.markDeleted('reuniones', id));
+    this.markMultipleDeleted('reuniones', ids);
     const idSet = new Set(ids.map(String));
     let reuniones = this.getCollection(STORAGE_KEYS.REUNIONES);
-    reuniones = reuniones.filter(r => !idSet.has(String(r.id)));
+    reuniones = reuniones.filter(r => r && !idSet.has(String(r.id)) && !this.isDeleted('reuniones', r.id));
     this.setCollection(STORAGE_KEYS.REUNIONES, reuniones);
-    ids.forEach(id => deleteActaFromSupabase(id));
+    ids.forEach(id => this._trackDelete(deleteActaFromSupabase(id)));
     return true;
   }
 
@@ -807,7 +988,7 @@ class Database {
 
   /* ----------------- INFORMES DT-05 ----------------- */
   getInformes(obraId = null) {
-    const informes = this.getCollection(STORAGE_KEYS.INFORMES);
+    const informes = this.getCollection(STORAGE_KEYS.INFORMES).filter(i => i && !this.isDeleted('informes', i.id));
     if (obraId) {
       return informes.filter(i => String(i.obraId) === String(obraId));
     }
@@ -815,12 +996,13 @@ class Database {
   }
 
   getInformeById(id) {
+    if (!id || this.isDeleted('informes', id)) return null;
     const informes = this.getCollection(STORAGE_KEYS.INFORMES);
-    return informes.find(inf => String(inf.id) === String(id)) || null;
+    return informes.find(inf => inf && String(inf.id) === String(id) && !this.isDeleted('informes', inf.id)) || null;
   }
 
   saveInforme(informe) {
-    const informes = this.getCollection(STORAGE_KEYS.INFORMES);
+    const informes = this.getCollection(STORAGE_KEYS.INFORMES).filter(i => i && !this.isDeleted('informes', i.id));
     const existingIndex = informes.findIndex(i => String(i.id) === String(informe.id));
     const currentUser = this.getCurrentUserModifier();
     const now = new Date().toISOString();
@@ -856,19 +1038,19 @@ class Database {
     const strId = String(id);
     this.markDeleted('informes', strId);
     let informes = this.getCollection(STORAGE_KEYS.INFORMES);
-    informes = informes.filter(i => String(i.id) !== strId);
+    informes = informes.filter(i => i && String(i.id) !== strId && !this.isDeleted('informes', i.id));
     this.setCollection(STORAGE_KEYS.INFORMES, informes);
-    deleteInformeFromSupabase(strId);
+    this._trackDelete(deleteInformeFromSupabase(strId));
     return true;
   }
 
   deleteMultipleInformes(ids) {
-    ids.forEach(id => this.markDeleted('informes', id));
+    this.markMultipleDeleted('informes', ids);
     const idSet = new Set(ids.map(String));
     let informes = this.getCollection(STORAGE_KEYS.INFORMES);
-    informes = informes.filter(i => !idSet.has(String(i.id)));
+    informes = informes.filter(i => i && !idSet.has(String(i.id)) && !this.isDeleted('informes', i.id));
     this.setCollection(STORAGE_KEYS.INFORMES, informes);
-    ids.forEach(id => deleteInformeFromSupabase(id));
+    ids.forEach(id => this._trackDelete(deleteInformeFromSupabase(id)));
     return true;
   }
 
@@ -884,7 +1066,7 @@ class Database {
 
   /* ----------------- NOTAS DE OBRA / BITÁCORA ----------------- */
   getNotas(obraId = null) {
-    const notas = this.getCollection(STORAGE_KEYS.NOTAS);
+    const notas = this.getCollection(STORAGE_KEYS.NOTAS).filter(n => n && !this.isDeleted('notas', n.id));
     if (obraId) {
       return notas.filter(n => String(n.obraId) === String(obraId));
     }
@@ -892,6 +1074,7 @@ class Database {
   }
 
   getNotaById(id) {
+    if (!id || this.isDeleted('notas', id)) return null;
     return this.getNotas().find(n => String(n.id) === String(id)) || null;
   }
 
@@ -934,9 +1117,9 @@ class Database {
     const strId = String(id);
     this.markDeleted('notas', strId);
     let notas = this.getNotas();
-    notas = notas.filter(n => String(n.id) !== strId);
+    notas = notas.filter(n => n && String(n.id) !== strId && !this.isDeleted('notas', n.id));
     this.setCollection(STORAGE_KEYS.NOTAS, notas);
-    deleteNotaFromSupabase(strId);
+    this._trackDelete(deleteNotaFromSupabase(strId));
     return true;
   }
 
@@ -956,22 +1139,28 @@ class Database {
 
   saveUser(user) {
     const users = this.getUsers();
-    const existingIndex = users.findIndex(u => String(u.id) === String(user.id));
+    const existingIndex = users.findIndex(
+      u =>
+        String(u.id) === String(user.id) ||
+        (u.username && user.username && u.username.trim().toLowerCase() === user.username.trim().toLowerCase())
+    );
     let savedUser;
     
     if (existingIndex >= 0) {
-      savedUser = { ...users[existingIndex], ...user };
+      savedUser = { ...users[existingIndex], ...user, updatedAt: new Date().toISOString() };
       users[existingIndex] = savedUser;
     } else {
       savedUser = {
         ...user,
         id: user.id || `usr-${Date.now()}`,
-        active: user.active !== undefined ? user.active : true
+        active: user.active !== undefined ? user.active : true,
+        updatedAt: new Date().toISOString()
       };
       users.push(savedUser);
     }
+    this.unmarkDeleted('usuarios', savedUser.id);
     this.setCollection(STORAGE_KEYS.USERS, users);
-    syncUsuarioToSupabase(savedUser);
+    syncUsuarioToSupabase(savedUser, users, this.getDeletedIds());
     return savedUser;
   }
 
@@ -980,10 +1169,11 @@ class Database {
     if (user && user.username.toLowerCase() === 'admin') {
       throw new Error('No es posible eliminar el usuario Admin principal del sistema.');
     }
+    this.markDeleted('usuarios', id);
     let users = this.getUsers();
     users = users.filter(u => String(u.id) !== String(id));
     this.setCollection(STORAGE_KEYS.USERS, users);
-    deleteUsuarioFromSupabase(id);
+    deleteUsuarioFromSupabase(id, this.getDeletedIds());
     return true;
   }
 
@@ -1010,8 +1200,9 @@ class Database {
       };
       groups.push(savedGroup);
     }
+    this.unmarkDeleted('grupos', savedGroup.id);
     this.setCollection(STORAGE_KEYS.GROUPS, groups);
-    syncGrupoToSupabase(savedGroup);
+    syncGrupoToSupabase(savedGroup, groups, this.getDeletedIds());
     return savedGroup;
   }
 
@@ -1019,10 +1210,11 @@ class Database {
     if (id === 'admin') {
       throw new Error('No es posible eliminar el grupo Administradores principal.');
     }
+    this.markDeleted('grupos', id);
     let groups = this.getGroups();
     groups = groups.filter(g => String(g.id) !== String(id));
     this.setCollection(STORAGE_KEYS.GROUPS, groups);
-    deleteGrupoFromSupabase(id);
+    deleteGrupoFromSupabase(id, this.getDeletedIds());
 
     // Reasignar usuarios vinculados al grupo eliminado hacia admin
     let users = this.getUsers();
@@ -1030,8 +1222,8 @@ class Database {
     users = users.map(u => {
       if (u.role === id) {
         updated = true;
-        const reassigned = { ...u, role: 'admin' };
-        syncUsuarioToSupabase(reassigned);
+        const reassigned = { ...u, role: 'admin', updatedAt: new Date().toISOString() };
+        syncUsuarioToSupabase(reassigned, users, this.getDeletedIds());
         return reassigned;
       }
       return u;
@@ -1264,7 +1456,7 @@ export function normalizeActa(acta) {
   clone.anexosPdf = clone.anexosPdf || [];
   clone.fotos = Array.isArray(clone.fotos) ? clone.fotos : [];
 
-  if (!clone.apartados || !Array.isArray(clone.apartados) || clone.apartados.length === 0) {
+  if (!Array.isArray(clone.apartados)) {
     const apartados = [];
 
     // 1. Cuestiones Tratadas
@@ -1314,56 +1506,41 @@ export function normalizeActa(acta) {
       });
     }
 
-    // Default if completely empty
-    if (apartados.length === 0) {
-      apartados.push({
-        id: 'ap-1',
-        titulo: 'CUESTIONES TRATADAS EN REUNIÓN',
-        secciones: [
-          {
-            id: 'sec-1-1',
-            titulo: 'Carpinterías',
-            texto: 'Se revisan las muestras de taller y remates de mochetas.'
-          }
-        ]
-      });
-    }
-
     clone.apartados = apartados;
   } else {
     clone.apartados = clone.apartados.map((ap, apIdx) => ({
       id: ap.id || `ap-${apIdx + 1}`,
-      titulo: ap.titulo || `APARTADO ${apIdx + 1}`,
+      titulo: ap.titulo !== undefined ? ap.titulo : `APARTADO ${apIdx + 1}`,
       secciones: (ap.secciones || []).map((sec, secIdx) => ({
         id: sec.id || `sec-${apIdx + 1}-${secIdx + 1}`,
-        titulo: sec.titulo || `Sección ${apIdx + 1}.${secIdx + 1}`,
+        titulo: sec.titulo !== undefined ? sec.titulo : `Sección ${apIdx + 1}.${secIdx + 1}`,
         texto: sec.texto || ''
       }))
     }));
   }
 
-  // Synchronize legacy fields for views that query them
-  if (clone.apartados && clone.apartados.length > 0) {
-    if (!clone.cuestionesTratadas || !clone.cuestionesTratadas.length) {
-      const firstAp = clone.apartados[0];
-      clone.cuestionesTratadas = (firstAp.secciones || []).map(s => ({
-        id: s.id,
-        subtitulo: s.titulo,
-        puntos: s.texto ? s.texto.split('\n').filter(Boolean) : []
-      }));
-    }
-    if (!clone.indicacionesSeguridad || !clone.indicacionesSeguridad.length) {
-      const segAp = clone.apartados.find(a => (a.titulo || '').toLowerCase().includes('segur'));
-      if (segAp) {
-        clone.indicacionesSeguridad = (segAp.secciones || []).flatMap(s => s.texto ? s.texto.split('\n').filter(Boolean) : []);
-      }
-    }
-    if (!clone.actuacionesPrevistas || !clone.actuacionesPrevistas.length) {
-      const actAp = clone.apartados.find(a => (a.titulo || '').toLowerCase().includes('previst') || (a.titulo || '').toLowerCase().includes('actua'));
-      if (actAp) {
-        clone.actuacionesPrevistas = (actAp.secciones || []).flatMap(s => s.texto ? s.texto.split('\n').filter(Boolean) : []);
-      }
-    }
+  // Synchronize legacy fields directly from clone.apartados so deleted apartados/secciones stay deleted
+  if (Array.isArray(clone.apartados) && clone.apartados.length > 0) {
+    const firstAp = clone.apartados[0];
+    clone.cuestionesTratadas = (firstAp.secciones || []).map(s => ({
+      id: s.id,
+      subtitulo: s.titulo,
+      puntos: s.texto ? s.texto.split('\n').filter(Boolean) : []
+    }));
+
+    const segAp = clone.apartados.find(a => (a.titulo || '').toLowerCase().includes('segur'));
+    clone.indicacionesSeguridad = segAp
+      ? (segAp.secciones || []).flatMap(s => s.texto ? s.texto.split('\n').filter(Boolean) : [])
+      : [];
+
+    const actAp = clone.apartados.find(a => (a.titulo || '').toLowerCase().includes('previst') || (a.titulo || '').toLowerCase().includes('actua'));
+    clone.actuacionesPrevistas = actAp
+      ? (actAp.secciones || []).flatMap(s => s.texto ? s.texto.split('\n').filter(Boolean) : [])
+      : [];
+  } else {
+    clone.cuestionesTratadas = [];
+    clone.indicacionesSeguridad = [];
+    clone.actuacionesPrevistas = [];
   }
 
   return clone;
@@ -1375,9 +1552,9 @@ export function normalizeActa(acta) {
 export function normalizeReunion(data = {}) {
   const normalized = normalizeActa(data);
   normalized.tipoDocumento = 'reunion';
-  normalized.tipoModalidad = data.tipoModalidad || data.tipoReunion || 'Presencial';
-  normalized.lugar = data.lugar || 'Caseta de obra';
-  normalized.hora = data.hora || '10:00';
+  normalized.tipoModalidad = data.tipoModalidad !== undefined ? data.tipoModalidad : (data.tipoReunion || 'Presencial');
+  normalized.lugar = data.lugar !== undefined ? data.lugar : '';
+  normalized.hora = data.hora !== undefined ? data.hora : '';
   return normalized;
 }
 

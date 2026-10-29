@@ -2346,3 +2346,110 @@ en el dashboard faltan las "Reuniones"
 
 ---
 
+
+## Conversación #66
+
+### 👤 Usuario:
+
+Estoy viendo fallos graves que hay que arreglar:
+- Creo usuarios y en otro PC no pueden entrar. NO se sincronizan con SUPABASE?
+- Edito con el mismo usuario una Reunión en distintos PCs, y se cambian los datos, pero los Asistentes sólo aparecen en un PC.
+- Cuando le doy a añadir un agente como asistente a una reunión, me aparecen todos los agentes disponibles,cuando sólo quiero que aparezcan los asignados a ese proyecto.
+- Cuando edito una reunión (imagino que otro documento será igual), no me deja borrar secciones y apartados. Quiero que salga un mensaje de advertencia de borrado siempre.
+
+### 🤖 Antigravity:
+
+Se han diagnosticado y corregido de raíz los 4 fallos reportados:
+
+1. **Sincronización de Usuarios y Grupos entre PCs con Supabase (`src/js/supabaseClient.js`, `src/js/db.js`, `src/js/auth.js`)**:
+   - En la instancia de Supabase no existían las tablas `public.usuarios` ni `public.grupos`, por lo que las llamadas a esas tablas fallaban silenciosamente y los usuarios quedaban únicamente en el `localStorage` del PC donde se creaban.
+   - Se ha implementado el registro de sincronización de sistema `__system_auth_sync__` en `public.notas` (`obra_id: null`), que almacena y sincroniza `{ usuarios, grupos, deletedIds }` en tiempo real con Supabase (quedando oculto en los listados de notas de obra).
+   - Al abrir la aplicación en el PC donde se crearon usuarios previamente, `hydrateFromSupabase()` fusiona y sube automáticamente esos usuarios locales a Supabase, y en cualquier otro PC `auth.login()` consulta y descarga los usuarios y grupos desde Supabase antes de validar credenciales.
+
+2. **Sincronización de Reuniones y Asistentes entre PCs (`src/js/supabaseClient.js`, `src/js/db.js`, `src/js/app.js`, `src/js/views/actaEditor.js`)**:
+   - Las reuniones se guardaban en `public.actas` con `tipoDocumento: 'reunion'`, pero `fetchAllFromSupabase()` devolvía todo junto en `actas` y `hydrateFromSupabase()` solo hidrataba `STORAGE_KEYS.ACTAS`, sin actualizar jamás `STORAGE_KEYS.REUNIONES`. Además existía un registro duplicado vacío (`reu-1793188354466`) junto a `reu-1` (con los 8 asistentes).
+   - Se eliminó el registro duplicado vacío en Supabase, se separaron `actas` y `reuniones` en `fetchAllFromSupabase()`, se hidrató `STORAGE_KEYS.REUNIONES` en `hydrateFromSupabase()`, se conservó `data-agente-id` en las filas de asistentes y se activó la re-hidratación automática al recuperar el foco o navegar entre vistas.
+
+3. **Selector `+ Engadir axente` filtrado exclusivamente a los agentes asignados al proyecto (`src/js/views/actaEditor.js`)**:
+   - En `openAgentesSelectorModal()` se eliminó el bucle secundario ("Prioridad 2") que añadía todos los agentes del directorio global, mostrando ahora únicamente los agentes asignados a la obra activa (`currentObra.agentes`).
+
+4. **Borrado de Apartados, Secciones y elementos con advertencia obligatoria de borrado (`src/js/modal.js`, `src/js/db.js`, `src/js/views/actaEditor.js`, `src/js/views/informeEditor.js`, `src/js/views/agentes.js`, `src/js/views/expedienteEditorModal.js`)**:
+   - En `actaEditor.js` e `informeEditor.js` se llamaba a `modal.confirm(...)`, método que no existía en `src/js/modal.js` (`TypeError: modal.confirm is not a function`), impidiendo borrar apartados y anexos. Además, el botón `.btn-delete-seccion` carecía de confirmación y `normalizeActa()` regeneraba apartados/secciones desde campos legados cuando quedaban vacíos.
+   - Se añadieron `modal.confirm` (delegando en `modal.confirmDelete`) y `modal.alert` en `src/js/modal.js`, se configuró `modal.confirmDelete` con advertencia obligatoria en todos los botones de borrado (apartados, secciones, asistentes, fotografías, anexos PDF y agentes), y se ajustó `normalizeActa()` y `collectFormData()` para que los apartados y secciones eliminados no se regeneren nunca.
+
+---
+
+## Conversación #67
+
+### 👤 Usuario:
+
+Quiero desdoblar este botón en dos: Guardar, y Guardar y volver.
+- Guardar: se guarda y permanece abierto el documento
+- Guardar y volver: se guarda y vuelve a la lista de documentos (reuniones, informes... lo que corresponda)
+
+### 🤖 Antigravity:
+
+Se ha desdoblado el botón de guardado en dos botones independientes en la barra de acciones superior de los editores de documentos (`src/js/views/actaEditor.js` para Actas Semanales y Reuniones de Obra, y `src/js/views/informeEditor.js` para Informes Mensuales):
+- **Guardar**: Confirma y guarda los cambios en la base de datos local y en Supabase manteniendo el documento abierto en la misma posición de lectura (y habilitando las acciones de exportación DOCX/PDF si era un documento nuevo).
+- **Guardar y volver**: Confirma, guarda los cambios y regresa automáticamente al listado correspondiente del expediente (`reuniones`, `actas` o `informes`).
+
+---
+
+
+## Conversación #68
+
+### 👤 Usuario:
+
+Sigo viendo actas semanales ya borradas anteriormente es CRUCIAL que los elementos borrados no vuelvan a aparecer!
+
+### 🤖 Antigravity:
+
+Se ha blindado de forma definitiva la eliminación de registros (Actas Semanales, Reuniones, Informes Mensuales, Notas, Expedientes y Agentes) para que ningún elemento eliminado vuelva a reaparecer en ningún navegador o equipo:
+1. **Eliminación de semillas demo legadas (`src/js/seed.js`)**: Se han vaciado `INITIAL_ACTAS = []`, `INITIAL_INFORMES = []`, `INITIAL_NOTAS = []` e `INITIAL_REUNIONES = []`, y se han retirado los agentes y expedientes de prueba antiguos para que jamás se inyecten documentos demo (`acta-16`, `acta-17`, `inf-1..3`, `not-1..3`) al iniciar navegador.
+2. **Lista negra permanente y unión estricta de tombstones (`src/js/db.js`, `src/js/supabaseClient.js`)**:
+   - Se ha definido `LEGACY_DELETED_IDS` e integrado en `getDeletedIds()` y `checkMigrations()`, purgando de inmediato cualquier elemento eliminado que permaneciese en el `localStorage` del navegador.
+   - Se ha eliminado la condición que descartaba tombstones locales si una petición asíncrona de borrado en Supabase aún estaba en vuelo durante `hydrateFromSupabase()`. Ahora se espera a que finalicen las eliminaciones pendientes (`_pendingDeletes`), se realiza la unión estricta de IDs eliminados locales y remotos, y si algún registro marcado como eliminado siguiese en Supabase, se purga automáticamente de la nube.
+   - Todos los selectores (`getActas`, `getActaById`, `getReuniones`, `getReunionById`, `getInformes`, `getInformeById`, `getNotas`, `getNotaById`, `getObras`, `getAgentes`) filtran siempre por `!this.isDeleted(...)`.
+
+---
+
+
+## Conversación #69
+
+### 👤 Usuario:
+
+Estoy viendo los asistentes al editar un informe (ver captura).
+Quiero que se añada en la primera columna "Cargo / Titulación Habitual" de la ficha de agente
+En la segunda columna "Entidade, Empresa ou Organismo" de la ficha del agente
+
+### 🤖 Antigravity:
+
+Se ha actualizado el editor de documentos (`src/js/views/actaEditor.js`) y la sincronización de agentes (`src/js/db.js` y `public.obras` en Supabase) para que al añadir o mostrar agentes como asistentes:
+- **Primera columna (Cargo)**: toma directamente el campo **"Cargo / Titulación Habitual"** (`cargoHabitual`) de la ficha del agente (p. ej. `Arquitecta Directora de Obra (DO)`, `Director de Execución Material (DEM)`, `Responsable Técnico da Propiedade`, etc.) en lugar del código corto de rol (`DO`, `DEM`, `Propiedade`, `JO`, `ControlCalidade`).
+- **Segunda columna (Entidad)**: toma directamente el campo **"Entidade, Empresa ou Organismo"** (`entidad`) de la ficha del agente (p. ej. `Estudio Anta Arquitectos SLP`, `BOG`, `VIPUGAL`, `ACCIONA CONSTRUCCION S.L.`, etc.).
+- Además, cualquier asistente ya existente en una reunión o acta que tuviese guardado el código corto de rol (`DO`, `DEM`, `Propiedade`, etc.) se actualiza automáticamente con el **"Cargo / Titulación Habitual"** y la **"Entidade, Empresa ou Organismo"** de su ficha de agente.
+
+---
+
+
+## Conversación #70
+
+### 👤 Usuario:
+
+Bien.
+Más cosas:
+-Quiero que al crear cualquier documento (acta,informe,reunion o nota), venga en blanco, sin asistentes, apartados, ni nada, excepto el punto inicial de Datos de Identificación del Acta que se rellena autoáticamente con numero correlativo, la fecha del momento
+- Al exportar a PDF sale un error, no así el docX
+
+### 🤖 Antigravity:
+
+Se han aplicado ambos cambios:
+1. **Documentos nuevos completamente en blanco salvo la identificación inicial**:
+   - **Actas Semanales y Reuniones de Obra** (`src/js/views/actaEditor.js`, `src/js/db.js`): Al crear un documento nuevo (`!isEditing`), se inicializa únicamente la cabecera de Datos de Identificación del proyecto junto con el **número correlativo** (`getNextActaNumber` / `getNextReunionNumber`) y la **fecha y hora del momento**, dejando `asistentes: []`, `apartados: []`, `firmas: []`, `fotos: []` y `anexosPdf: []` completamente en blanco (sin pre-cargar asistentes ni apartados de muestra).
+   - **Informes Mensuales** (`src/js/views/informeEditor.js`): Al crear un informe nuevo, solo se rellenan los datos generales del expediente, el número correlativo (`getNextInformeNumber`) y la fecha actual (`dataInforme`), dejando todos los campos de estado, porcentajes, importes, textos, fotografías y anexos en blanco.
+   - **Notas de Obra** (`src/js/views/notas.js`, `src/js/views/expedienteView.js`): Al crear una nota nueva, solo viene pre-rellenada la fecha actual y el resto de campos permanecen en blanco.
+2. **Corrección de la exportación a PDF Oficial (`src/py/generar_acta.py`, `src/py/server.py`, `requirements.txt`)**:
+   - Se corrigió el fallo en el backend de producción (`No module named 'bs4'` y variable `es_reunion` en `src/py/generar_acta.py`), añadiendo `beautifulsoup4` y `Pillow` a `requirements.txt` y eliminando la dependencia obligatoria de `bs4`.
+   - En `src/py/server.py` se corrigió el desempaquetado del payload (`data.get("acta", data)` y `data.get("informe", data)`) y se añadieron los endpoints `/api/convert-docx-to-pdf`, `/api/store-download`, `/api/merge-pdfs` y `/api/generate-separata` con soporte nativo para LibreOffice headless en producción.
+
+---

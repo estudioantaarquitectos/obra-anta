@@ -279,10 +279,10 @@ export function renderAgentes(container, router) {
           details = `Atención: Este axente está asignado en ${assignedObras.length} obra(s) (${assignedObras.map(o => o.expediente || o.titulo).join(', ')}). Ao eliminalo, desvincularase deses expedientes.`;
         }
 
-        modal.confirmSave({
+        modal.confirmDelete({
           title: 'Confirmar Eliminación de Agente',
-          message: `¿Está seguro de que desexa eliminar a "${name}" da base de datos de axentes?`,
-          details,
+          message: `¿Está seguro de que desexa eliminar a "${name}" da base de datos de axentes?${details ? ` ${details}` : ''}`,
+          itemName: name,
           confirmText: 'Si, Eliminar Axente',
           onConfirm: () => {
             db.deleteAgente(id);

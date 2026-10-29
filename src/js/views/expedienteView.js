@@ -1699,7 +1699,7 @@ export function renderExpedienteView(container, router, params = {}) {
           <div class="form-grid-2">
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label">Autor</label>
-              <input type="text" id="modal-nota-autor" class="form-control" value="${escapeHtml(existing?.autor || user?.name || 'Dirección de Obra')}" />
+              <input type="text" id="modal-nota-autor" class="form-control" value="${escapeHtml(existing?.autor || '')}" placeholder="Ex: Dirección de Obra" />
             </div>
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label">Vincular a Acta</label>

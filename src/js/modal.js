@@ -149,6 +149,62 @@ export const modal = {
   },
 
   /**
+   * Alias for confirmDelete so any call to modal.confirm(...) displays the mandatory delete/action warning
+   */
+  confirm(options = {}) {
+    return this.confirmDelete(options);
+  },
+
+  /**
+   * Informational / Warning Alert Dialog
+   */
+  alert({ title = 'Aviso', message = '', buttonText = 'Entendido', onClose } = {}) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop active';
+    const zIndex = 100 + (modalStack.length + 1) * 20;
+    backdrop.style.zIndex = zIndex;
+    backdrop.innerHTML = `
+      <div class="modal-window">
+        <div class="modal-header">
+          <div class="modal-title" style="color: var(--primary);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            ${title}
+          </div>
+          <button class="modal-close-btn" id="modal-close-x">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.5; margin: 0;">
+            ${message}
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="modal-alert-ok-btn">${buttonText}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    modalStack.push(backdrop);
+
+    const cleanup = () => {
+      backdrop.classList.remove('active');
+      setTimeout(() => backdrop.remove(), 200);
+      modalStack = modalStack.filter(m => m !== backdrop);
+      if (typeof onClose === 'function') onClose();
+    };
+
+    backdrop.querySelector('#modal-close-x').onclick = cleanup;
+    backdrop.querySelector('#modal-alert-ok-btn').onclick = cleanup;
+    attachBackdropDismiss(backdrop, cleanup, true);
+  },
+
+  /**
    * Confirmation dialog with mandatory text verification (e.g. typing "ELIMINAR")
    */
   confirmTextVerification({

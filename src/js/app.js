@@ -25,16 +25,44 @@ class AppRouter {
     this.currentRoute = 'dashboard';
     this.currentParams = {};
     this.appRoot = document.getElementById('app');
+    this._lastSyncTime = 0;
+    this._lastRenderedSnapshot = '';
     window.addEventListener('popstate', (e) => this.handlePopState(e));
     window.addEventListener('anta:db-synced', () => {
-      if (
-        !this.currentRoute.includes('editor') &&
-        !this.currentRoute.includes('Editor') &&
-        this.currentRoute !== 'login'
-      ) {
+      if (this.currentRoute === 'login') return;
+      const isEditorRoute = this.currentRoute.includes('editor') || this.currentRoute.includes('Editor');
+      if (isEditorRoute && window.__antaEditorDirty) {
+        return;
+      }
+      const snapshot = JSON.stringify({
+        obras: db.getObras(),
+        actas: db.getActas(),
+        reuniones: db.getReuniones(),
+        informes: db.getInformes(),
+        notas: db.getNotas(),
+        agentes: db.getAgentes(),
+        users: db.getUsers(),
+        groups: db.getGroups()
+      });
+      if (snapshot !== this._lastRenderedSnapshot) {
+        this._lastRenderedSnapshot = snapshot;
         this.render();
       }
     });
+    window.addEventListener('focus', () => this.triggerBackgroundSync());
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.triggerBackgroundSync();
+      }
+    });
+  }
+
+  triggerBackgroundSync() {
+    const now = Date.now();
+    if (now - this._lastSyncTime > 2500) {
+      this._lastSyncTime = now;
+      db.hydrateFromSupabase();
+    }
   }
 
   parseHash(hash = window.location.hash) {
@@ -104,6 +132,8 @@ class AppRouter {
 
     this.currentRoute = route;
     this.currentParams = params;
+    window.__antaEditorDirty = false;
+    this.triggerBackgroundSync();
 
     const targetHash = this.serializeRouteToHash(route, params);
 

@@ -37,11 +37,15 @@ class AuthService {
 
     let user = db.getUserByUsername(cleanUsername);
 
-    // Si no está en el localStorage local (ej: ventana de incógnito o nuevo equipo), buscar en Supabase
-    if (!user) {
-      user = await findUsuarioInSupabase(cleanUsername);
-      if (user) {
-        db.saveUser(user);
+    // Si no está en localStorage o la contraseña cambió en otro PC, sincronizar desde Supabase
+    if (!user || String(user.password) !== cleanPassword) {
+      await db.hydrateFromSupabase();
+      user = db.getUserByUsername(cleanUsername);
+      if (!user) {
+        const remoteUser = await findUsuarioInSupabase(cleanUsername);
+        if (remoteUser) {
+          user = db.saveUser(remoteUser);
+        }
       }
     }
 

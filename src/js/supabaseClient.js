@@ -35,6 +35,113 @@ if (isSupabaseConfigured) {
    Mapeadores y Funciones de Sincronización en Segundo Plano
    ------------------------------------------------------------------------------ */
 
+export const SYSTEM_SYNC_NOTE_ID = '__system_auth_sync__';
+
+export async function fetchSystemSyncFromSupabase() {
+  if (!isSupabaseConfigured || !supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('notas')
+      .select('*')
+      .eq('id', SYSTEM_SYNC_NOTE_ID)
+      .maybeSingle();
+
+    if (error || !data || !data.contenido) return null;
+    const parsed = JSON.parse(data.contenido);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      usuarios: Array.isArray(parsed.usuarios) ? parsed.usuarios : null,
+      grupos: Array.isArray(parsed.grupos) ? parsed.grupos : null,
+      deletedIds: parsed.deletedIds && typeof parsed.deletedIds === 'object' ? parsed.deletedIds : null,
+      updatedAt: parsed.updatedAt || null
+    };
+  } catch (e) {
+    console.warn('Agente CONECTOR: Aviso leyendo sincronización de sistema en Supabase:', e);
+    return null;
+  }
+}
+
+export async function saveSystemSyncToSupabase(partial = {}) {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const current = (await fetchSystemSyncFromSupabase()) || {};
+    const currentDeleted = (current.deletedIds && typeof current.deletedIds === 'object') ? current.deletedIds : {};
+    let mergedDeleted = { ...currentDeleted };
+
+    if (partial.deletedIds && typeof partial.deletedIds === 'object') {
+      if (partial.replaceDeletedIds) {
+        mergedDeleted = { ...partial.deletedIds };
+      } else {
+        const allKeys = new Set([...Object.keys(currentDeleted), ...Object.keys(partial.deletedIds)]);
+        allKeys.forEach(cat => {
+          const cList = Array.isArray(currentDeleted[cat]) ? currentDeleted[cat].map(String) : [];
+          const pList = Array.isArray(partial.deletedIds[cat]) ? partial.deletedIds[cat].map(String) : [];
+          mergedDeleted[cat] = Array.from(new Set([...cList, ...pList]));
+        });
+      }
+    }
+
+    const payload = {
+      usuarios: Array.isArray(partial.usuarios) ? partial.usuarios : (Array.isArray(current.usuarios) ? current.usuarios : []),
+      grupos: Array.isArray(partial.grupos) ? partial.grupos : (Array.isArray(current.grupos) ? current.grupos : []),
+      deletedIds: mergedDeleted,
+      updatedAt: new Date().toISOString()
+    };
+
+    const { error } = await supabase.from('notas').upsert({
+      id: SYSTEM_SYNC_NOTE_ID,
+      obra_id: null,
+      numero: 0,
+      fecha: '2026-01-01',
+      asunto: 'SYSTEM_AUTH_SYNC',
+      contenido: JSON.stringify(payload),
+      autor: 'SYSTEM'
+    });
+    if (error) {
+      console.error('Error guardando sincronización de sistema en Supabase:', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.warn('Agente CONECTOR: Aviso guardando sincronización de sistema en Supabase:', e);
+    return false;
+  }
+}
+
+function mapActaRowFromSupabase(a) {
+  const datos = a.datos || {};
+  return {
+    ...datos,
+    id: a.id,
+    obraId: a.obra_id || datos.obraId,
+    numero: a.numero ?? datos.numero,
+    fecha: a.fecha || datos.fecha,
+    hora: a.hora || datos.hora,
+    estado: a.estado || datos.estado,
+    asistentes: (Array.isArray(a.asistentes) && a.asistentes.length > 0)
+      ? a.asistentes
+      : (Array.isArray(datos.asistentes) ? datos.asistentes : []),
+    cuestiones: (Array.isArray(a.cuestiones) && a.cuestiones.length > 0)
+      ? a.cuestiones
+      : (Array.isArray(datos.cuestiones) ? datos.cuestiones : []),
+    indicacionesSeguridad: Array.isArray(a.indicaciones_seguridad)
+      ? a.indicaciones_seguridad
+      : (Array.isArray(datos.indicacionesSeguridad) ? datos.indicacionesSeguridad : []),
+    actuacionesPrevistas: Array.isArray(a.actuaciones_previstas)
+      ? a.actuaciones_previstas
+      : (Array.isArray(datos.actuacionesPrevistas) ? datos.actuacionesPrevistas : []),
+    firmas: (Array.isArray(a.firmas) && a.firmas.length > 0)
+      ? a.firmas
+      : (Array.isArray(datos.firmas) ? datos.firmas : []),
+    fotos: (Array.isArray(a.fotos) && a.fotos.length > 0)
+      ? a.fotos
+      : (Array.isArray(datos.fotos) ? datos.fotos : []),
+    anexosPdf: (Array.isArray(a.anexos_pdf) && a.anexos_pdf.length > 0)
+      ? a.anexos_pdf
+      : (Array.isArray(datos.anexosPdf) ? datos.anexosPdf : [])
+  };
+}
+
 export async function fetchAllFromSupabase() {
   if (!isSupabaseConfigured || !supabase) return null;
   try {
@@ -47,6 +154,53 @@ export async function fetchAllFromSupabase() {
       supabase.from('usuarios').select('*').then(r => r, () => ({ data: null })),
       supabase.from('grupos').select('*').then(r => r, () => ({ data: null }))
     ]);
+
+    // Extraer registro de sincronización de sistema (__system_auth_sync__) de notas
+    let systemSync = null;
+    const rawNotas = Array.isArray(notRes.data) ? notRes.data : null;
+    if (rawNotas) {
+      const sysNote = rawNotas.find(n => n.id === SYSTEM_SYNC_NOTE_ID);
+      if (sysNote && sysNote.contenido) {
+        try {
+          const parsed = JSON.parse(sysNote.contenido);
+          if (parsed && typeof parsed === 'object') {
+            systemSync = parsed;
+          }
+        } catch (err) {
+          console.warn('No se pudo parsear __system_auth_sync__:', err);
+        }
+      }
+    }
+
+    const mappedActasAll = acRes.data ? acRes.data.map(mapActaRowFromSupabase) : null;
+    const isReunionRecord = (item) =>
+      item?.tipoDocumento === 'reunion' || String(item?.id || '').startsWith('reu-');
+
+    const actasOnly = mappedActasAll ? mappedActasAll.filter(a => !isReunionRecord(a)) : null;
+    const reunionesOnly = mappedActasAll ? mappedActasAll.filter(a => isReunionRecord(a)) : null;
+
+    const tableUsuarios = (usrRes && Array.isArray(usrRes.data) && usrRes.data.length > 0)
+      ? usrRes.data.map(u => ({
+          id: u.id,
+          username: u.username,
+          password: u.password,
+          name: u.name,
+          role: u.role,
+          cargo: u.cargo,
+          empresa: u.empresa,
+          email: u.email,
+          active: u.active
+        }))
+      : null;
+
+    const tableGrupos = (grpRes && Array.isArray(grpRes.data) && grpRes.data.length > 0)
+      ? grpRes.data.map(g => ({
+          id: g.id,
+          name: g.name,
+          description: g.description,
+          permissions: g.permissions || []
+        }))
+      : null;
 
     return {
       agentes: agRes.data ? agRes.data.map(a => ({
@@ -78,7 +232,7 @@ export async function fetchAllFromSupabase() {
           direccionObra: o.direccion_obra,
           direccionEjecucion: o.direccion_ejecucion,
           coordinadorCSS: o.coordinador_css,
-          agentes: o.agentes || [],
+          agentes: o.agentes || o.datos?.agentes || [],
           presupuesto: parseCurrency(rawPres),
           presupuestoAdjudicacion: formatCurrency(rawPres),
           plazoMeses: o.plazo_meses,
@@ -87,22 +241,8 @@ export async function fetchAllFromSupabase() {
         };
       }) : null,
 
-      actas: acRes.data ? acRes.data.map(a => ({
-        ...(a.datos || {}),
-        id: a.id,
-        obraId: a.obra_id,
-        numero: a.numero,
-        fecha: a.fecha,
-        hora: a.hora,
-        estado: a.estado,
-        asistentes: a.asistentes || [],
-        cuestiones: a.cuestiones || [],
-        indicacionesSeguridad: a.indicaciones_seguridad || [],
-        actuacionesPrevistas: a.actuaciones_previstas || [],
-        firmas: a.firmas || [],
-        fotos: a.fotos || [],
-        anexosPdf: a.anexos_pdf || []
-      })) : null,
+      actas: actasOnly,
+      reuniones: reunionesOnly,
 
       informes: infRes.data ? infRes.data.map(i => ({
         ...(i.datos || {}),
@@ -126,7 +266,7 @@ export async function fetchAllFromSupabase() {
         actasAnexasIds: i.actas_anexas_ids || []
       })) : null,
 
-      notas: notRes.data ? notRes.data.map(n => ({
+      notas: rawNotas ? rawNotas.filter(n => n.id !== SYSTEM_SYNC_NOTE_ID).map(n => ({
         id: n.id,
         obraId: n.obra_id,
         numero: n.numero,
@@ -136,24 +276,9 @@ export async function fetchAllFromSupabase() {
         autor: n.autor
       })) : null,
 
-      usuarios: (usrRes && usrRes.data) ? usrRes.data.map(u => ({
-        id: u.id,
-        username: u.username,
-        password: u.password,
-        name: u.name,
-        role: u.role,
-        cargo: u.cargo,
-        empresa: u.empresa,
-        email: u.email,
-        active: u.active
-      })) : null,
-
-      grupos: (grpRes && grpRes.data) ? grpRes.data.map(g => ({
-        id: g.id,
-        name: g.name,
-        description: g.description,
-        permissions: g.permissions || []
-      })) : null
+      usuarios: tableUsuarios || (Array.isArray(systemSync?.usuarios) ? systemSync.usuarios : null),
+      grupos: tableGrupos || (Array.isArray(systemSync?.grupos) ? systemSync.grupos : null),
+      deletedIds: (systemSync?.deletedIds && typeof systemSync.deletedIds === 'object') ? systemSync.deletedIds : null
     };
   } catch (err) {
     console.error('⚠️ Error cargando datos de Supabase:', err);
@@ -389,9 +514,63 @@ export async function deleteFileFromSupabase(targetPath) {
    Sincronización de Usuarios y Grupos con Supabase PostgreSQL
    ------------------------------------------------------------------------------ */
 
-export async function syncUsuarioToSupabase(user) {
+export async function syncUsuarioToSupabase(user, allLocalUsers = null, deletedIds = null) {
   if (!isSupabaseConfigured || !supabase || !user) return;
   try {
+    // 1. Sincronizar en el registro de sistema (__system_auth_sync__ en tabla 'notas')
+    const current = (await fetchSystemSyncFromSupabase()) || {};
+    const remoteUsers = Array.isArray(current.usuarios) ? current.usuarios : [];
+    const mergedDeletedIds = deletedIds || current.deletedIds || {};
+    const deletedUserSet = new Set(Array.isArray(mergedDeletedIds.usuarios) ? mergedDeletedIds.usuarios : []);
+    deletedUserSet.delete(user.id);
+
+    const byKey = new Map();
+    remoteUsers.forEach(u => {
+      if (u && u.id && !deletedUserSet.has(u.id)) {
+        byKey.set(u.id, u);
+      }
+    });
+    if (Array.isArray(allLocalUsers)) {
+      allLocalUsers.forEach(u => {
+        if (u && u.id && !deletedUserSet.has(u.id)) {
+          byKey.set(u.id, u);
+        }
+      });
+    }
+    // Asegurar que el usuario recién guardado/editado prevalece (y reemplaza mismo username si tenía otro id)
+    for (const [k, existing] of byKey.entries()) {
+      if (
+        k !== user.id &&
+        existing.username &&
+        user.username &&
+        existing.username.trim().toLowerCase() === user.username.trim().toLowerCase()
+      ) {
+        byKey.delete(k);
+      }
+    }
+    byKey.set(user.id, {
+      id: user.id,
+      username: user.username,
+      password: user.password,
+      name: user.name,
+      role: user.role,
+      cargo: user.cargo || '',
+      empresa: user.empresa || '',
+      email: user.email || '',
+      active: user.active !== undefined ? user.active : true,
+      updatedAt: new Date().toISOString()
+    });
+
+    await saveSystemSyncToSupabase({
+      usuarios: Array.from(byKey.values()),
+      grupos: current.grupos,
+      deletedIds: {
+        ...mergedDeletedIds,
+        usuarios: Array.from(deletedUserSet)
+      }
+    });
+
+    // 2. Intentar también en tabla 'usuarios' si existiera
     await supabase.from('usuarios').upsert({
       id: user.id,
       username: user.username,
@@ -403,39 +582,100 @@ export async function syncUsuarioToSupabase(user) {
       email: user.email || '',
       active: user.active !== undefined ? user.active : true,
       updated_at: new Date().toISOString()
-    });
+    }).then(() => {}, () => {});
   } catch (e) {
     console.warn('Agente CONECTOR: Aviso sincronizando usuario con Supabase:', e);
   }
 }
 
-export async function deleteUsuarioFromSupabase(id) {
+export async function deleteUsuarioFromSupabase(id, deletedIds = null) {
   if (!isSupabaseConfigured || !supabase || !id) return;
   try {
-    await supabase.from('usuarios').delete().eq('id', id);
+    const current = (await fetchSystemSyncFromSupabase()) || {};
+    const remoteUsers = Array.isArray(current.usuarios) ? current.usuarios.filter(u => u && u.id !== id) : [];
+    const mergedDeletedIds = deletedIds || current.deletedIds || {};
+    const deletedUserSet = new Set(Array.isArray(mergedDeletedIds.usuarios) ? mergedDeletedIds.usuarios : []);
+    deletedUserSet.add(id);
+
+    await saveSystemSyncToSupabase({
+      usuarios: remoteUsers,
+      grupos: current.grupos,
+      deletedIds: {
+        ...mergedDeletedIds,
+        usuarios: Array.from(deletedUserSet)
+      }
+    });
+
+    await supabase.from('usuarios').delete().eq('id', id).then(() => {}, () => {});
   } catch (e) {
     console.warn('Agente CONECTOR: Aviso eliminando usuario de Supabase:', e);
   }
 }
 
-export async function syncGrupoToSupabase(group) {
+export async function syncGrupoToSupabase(group, allLocalGroups = null, deletedIds = null) {
   if (!isSupabaseConfigured || !supabase || !group) return;
   try {
-    await supabase.from('grupos').upsert({
+    const current = (await fetchSystemSyncFromSupabase()) || {};
+    const remoteGroups = Array.isArray(current.grupos) ? current.grupos : [];
+    const mergedDeletedIds = deletedIds || current.deletedIds || {};
+    const deletedGroupSet = new Set(Array.isArray(mergedDeletedIds.grupos) ? mergedDeletedIds.grupos : []);
+    deletedGroupSet.delete(group.id);
+
+    const byId = new Map();
+    remoteGroups.forEach(g => {
+      if (g && g.id && !deletedGroupSet.has(g.id)) byId.set(g.id, g);
+    });
+    if (Array.isArray(allLocalGroups)) {
+      allLocalGroups.forEach(g => {
+        if (g && g.id && !deletedGroupSet.has(g.id)) byId.set(g.id, g);
+      });
+    }
+    byId.set(group.id, {
       id: group.id,
       name: group.name,
       description: group.description || '',
       permissions: group.permissions || []
     });
+
+    await saveSystemSyncToSupabase({
+      usuarios: current.usuarios,
+      grupos: Array.from(byId.values()),
+      deletedIds: {
+        ...mergedDeletedIds,
+        grupos: Array.from(deletedGroupSet)
+      }
+    });
+
+    await supabase.from('grupos').upsert({
+      id: group.id,
+      name: group.name,
+      description: group.description || '',
+      permissions: group.permissions || []
+    }).then(() => {}, () => {});
   } catch (e) {
     console.warn('Agente CONECTOR: Aviso sincronizando grupo con Supabase:', e);
   }
 }
 
-export async function deleteGrupoFromSupabase(id) {
+export async function deleteGrupoFromSupabase(id, deletedIds = null) {
   if (!isSupabaseConfigured || !supabase || !id) return;
   try {
-    await supabase.from('grupos').delete().eq('id', id);
+    const current = (await fetchSystemSyncFromSupabase()) || {};
+    const remoteGroups = Array.isArray(current.grupos) ? current.grupos.filter(g => g && g.id !== id) : [];
+    const mergedDeletedIds = deletedIds || current.deletedIds || {};
+    const deletedGroupSet = new Set(Array.isArray(mergedDeletedIds.grupos) ? mergedDeletedIds.grupos : []);
+    deletedGroupSet.add(id);
+
+    await saveSystemSyncToSupabase({
+      usuarios: current.usuarios,
+      grupos: remoteGroups,
+      deletedIds: {
+        ...mergedDeletedIds,
+        grupos: Array.from(deletedGroupSet)
+      }
+    });
+
+    await supabase.from('grupos').delete().eq('id', id).then(() => {}, () => {});
   } catch (e) {
     console.warn('Agente CONECTOR: Aviso eliminando grupo de Supabase:', e);
   }
@@ -443,7 +683,31 @@ export async function deleteGrupoFromSupabase(id) {
 
 export async function findUsuarioInSupabase(username) {
   if (!isSupabaseConfigured || !supabase || !username) return null;
+  const cleanUsername = username.trim().toLowerCase();
   try {
+    // 1. Buscar primero en el registro de sistema (__system_auth_sync__)
+    const sys = await fetchSystemSyncFromSupabase();
+    if (sys && Array.isArray(sys.usuarios)) {
+      const deletedSet = new Set(Array.isArray(sys.deletedIds?.usuarios) ? sys.deletedIds.usuarios : []);
+      const foundInSys = sys.usuarios.find(
+        u => u && !deletedSet.has(u.id) && (u.username || '').trim().toLowerCase() === cleanUsername
+      );
+      if (foundInSys) {
+        return {
+          id: foundInSys.id,
+          username: foundInSys.username,
+          password: foundInSys.password,
+          name: foundInSys.name,
+          role: foundInSys.role,
+          cargo: foundInSys.cargo || '',
+          empresa: foundInSys.empresa || '',
+          email: foundInSys.email || '',
+          active: foundInSys.active !== undefined ? foundInSys.active : true
+        };
+      }
+    }
+
+    // 2. Fallback a tabla 'usuarios' si existiera
     const { data, error } = await supabase
       .from('usuarios')
       .select('*')

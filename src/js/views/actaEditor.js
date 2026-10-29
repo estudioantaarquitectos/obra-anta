@@ -16,7 +16,7 @@ import { renderAgentAvatarHtml } from '../utils/avatar.js';
 
 export function renderActaEditor(container, router, params = {}) {
   const isReunion = Boolean(params && (params.isReunion || params.tipoDocumento === 'reunion'));
-  const isEditing = Boolean(params && params.id);
+  let isEditing = Boolean(params && params.id);
   const settings = db.getSettings();
   const obraId = (params && params.obraId) || db.getActiveObraId();
   const currentObra = db.getObraById(obraId) || db.getActiveObra();
@@ -40,9 +40,46 @@ export function renderActaEditor(container, router, params = {}) {
     actaData.anexosPdf = actaData.anexosPdf || [];
     actaData.fotos = Array.isArray(actaData.fotos) ? actaData.fotos : [];
 
-    // Ensure all asistentes have asistio and firma properly defined
+    // Ensure all asistentes have asistio, firma, cargo ("Cargo / Titulación Habitual") and entidad ("Entidade, Empresa ou Organismo") from agent ficha
+    const allDbAgentesForSync = db.getAgentes() || [];
+    const obraAgentesForSync = Array.isArray(currentObra?.agentes) ? currentObra.agentes : [];
+    const roleCodesSet = new Set(['do', 'dem', 'de', 'css', 'jo', 'propiedade', 'controlcalidade', 'municipal', 'arqueoloxía', 'arqueologia', 'especialista', 'outro']);
+
+    const findMatchingAgente = (asist) => {
+      if (!asist) return null;
+      const agId = asist.agenteId || asist.id;
+      let match = allDbAgentesForSync.find(a => String(a.id) === String(agId));
+      if (!match && asist.nombre) {
+        const normName = asist.nombre.trim().toLowerCase();
+        match = allDbAgentesForSync.find(a => {
+          const dbName = (a.nombre || '').trim().toLowerCase();
+          return dbName === normName || dbName.includes(normName) || normName.includes(dbName);
+        });
+      }
+      if (!match && asist.nombre) {
+        const normName = asist.nombre.trim().toLowerCase();
+        const oaMatch = obraAgentesForSync.find(oa => (oa.nombre || '').trim().toLowerCase() === normName);
+        if (oaMatch && oaMatch.agenteId) {
+          match = allDbAgentesForSync.find(a => String(a.id) === String(oaMatch.agenteId));
+        }
+      }
+      return match || null;
+    };
+
     (actaData.asistentes || []).forEach(asist => {
       asist.asistio = true;
+      const dbMatch = findMatchingAgente(asist);
+      if (dbMatch) {
+        asist.agenteId = dbMatch.id;
+        const curCargo = (asist.cargo || '').trim();
+        if (!curCargo || roleCodesSet.has(curCargo.toLowerCase())) {
+          asist.cargo = dbMatch.cargoHabitual || curCargo;
+        }
+        const curEntidad = (asist.entidad || '').trim();
+        if (!curEntidad || curEntidad === 'Dirección Facultativa' || dbMatch.entidad) {
+          asist.entidad = dbMatch.entidad || curEntidad;
+        }
+      }
       if (asist.firma === undefined) {
         if (actaData.firmas && actaData.firmas.length > 0) {
           asist.firma = actaData.firmas.some(f => 
@@ -66,25 +103,11 @@ export function renderActaEditor(container, router, params = {}) {
         texto: `Fdo. ${a.nombre || ''} (${a.cargo || ''})`
       }));
   } else {
-    // New Document initialized with default project data and standard apartados
+    // Nuevo Documento en blanco: solo se rellenan los datos de identificación con número correlativo y fecha actual
     const nextNum = isReunion ? db.getNextReunionNumber(currentObra?.id) : db.getNextActaNumber(currentObra?.id);
-    const defaultAsistentes = (currentObra?.agentes && currentObra.agentes.length > 0)
-      ? currentObra.agentes.map((ag, idx) => ({
-          id: `asist-${idx + 1}`,
-          agenteId: ag.agenteId || ag.id,
-          nombre: ag.nombre,
-          cargo: ag.cargo || ag.rol,
-          entidad: ag.entidad || '',
-          asistio: true,
-          firma: isDefaultSignerRole(ag.cargo || ag.rol, ag.entidad)
-        }))
-      : [
-          { id: '1', nombre: 'Rosa Vilas Romalde', cargo: 'Arquitecta Directora de Obra', entidad: 'Dirección Facultativa', asistio: true, firma: true },
-          { id: '2', nombre: 'Sergio Beceiro Lodeiro', cargo: 'Arquitecto Director de Obra', entidad: 'Dirección Facultativa', asistio: true, firma: true },
-          { id: '3', nombre: 'Juan Carlos Bello Criado', cargo: 'Coordinador de Seguridad y Salud', entidad: 'CSS', asistio: true, firma: false },
-          { id: '4', nombre: 'Miguel López Rodríguez', cargo: 'Jefe de Obra', entidad: 'Cabero Edificaciones, S.A.', asistio: true, firma: false },
-          { id: '5', nombre: 'Ana Gallego Núñez', cargo: 'Directora de ejecución', entidad: 'DEM', asistio: true, firma: true }
-        ];
+    const now = new Date();
+    const todayIso = now.toISOString().split('T')[0];
+    const currentHora = now.toTimeString().slice(0, 5);
 
     if (isReunion) {
       actaData = normalizeReunion({
@@ -92,28 +115,16 @@ export function renderActaEditor(container, router, params = {}) {
         obraId: currentObra ? currentObra.id : 'obra-castillo-san-felipe',
         tipoDocumento: 'reunion',
         numero: nextNum,
-        fecha: new Date().toISOString().split('T')[0],
-        hora: '10:00',
+        fecha: todayIso,
+        hora: currentHora,
         tipoModalidad: 'Presencial',
-        lugar: currentObra?.situacion || 'Caseta de obra',
+        lugar: '',
         obra: currentObra ? currentObra.titulo : settings.obraPrincipal,
         obraTitulo: currentObra ? currentObra.titulo : settings.obraPrincipal,
         situacion: currentObra ? currentObra.situacion : settings.situacion,
         expediente: currentObra ? currentObra.expediente : settings.expediente,
         asistentes: [],
-        apartados: [
-          {
-            id: 'ap-1',
-            titulo: 'CUESTIÓNS TRATADAS NA REUNIÓN',
-            secciones: [
-              {
-                id: 'sec-1-1',
-                titulo: 'Revisión xeral e acordos',
-                texto: '<p>Revisión do estado dos traballos e acordos acadados nesta reunión.</p>'
-              }
-            ]
-          }
-        ],
+        apartados: [],
         firmas: [],
         fotos: [],
         anexosPdf: [],
@@ -124,58 +135,14 @@ export function renderActaEditor(container, router, params = {}) {
         id: `acta-${Date.now()}`,
         obraId: currentObra ? currentObra.id : 'obra-castillo-san-felipe',
         numero: nextNum,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: todayIso,
         obra: currentObra ? currentObra.titulo : settings.obraPrincipal,
         obraTitulo: currentObra ? currentObra.titulo : settings.obraPrincipal,
         situacion: currentObra ? currentObra.situacion : settings.situacion,
         expediente: currentObra ? currentObra.expediente : settings.expediente,
-        asistentes: defaultAsistentes,
-        apartados: [
-          {
-            id: 'ap-1',
-            titulo: 'CUESTIONES TRATADAS EN REUNIÓN',
-            secciones: [
-              {
-                id: 'sec-1-1',
-                titulo: 'Carpinterías',
-                texto: '<p>Se revisan las muestras de taller y remates de mochetas.</p>'
-              },
-              {
-                id: 'sec-1-2',
-                titulo: 'Estructuras y cubiertas',
-                texto: '<p>Replanteo de vigas y preparación de apoyos en muros de cantería.</p>'
-              }
-            ]
-          },
-          {
-            id: 'ap-2',
-            titulo: 'INDICACIONES POR PARTE DEL COORDINADOR DE SEGURIDAD Y SALUD',
-            secciones: [
-              {
-                id: 'sec-2-1',
-                titulo: 'Medidas Preventivas e EPIS',
-                texto: '<p>Se recuerda el uso obligatorio de los EPIS correspondientes a los trabajos en ejecución.</p><p>Se ordena que los trabajadores en coronación de muros lleven arnés y línea de vida.</p>'
-              }
-            ]
-          },
-          {
-            id: 'ap-3',
-            titulo: 'ACTUACIONES PREVISTAS',
-            secciones: [
-              {
-                id: 'sec-3-1',
-                titulo: 'Próximas Actuaciones',
-                texto: '<p>Continuar con los trabajos de limpieza y encintados de muros.</p><p>Aportar muestras y fichas técnicas requeridas.</p>'
-              }
-            ]
-          }
-        ],
-        firmas: defaultAsistentes.filter(a => a.asistio && a.firma).map(a => ({
-          asistenteId: a.id,
-          nombre: a.nombre,
-          cargo: a.cargo || 'Dirección Facultativa',
-          texto: `Fdo. ${a.nombre || ''} (${a.cargo || ''})`
-        })),
+        asistentes: [],
+        apartados: [],
+        firmas: [],
         fotos: [],
         anexosPdf: [],
         estado: 'borrador'
@@ -220,9 +187,13 @@ export function renderActaEditor(container, router, params = {}) {
                   Ver Oficial
                 </button>
               ` : ''}
-              <button type="button" class="btn btn-primary" id="btn-save-acta">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-acta" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-save-back-acta">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                ${isReunion ? 'Guardar Reunión' : 'Guardar Acta'}
+                Guardar y volver
               </button>
             </div>
           </div>
@@ -371,16 +342,16 @@ export function renderActaEditor(container, router, params = {}) {
                   ` : (actaData.asistentes || []).map((asist, idx) => {
                     const isSigner = Boolean(asist.firma);
                     return `
-                    <div class="repeater-item" data-index="${idx}" data-id="${asist.id || `asist-${idx + 1}`}">
+                    <div class="repeater-item" data-index="${idx}" data-id="${asist.id || `asist-${idx + 1}`}" data-agente-id="${escapeHtml(asist.agenteId || '')}">
                       <div class="repeater-fields">
                         <div style="flex: 2; min-width: 180px;">
-                          <input type="text" class="form-control asist-nombre" placeholder="Nombre completo" value="${escapeHtml(asist.nombre)}" />
+                          <input type="text" class="form-control asist-nombre" placeholder="Nome e Apelidos do Profesional" value="${escapeHtml(asist.nombre)}" />
                         </div>
                         <div style="flex: 2; min-width: 170px;">
-                          <input type="text" class="form-control asist-cargo" placeholder="Cargo (ej: Arquitecta Directora de Obra)" value="${escapeHtml(asist.cargo)}" />
+                          <input type="text" class="form-control asist-cargo" placeholder="Cargo / Titulación Habitual" value="${escapeHtml(asist.cargo)}" />
                         </div>
                         <div style="flex: 1.5; min-width: 130px;">
-                          <input type="text" class="form-control asist-entidad" placeholder="Entidad / Empresa" value="${escapeHtml(asist.entidad || '')}" />
+                          <input type="text" class="form-control asist-entidad" placeholder="Entidade, Empresa ou Organismo" value="${escapeHtml(asist.entidad || '')}" />
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem; padding: 0 0.5rem; flex-wrap: nowrap; white-space: nowrap;">
                           <label class="label-asist-firma" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; cursor: pointer; user-select: none; font-weight: 500; color: var(--text-main);" title="Indica si este asistente firma en el acta oficial">
@@ -420,6 +391,12 @@ export function renderActaEditor(container, router, params = {}) {
               </div>
               <div class="editor-section-body">
                 <div class="apartados-container" id="apartados-list">
+                  ${(actaData.apartados || []).length === 0 ? `
+                    <div style="text-align: center; padding: 1.5rem 1rem; background: var(--bg-subtle, #f8fafc); border: 1px dashed var(--border-light); border-radius: 8px; color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;">
+                      <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">Non hai apartados nin seccións neste documento.</div>
+                      <div>Pulse <strong>+ Añadir Apartado</strong> para engadir un apartado e as súas seccións correspondentes.</div>
+                    </div>
+                  ` : ''}
                   ${(actaData.apartados || []).map((ap, apIdx) => `
                     <div class="apartado-card" data-apartado-index="${apIdx}" data-id="${ap.id || `ap-${apIdx + 1}`}">
                       
@@ -430,7 +407,7 @@ export function renderActaEditor(container, router, params = {}) {
                           <input 
                             type="text" 
                             class="form-control apartado-titulo-input" 
-                            value="${escapeHtml(cleanNumberPrefix(ap.titulo || 'APARTADO'))}" 
+                            value="${escapeHtml(cleanNumberPrefix(ap.titulo || ''))}" 
                             placeholder="Título del Apartado (ej: CUESTIONES TRATADAS EN REUNIÓN)" 
                             required 
                           />
@@ -461,7 +438,7 @@ export function renderActaEditor(container, router, params = {}) {
                                 <input 
                                   type="text" 
                                   class="form-control seccion-titulo-input" 
-                                  value="${escapeHtml(cleanNumberPrefix(sec.titulo || 'Sección/tema'))}" 
+                                  value="${escapeHtml(cleanNumberPrefix(sec.titulo || ''))}" 
                                   placeholder="Título de la sección o tema (ej: Carpinterías, Cubiertas, EPIS...)" 
                                   required 
                                 />
@@ -776,14 +753,18 @@ export function renderActaEditor(container, router, params = {}) {
       const firma = Boolean(firmaChk && firmaChk.checked);
 
       if (nombre || cargo) {
-        asistentes.push({
+        const entry = {
           id: item.dataset.id || `asist-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           nombre,
           cargo,
           entidad,
           asistio: true, // Si está en la lista es porque asiste
           firma
-        });
+        };
+        if (item.dataset.agenteId) {
+          entry.agenteId = item.dataset.agenteId;
+        }
+        asistentes.push(entry);
       }
     });
     actaData.asistentes = asistentes;
@@ -813,13 +794,25 @@ export function renderActaEditor(container, router, params = {}) {
     });
     actaData.apartados = apartados;
 
-    // Sincronizar campos legados para vistas que los consulten
+    // Sincronizar campos legados para vistas que los consulten (y limpiarlos si se borraron apartados/secciones)
     if (apartados.length > 0) {
       actaData.cuestionesTratadas = (apartados[0].secciones || []).map(s => ({
         id: s.id,
         subtitulo: s.titulo,
         puntos: s.texto ? [s.texto] : []
       }));
+      const segAp = apartados.find(a => (a.titulo || '').toLowerCase().includes('segur'));
+      actaData.indicacionesSeguridad = segAp
+        ? (segAp.secciones || []).flatMap(s => s.texto ? s.texto.split('\n').filter(Boolean) : [])
+        : [];
+      const actAp = apartados.find(a => (a.titulo || '').toLowerCase().includes('previst') || (a.titulo || '').toLowerCase().includes('actua'));
+      actaData.actuacionesPrevistas = actAp
+        ? (actAp.secciones || []).flatMap(s => s.texto ? s.texto.split('\n').filter(Boolean) : [])
+        : [];
+    } else {
+      actaData.cuestionesTratadas = [];
+      actaData.indicacionesSeguridad = [];
+      actaData.actuacionesPrevistas = [];
     }
 
     // Firmas automáticamente generadas a partir de los asistentes que asisten y firman
@@ -859,56 +852,45 @@ export function renderActaEditor(container, router, params = {}) {
   }
 
   function openAgentesSelectorModal() {
-    // 1. Obtener agentes de la obra activa y del directorio general
+    // Mostrar EXCLUSIVAMENTE los agentes asignados a la obra/proyecto activo
     const obraAgentes = Array.isArray(currentObra?.agentes) ? currentObra.agentes : [];
     const allDbAgentes = db.getAgentes() || [];
 
-    // Map para consolidar y evitar duplicados en la lista de selección
     const unifiedMap = new Map();
 
-    // Prioridad 1: Agentes asignados a la obra activa
     obraAgentes.forEach(oa => {
-      const dbMatch = allDbAgentes.find(a => String(a.id) === String(oa.agenteId || oa.id));
-      const key = (oa.nombre || '').trim().toLowerCase();
-      if (!key) return;
+      const dbMatch = allDbAgentes.find(a =>
+        String(a.id) === String(oa.agenteId || oa.id) ||
+        (a.nombre && oa.nombre && a.nombre.trim().toLowerCase() === oa.nombre.trim().toLowerCase())
+      );
+      const nombre = (dbMatch?.nombre || oa.nombre || '').trim();
+      const key = (dbMatch?.id || oa.agenteId || oa.id || nombre).toString().toLowerCase();
+      if (!nombre) return;
       unifiedMap.set(key, {
-        id: oa.agenteId || oa.id || dbMatch?.id || `ag-${Math.random().toString(36).substr(2, 6)}`,
-        nombre: oa.nombre || dbMatch?.nombre || '',
-        cargo: oa.rol || oa.cargo || dbMatch?.cargoHabitual || 'Agente de Obra',
-        entidad: oa.entidad || dbMatch?.empresa || '',
-        email: oa.email || dbMatch?.email || '',
-        colorFondo: dbMatch?.colorFondo,
-        iniciales: dbMatch?.iniciales,
+        id: dbMatch?.id || oa.agenteId || oa.id || `ag-${Math.random().toString(36).substr(2, 6)}`,
+        nombre,
+        cargo: dbMatch?.cargoHabitual || oa.cargo || oa.rol || 'Agente de Obra',
+        entidad: dbMatch?.entidad || oa.entidad || dbMatch?.empresa || '',
+        email: dbMatch?.email || oa.email || '',
+        colorFondo: dbMatch?.colorFondo || oa.colorFondo,
+        iniciales: dbMatch?.iniciales || oa.iniciales,
         isFromObra: true
-      });
-    });
-
-    // Prioridad 2: Agentes del directorio general no añadidos aún al mapa
-    allDbAgentes.forEach(da => {
-      const key = (da.nombre || '').trim().toLowerCase();
-      if (!key || unifiedMap.has(key)) return;
-      unifiedMap.set(key, {
-        id: da.id,
-        nombre: da.nombre,
-        cargo: da.cargoHabitual || 'Agente',
-        entidad: da.empresa || '',
-        email: da.email || '',
-        colorFondo: da.colorFondo,
-        iniciales: da.iniciales,
-        isFromObra: false
       });
     });
 
     const candidateList = Array.from(unifiedMap.values());
 
     if (candidateList.length === 0) {
-      showToast('Non se atoparon axentes rexistrados nesta obra nin no Directorio de Axentes. Pode engadir asistentes externos co botón "+ Engadir asistente".', 'info', 5000);
+      showToast('Non hai axentes asignados a este proxecto. Pode asignalos na ficha do expediente ou engadir asistentes externos co botón "+ Engadir asistente".', 'info', 5000);
       return;
     }
 
     // Detectar cuáles ya están añadidos en la lista actual de asistentes
     const currentAttendeeNames = new Set(
       (actaData.asistentes || []).map(a => (a.nombre || '').trim().toLowerCase()).filter(Boolean)
+    );
+    const currentAttendeeAgentIds = new Set(
+      (actaData.asistentes || []).map(a => String(a.agenteId || '')).filter(Boolean)
     );
 
     const contentHtml = `
@@ -942,7 +924,7 @@ export function renderActaEditor(container, router, params = {}) {
         <!-- Listado de agentes -->
         <div id="modal-agentes-scroll" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-light, #e2e8f0); border-radius: var(--radius-sm, 6px); background: #fff;">
           ${candidateList.map((ag, i) => {
-            const isAlreadyAdded = currentAttendeeNames.has(ag.nombre.trim().toLowerCase());
+            const isAlreadyAdded = currentAttendeeAgentIds.has(String(ag.id)) || currentAttendeeNames.has(ag.nombre.trim().toLowerCase());
             const avatarHtml = renderAgentAvatarHtml(ag, { size: 36 });
             return `
               <label 
@@ -1078,6 +1060,12 @@ export function renderActaEditor(container, router, params = {}) {
   }
 
   function wireEvents() {
+    const formEl = container.querySelector('#acta-form');
+    if (formEl) {
+      formEl.addEventListener('input', () => { window.__antaEditorDirty = true; });
+      formEl.addEventListener('change', () => { window.__antaEditorDirty = true; });
+    }
+
     // Botón + Engadir axente
     const btnAddAgente = container.querySelector('#btn-add-agente');
     if (btnAddAgente) {
@@ -1100,6 +1088,7 @@ export function renderActaEditor(container, router, params = {}) {
           asistio: true,
           firma: false
         });
+        window.__antaEditorDirty = true;
         render();
         setTimeout(() => {
           const list = container.querySelectorAll('#asistentes-list .asist-nombre');
@@ -1108,14 +1097,25 @@ export function renderActaEditor(container, router, params = {}) {
       };
     }
 
-    // Remove Asistente
+    // Remove Asistente (con advertencia obligatoria de borrado)
     container.querySelectorAll('.remove-asistente').forEach(btn => {
       btn.onclick = (e) => {
         const item = e.target.closest('.repeater-item');
         const idx = parseInt(item.dataset.index, 10);
-        collectFormData();
-        actaData.asistentes.splice(idx, 1);
-        render();
+        const nombreVal = item.querySelector('.asist-nombre')?.value.trim() || actaData.asistentes[idx]?.nombre || `Asistente #${idx + 1}`;
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Asistente',
+          message: '¿Está seguro de que desea eliminar este asistente de la lista?',
+          itemName: nombreVal,
+          confirmText: 'Eliminar asistente',
+          onConfirm: () => {
+            collectFormData();
+            actaData.asistentes.splice(idx, 1);
+            window.__antaEditorDirty = true;
+            render();
+            showToast('Asistente eliminado', 'info');
+          }
+        });
       };
     });
 
@@ -1128,6 +1128,7 @@ export function renderActaEditor(container, router, params = {}) {
         if (actaData.asistentes && actaData.asistentes[idx]) {
           actaData.asistentes[idx].firma = e.target.checked;
         }
+        window.__antaEditorDirty = true;
         if (isReunion) {
           collectFormData();
           render();
@@ -1138,18 +1139,18 @@ export function renderActaEditor(container, router, params = {}) {
     // Add Apartado (Top & Bottom buttons)
     const onAddApartado = () => {
       collectFormData();
-      const num = actaData.apartados.length + 1;
       actaData.apartados.push({
         id: `ap-${Date.now()}`,
-        titulo: `APARTADO ${num}`,
+        titulo: '',
         secciones: [
           {
             id: `sec-${Date.now()}-1`,
-            titulo: `Tema o aspecto tratado`,
+            titulo: '',
             texto: ''
           }
         ]
       });
+      window.__antaEditorDirty = true;
       render();
       const apCards = container.querySelectorAll('.apartado-card');
       if (apCards.length) {
@@ -1173,6 +1174,7 @@ export function renderActaEditor(container, router, params = {}) {
           const temp = actaData.apartados[idx];
           actaData.apartados[idx] = actaData.apartados[idx - 1];
           actaData.apartados[idx - 1] = temp;
+          window.__antaEditorDirty = true;
           render();
         }
       };
@@ -1188,25 +1190,29 @@ export function renderActaEditor(container, router, params = {}) {
           const temp = actaData.apartados[idx];
           actaData.apartados[idx] = actaData.apartados[idx + 1];
           actaData.apartados[idx + 1] = temp;
+          window.__antaEditorDirty = true;
           render();
         }
       };
     });
 
-    // Delete Apartado
+    // Delete Apartado (con advertencia obligatoria de borrado)
     container.querySelectorAll('.btn-delete-apartado').forEach(btn => {
       btn.onclick = (e) => {
         const card = e.target.closest('.apartado-card');
         const idx = parseInt(card.dataset.apartadoIndex, 10);
-        modal.confirm({
-          title: 'Eliminar Apartado',
-          message: `¿Seguro que desea eliminar el Apartado ${idx + 1} y todas sus secciones?`,
-          confirmText: 'Eliminar',
-          confirmClass: 'btn-danger',
+        const apTitle = card.querySelector('.apartado-titulo-input')?.value.trim() || actaData.apartados[idx]?.titulo || `Apartado ${idx + 1}`;
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Apartado',
+          message: `¿Está seguro de que desea eliminar el Apartado ${idx + 1} y todas sus secciones?`,
+          itemName: `${idx + 1}_ ${apTitle}`,
+          confirmText: 'Eliminar apartado',
           onConfirm: () => {
             collectFormData();
             actaData.apartados.splice(idx, 1);
+            window.__antaEditorDirty = true;
             render();
+            showToast('Apartado eliminado correctamente', 'info');
           }
         });
       };
@@ -1226,6 +1232,7 @@ export function renderActaEditor(container, router, params = {}) {
             titulo: '',
             texto: ''
           });
+          window.__antaEditorDirty = true;
           render();
         }
       };
@@ -1244,6 +1251,7 @@ export function renderActaEditor(container, router, params = {}) {
           const temp = ap.secciones[secIdx];
           ap.secciones[secIdx] = ap.secciones[secIdx - 1];
           ap.secciones[secIdx - 1] = temp;
+          window.__antaEditorDirty = true;
           render();
         }
       };
@@ -1262,24 +1270,36 @@ export function renderActaEditor(container, router, params = {}) {
           const temp = ap.secciones[secIdx];
           ap.secciones[secIdx] = ap.secciones[secIdx + 1];
           ap.secciones[secIdx + 1] = temp;
+          window.__antaEditorDirty = true;
           render();
         }
       };
     });
 
-    // Delete Section
+    // Delete Section (con advertencia obligatoria de borrado)
     container.querySelectorAll('.btn-delete-seccion').forEach(btn => {
       btn.onclick = (e) => {
         const apCard = e.target.closest('.apartado-card');
         const apIdx = parseInt(apCard.dataset.apartadoIndex, 10);
         const secCard = e.target.closest('.seccion-card');
         const secIdx = parseInt(secCard.dataset.seccionIndex, 10);
-        const ap = actaData.apartados[apIdx];
-        if (ap) {
-          collectFormData();
-          ap.secciones.splice(secIdx, 1);
-          render();
-        }
+        const secTitle = secCard.querySelector('.seccion-titulo-input')?.value.trim() || actaData.apartados[apIdx]?.secciones?.[secIdx]?.titulo || `Sección ${apIdx + 1}.${secIdx + 1}`;
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Sección',
+          message: `¿Está seguro de que desea eliminar la sección ${apIdx + 1}.${secIdx + 1} y su contenido?`,
+          itemName: `${apIdx + 1}.${secIdx + 1}_ ${secTitle}`,
+          confirmText: 'Eliminar sección',
+          onConfirm: () => {
+            collectFormData();
+            const ap = actaData.apartados[apIdx];
+            if (ap && Array.isArray(ap.secciones)) {
+              ap.secciones.splice(secIdx, 1);
+              window.__antaEditorDirty = true;
+              render();
+              showToast('Sección eliminada correctamente', 'info');
+            }
+          }
+        });
       };
     });
 
@@ -1496,14 +1516,25 @@ export function renderActaEditor(container, router, params = {}) {
       };
     });
 
-    // Remove Photo
+    // Remove Photo (con advertencia obligatoria de borrado)
     container.querySelectorAll('.remove-photo').forEach(btn => {
       btn.onclick = (e) => {
         const card = e.target.closest('.photo-card');
         const idx = parseInt(card.dataset.index, 10);
-        collectFormData();
-        actaData.fotos.splice(idx, 1);
-        render();
+        const desc = card.querySelector('.photo-desc-input')?.value.trim() || actaData.fotos[idx]?.descripcion || `Fotografía #${idx + 1}`;
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Fotografía',
+          message: '¿Está seguro de que desea eliminar esta fotografía del reportaje?',
+          itemName: desc,
+          confirmText: 'Eliminar fotografía',
+          onConfirm: () => {
+            collectFormData();
+            actaData.fotos.splice(idx, 1);
+            window.__antaEditorDirty = true;
+            render();
+            showToast('Fotografía eliminada', 'info');
+          }
+        });
       };
     });
 
@@ -1608,22 +1639,23 @@ export function renderActaEditor(container, router, params = {}) {
       };
     });
 
-    // Delete PDF Annex
+    // Delete PDF Annex (con advertencia obligatoria de borrado)
     container.querySelectorAll('.btn-delete-pdf-annex').forEach(btn => {
       btn.onclick = () => {
         const idx = parseInt(btn.dataset.index, 10);
         const item = actaData.anexosPdf[idx];
-        modal.confirm({
-          title: 'Eliminar Anexo PDF',
-          message: `¿Desea eliminar el documento anexo "${item?.nombre || 'PDF'}"?`,
-          confirmText: 'Eliminar',
-          confirmClass: 'btn-danger',
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Anexo PDF',
+          message: '¿Está seguro de que desea eliminar este documento anexo en PDF?',
+          itemName: item?.nombre || item?.archivo || 'Documento PDF',
+          confirmText: 'Eliminar anexo PDF',
           onConfirm: async () => {
             collectFormData();
             if (item?.id) {
               await db.deletePdfFile(item.id);
             }
             actaData.anexosPdf.splice(idx, 1);
+            window.__antaEditorDirty = true;
             render();
             showToast('Documento anexo eliminado', 'info');
           }
@@ -1697,8 +1729,8 @@ export function renderActaEditor(container, router, params = {}) {
       };
     }
 
-    // Save Button
-    container.querySelector('#btn-save-acta').onclick = () => {
+    // Función común de validación y guardado (con opción de permanecer abierto o volver al listado)
+    const handleSaveActa = (returnToList = false) => {
       const data = collectFormData();
 
       if (!data.numero || isNaN(data.numero)) {
@@ -1712,19 +1744,51 @@ export function renderActaEditor(container, router, params = {}) {
 
       modal.confirmSave({
         title: isReunion ? 'Confirmar Guardado de Reunión' : 'Confirmar Guardado de Acta',
-        message: `¿Desea guardar definitivamente los cambios en ${isReunion ? 'la Reunión' : 'el Acta'} nº ${data.numero} (${formatDate(data.fecha)})?`,
+        message: `¿Desea guardar los cambios en ${isReunion ? 'la Reunión' : 'el Acta'} nº ${data.numero} (${formatDate(data.fecha)})?`,
         details: `Se actualizarán ${data.asistentes.length} asistentes, ${data.apartados ? data.apartados.length : 0} apartados con ${(data.apartados || []).reduce((acc, a) => acc + (a.secciones || []).length, 0)} sección(es), y ${(data.fotos || []).length} fotografías.`,
+        confirmText: returnToList ? 'Confirmar, Guardar y Volver' : 'Confirmar y Guardar',
         onConfirm: () => {
           const res = isReunion ? db.saveReunion(data) : db.saveActa(data);
           if (res === false) {
             showToast('Error al guardar: el almacenamiento local no pudo persistir los datos', 'error');
             return;
           }
+          window.__antaEditorDirty = false;
           showToast(`${isReunion ? 'Reunión' : 'Acta'} nº ${data.numero} guardada con éxito`, 'success');
-          router.navigate('expediente', { id: data.obraId, tab: isReunion ? 'reuniones' : 'actas' });
+
+          if (returnToList) {
+            router.navigate('expediente', { id: data.obraId, tab: isReunion ? 'reuniones' : 'actas' });
+          } else {
+            isEditing = true;
+            if (res && res.id) {
+              actaData.id = res.id;
+              const routeName = isReunion ? 'reunion-editor' : 'acta-editor';
+              const newParams = { ...params, id: res.id };
+              if (router && typeof router.serializeRouteToHash === 'function') {
+                const targetHash = router.serializeRouteToHash(routeName, newParams);
+                window.history.replaceState({ route: routeName, params: newParams }, '', targetHash);
+                router.currentParams = newParams;
+              }
+            }
+            const scrollPos = window.scrollY;
+            render();
+            window.scrollTo(0, scrollPos);
+          }
         }
       });
     };
+
+    // Botón Guardar (permanece abierto)
+    const btnSaveOnly = container.querySelector('#btn-save-acta');
+    if (btnSaveOnly) {
+      btnSaveOnly.onclick = () => handleSaveActa(false);
+    }
+
+    // Botón Guardar y volver (vuelve al listado)
+    const btnSaveAndBack = container.querySelector('#btn-save-back-acta');
+    if (btnSaveAndBack) {
+      btnSaveAndBack.onclick = () => handleSaveActa(true);
+    }
   }
 
   // Initial render

@@ -23,12 +23,15 @@ try:
     from docx.oxml.ns import nsdecls
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT
-    from bs4 import BeautifulSoup, NavigableString, Tag
     import pypdf
-    from PIL import Image
 except ImportError as ie:
     print(json.dumps({"success": False, "error": f"Falta una librería requerida ({ie})."}))
     sys.exit(1)
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 
 def format_date_es(date_str):
@@ -718,7 +721,7 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
     # 9. SECCIÓN 7: ANEXO REPORTAXE FOTOGRÁFICO (Cuadrícula 2x2 preservando proporciones)
     fotos = acta_data.get('fotos', [])
     if fotos:
-        if is_reunion:
+        if es_reunion:
             doc.add_paragraph(f'{next_sec_reu}.- ANEXO REPORTAXE FOTOGRÁFICO', style=style_h1)
             next_sec_reu += 1
         else:
@@ -740,8 +743,11 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                     img_path = decode_image_data(foto.get('url'))
                     if img_path and os.path.exists(img_path):
                         try:
-                            with Image.open(img_path) as im:
-                                nw, nh = im.size
+                            if Image is not None:
+                                with Image.open(img_path) as im:
+                                    nw, nh = im.size
+                            else:
+                                nw, nh = 800, 600
                             max_w = 3.2
                             max_h = 2.1
                             w_in = max_w
@@ -774,7 +780,7 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
     # 10. SECCIÓN 8: ANEXO DOCUMENTACIÓN COMPLEMENTARIA
     anexos = acta_data.get('anexosPdf') or acta_data.get('anexos') or []
     if anexos:
-        if is_reunion:
+        if es_reunion:
             doc.add_paragraph(f'{next_sec_reu}.- ANEXO DOCUMENTACIÓN COMPLEMENTARIA', style=style_h1)
             next_sec_reu += 1
         else:

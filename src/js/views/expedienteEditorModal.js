@@ -387,10 +387,19 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
     listContainer.querySelectorAll('.btn-remove-agente').forEach(btn => {
       btn.onclick = () => {
         const idx = parseInt(btn.dataset.index, 10);
-        if (!isNaN(idx)) {
-          const removed = assignedAgentes.splice(idx, 1);
-          showToast(`Axente "${removed[0]?.nombre || ''}" desasignado da obra`, 'info');
-          renderAssignedAgentesList();
+        if (!isNaN(idx) && assignedAgentes[idx]) {
+          const targetName = assignedAgentes[idx].nombre || 'Axente';
+          modal.confirmDelete({
+            title: 'Confirmar Desasignación de Axente',
+            message: '¿Está seguro de que desexa quitar este axente do expediente de obra?',
+            itemName: targetName,
+            confirmText: 'Quitar da obra',
+            onConfirm: () => {
+              const removed = assignedAgentes.splice(idx, 1);
+              showToast(`Axente "${removed[0]?.nombre || ''}" desasignado da obra`, 'info');
+              renderAssignedAgentesList();
+            }
+          });
         }
       };
     });
