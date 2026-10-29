@@ -133,6 +133,77 @@ export async function downloadBlob(blob, filename) {
 }
 
 /**
+ * Shows full-screen blocking overlay with rotating spinner and pop-up card
+ */
+export function showExportOverlay(format = 'docx') {
+  if (typeof document === 'undefined') return;
+  hideExportOverlay();
+
+  const isPdf = String(format || '').toLowerCase().includes('pdf');
+  const fmtText = isPdf ? 'pdf' : 'docx';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'anta-export-overlay';
+  overlay.className = 'export-blocking-overlay';
+  overlay.setAttribute('role', 'alertdialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <div class="export-popup-card">
+      <div class="export-icon-container">
+        <div class="export-spinner-ring ${isPdf ? 'pdf' : ''}"></div>
+        <div class="export-icon-badge ${isPdf ? 'pdf' : ''}">
+          ${isPdf ? `
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+          ` : `
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          `}
+        </div>
+      </div>
+      <h3 class="export-popup-title">Xerando arquivo ${fmtText}</h3>
+      <p class="export-popup-desc">Procesando o documento oficial segundo a plantilla aprobada. Por favor, agarde...</p>
+      <div class="export-popup-pulse">
+        <span class="export-pulse-dot ${isPdf ? 'pdf' : ''}"></span>
+        <span>Navegación bloqueada ata rematar a descarga</span>
+      </div>
+    </div>
+  `;
+
+  const trapKey = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+  };
+  overlay._trapKey = trapKey;
+  window.addEventListener('keydown', trapKey, true);
+
+  document.body.appendChild(overlay);
+}
+
+/**
+ * Hides and removes the blocking overlay
+ */
+export function hideExportOverlay() {
+  if (typeof document === 'undefined') return;
+  const overlay = document.getElementById('anta-export-overlay');
+  if (overlay) {
+    if (overlay._trapKey) {
+      window.removeEventListener('keydown', overlay._trapKey, true);
+    }
+    overlay.remove();
+  }
+}
+
+/**
  * Format date string YYYY-MM-DD to DD/MM/YYYY
  */
 function formatDate(dateStr) {
@@ -251,236 +322,245 @@ async function getPhotoBytes(url, targetMaxW = 540, targetMaxH = 340) {
  * Exports Acta to DOCX using the official plantilla_acta.docx template
  */
 export async function exportActaToDocx(acta) {
-  const { db } = await import('./db.js');
-  const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
-  const numStr = String(acta.numero || (isReunion ? 'reunion' : 'acta')).padStart(2, '0');
-  const dateStr = (acta.fecha || '').replace(/-/g, '');
-  const prefix = isReunion ? 'Reunion' : 'Acta';
-  const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.docx`;
-
-  const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
-  const currentObra = acta.currentObra || (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
-  const obraTitulo = currentObra?.titulo || acta.obraTitulo || (typeof acta.obra === 'string' ? acta.obra : null) || 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
-  const expediente = currentObra?.expediente || acta.expediente || 'AVS 03007 25/05';
-  const situacion = currentObra?.situacion || acta.situacion || '—';
-  const contratista = currentObra?.contratista || acta.contratista || '—';
-
-  const rawDO = currentObra?.direccionObra || acta.direccionObra || '';
-  const doClean = acta.doClean || (rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO) || '—';
-  const deClean = acta.deClean || currentObra?.direccionEjecucion || acta.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '') || '—';
-  const coordinadorCSSStr = acta.coordinadorCSSStr || currentObra?.coordinadorCSS || acta.coordinadorCSS || '—';
-  const jefeObraStr = acta.jefeObraStr || currentObra?.jefeObra || acta.jefeObra || '—';
-
-  const enrichedActa = {
-    ...acta,
-    obraTitulo,
-    obra: obraTitulo,
-    expediente,
-    situacion,
-    contratista,
-    doClean,
-    deClean,
-    coordinadorCSSStr,
-    jefeObraStr,
-    currentObra,
-    agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : []
-  };
-  if (acta.anexosPdf && acta.anexosPdf.length > 0) {
-    const list = [];
-    for (const item of acta.anexosPdf) {
-      let b64 = item.url || item.dataUrl || item.data;
-      if (!b64 && item.id && db?.getPdfFile) {
-        const stored = await db.getPdfFile(item.id);
-        b64 = stored ? stored.dataUrl : null;
-      }
-      list.push({
-        nombre: item.nombre || item.archivo || 'Documento',
-        descripcion: item.descripcion || '',
-        archivo: item.archivo || item.nombre || 'documento.pdf',
-        tamano: item.tamano || 0,
-        dataUrl: b64,
-        url: b64,
-        data: b64
-      });
-    }
-    enrichedActa.anexosPdf = list;
-  }
-
-  // 1. Prioritize Python backend with official plantilla_acta.docx
+  showExportOverlay('docx');
   try {
-    const res = await fetch(`${API_BASE}/api/export-acta`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acta: enrichedActa, format: 'docx', responseType: 'token', filename })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.downloadUrl) {
-        triggerDownload(data.downloadUrl, data.filename || filename);
-        return data.filename || filename;
-      }
-    }
-  } catch (err) {
-    console.warn('Backend export-acta docx failed, fallback to client:', err);
-  }
+    const { db } = await import('./db.js');
+    const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
+    const numStr = String(acta.numero || (isReunion ? 'reunion' : 'acta')).padStart(2, '0');
+    const dateStr = (acta.fecha || '').replace(/-/g, '');
+    const prefix = isReunion ? 'Reunion' : 'Acta';
+    const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.docx`;
 
-  // 2. Client-side fallback
-  const doc = await buildModernActaDocx(enrichedActa);
-  if (typeof window !== 'undefined') {
-    const blob = await Packer.toBlob(doc);
-    downloadBlob(blob, filename);
+    const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
+    const currentObra = acta.currentObra || (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
+    const obraTitulo = currentObra?.titulo || acta.obraTitulo || (typeof acta.obra === 'string' ? acta.obra : null) || 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
+    const expediente = currentObra?.expediente || acta.expediente || 'AVS 03007 25/05';
+    const situacion = currentObra?.situacion || acta.situacion || '—';
+    const contratista = currentObra?.contratista || acta.contratista || '—';
+
+    const rawDO = currentObra?.direccionObra || acta.direccionObra || '';
+    const doClean = acta.doClean || (rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO) || '—';
+    const deClean = acta.deClean || currentObra?.direccionEjecucion || acta.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '') || '—';
+    const coordinadorCSSStr = acta.coordinadorCSSStr || currentObra?.coordinadorCSS || acta.coordinadorCSS || '—';
+    const jefeObraStr = acta.jefeObraStr || currentObra?.jefeObra || acta.jefeObra || '—';
+
+    const enrichedActa = {
+      ...acta,
+      obraTitulo,
+      obra: obraTitulo,
+      expediente,
+      situacion,
+      contratista,
+      doClean,
+      deClean,
+      coordinadorCSSStr,
+      jefeObraStr,
+      currentObra,
+      agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : []
+    };
+    if (acta.anexosPdf && acta.anexosPdf.length > 0) {
+      const list = [];
+      for (const item of acta.anexosPdf) {
+        let b64 = item.url || item.dataUrl || item.data;
+        if (!b64 && item.id && db?.getPdfFile) {
+          const stored = await db.getPdfFile(item.id);
+          b64 = stored ? stored.dataUrl : null;
+        }
+        list.push({
+          nombre: item.nombre || item.archivo || 'Documento',
+          descripcion: item.descripcion || '',
+          archivo: item.archivo || item.nombre || 'documento.pdf',
+          tamano: item.tamano || 0,
+          dataUrl: b64,
+          url: b64,
+          data: b64
+        });
+      }
+      enrichedActa.anexosPdf = list;
+    }
+
+    // 1. Prioritize Python backend with official plantilla_acta.docx
+    try {
+      const res = await fetch(`${API_BASE}/api/export-acta`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acta: enrichedActa, format: 'docx', responseType: 'token', filename })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.downloadUrl) {
+          triggerDownload(data.downloadUrl, data.filename || filename);
+          return data.filename || filename;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend export-acta docx failed, fallback to client:', err);
+    }
+
+    // 2. Client-side fallback
+    const doc = await buildModernActaDocx(enrichedActa);
+    if (typeof window !== 'undefined') {
+      const blob = await Packer.toBlob(doc);
+      downloadBlob(blob, filename);
+    }
+    return filename;
+  } finally {
+    hideExportOverlay();
   }
-  return filename;
 }
 
 /**
  * Exports Acta to official PDF generated from plantilla_acta.docx with annexes and separatas
  */
 export async function exportActaToPdf(acta) {
-  const { db } = await import('./db.js');
-  const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
-  const numStr = String(acta.numero || (isReunion ? 'reunion' : 'acta')).padStart(2, '0');
-  const dateStr = (acta.fecha || '').replace(/-/g, '');
-  const prefix = isReunion ? 'Reunion' : 'Acta';
-  const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.pdf`;
-
-  const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
-  const currentObra = acta.currentObra || (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
-  const obraTitulo = currentObra?.titulo || acta.obraTitulo || (typeof acta.obra === 'string' ? acta.obra : null) || 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
-  const expediente = currentObra?.expediente || acta.expediente || 'AVS 03007 25/05';
-  const situacion = currentObra?.situacion || acta.situacion || '—';
-  const contratista = currentObra?.contratista || acta.contratista || '—';
-
-  const rawDO = currentObra?.direccionObra || acta.direccionObra || '';
-  const doClean = acta.doClean || (rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO) || '—';
-  const deClean = acta.deClean || currentObra?.direccionEjecucion || acta.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '') || '—';
-  const coordinadorCSSStr = acta.coordinadorCSSStr || currentObra?.coordinadorCSS || acta.coordinadorCSS || '—';
-  const jefeObraStr = acta.jefeObraStr || currentObra?.jefeObra || acta.jefeObra || '—';
-
-  const enrichedActa = {
-    ...acta,
-    obraTitulo,
-    obra: obraTitulo,
-    expediente,
-    situacion,
-    contratista,
-    doClean,
-    deClean,
-    coordinadorCSSStr,
-    jefeObraStr,
-    currentObra,
-    agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : []
-  };
-  if (acta.anexosPdf && acta.anexosPdf.length > 0) {
-    const list = [];
-    for (const item of acta.anexosPdf) {
-      let b64 = item.url || item.dataUrl || item.data;
-      if (!b64 && item.id && db?.getPdfFile) {
-        const stored = await db.getPdfFile(item.id);
-        b64 = stored ? stored.dataUrl : null;
-      }
-      list.push({
-        nombre: item.nombre || item.archivo || 'Documento',
-        descripcion: item.descripcion || '',
-        archivo: item.archivo || item.nombre || 'documento.pdf',
-        tamano: item.tamano || 0,
-        dataUrl: b64,
-        url: b64,
-        data: b64
-      });
-    }
-    enrichedActa.anexosPdf = list;
-  }
-
-  // 1. Prioritize Python backend with official plantilla_acta.docx + Word COM + separatas
+  showExportOverlay('pdf');
   try {
-    const res = await fetch(`${API_BASE}/api/export-acta`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acta: enrichedActa, format: 'pdf', responseType: 'token', filename })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.downloadUrl) {
-        triggerDownload(data.downloadUrl, data.filename || filename);
-        return data.filename || filename;
-      }
-    }
-  } catch (err) {
-    console.warn('Backend export-acta pdf failed, fallback to client:', err);
-  }
+    const { db } = await import('./db.js');
+    const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
+    const numStr = String(acta.numero || (isReunion ? 'reunion' : 'acta')).padStart(2, '0');
+    const dateStr = (acta.fecha || '').replace(/-/g, '');
+    const prefix = isReunion ? 'Reunion' : 'Acta';
+    const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.pdf`;
 
-  // 2. Client-side fallback
-  const doc = await buildModernActaDocx(enrichedActa);
-  const docxBlob = await Packer.toBlob(doc);
+    const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
+    const currentObra = acta.currentObra || (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
+    const obraTitulo = currentObra?.titulo || acta.obraTitulo || (typeof acta.obra === 'string' ? acta.obra : null) || 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
+    const expediente = currentObra?.expediente || acta.expediente || 'AVS 03007 25/05';
+    const situacion = currentObra?.situacion || acta.situacion || '—';
+    const contratista = currentObra?.contratista || acta.contratista || '—';
 
-  const docxBase64 = await new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(docxBlob);
-  });
+    const rawDO = currentObra?.direccionObra || acta.direccionObra || '';
+    const doClean = acta.doClean || (rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO) || '—';
+    const deClean = acta.deClean || currentObra?.direccionEjecucion || acta.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '') || '—';
+    const coordinadorCSSStr = acta.coordinadorCSSStr || currentObra?.coordinadorCSS || acta.coordinadorCSS || '—';
+    const jefeObraStr = acta.jefeObraStr || currentObra?.jefeObra || acta.jefeObra || '—';
 
-  const pdfRes = await fetch('/api/convert-docx-to-pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ docxBase64 })
-  });
-
-  if (!pdfRes.ok) {
-    const errData = await pdfRes.json().catch(() => ({}));
-    throw new Error(errData.error || 'Non se puido converter o documento a PDF');
-  }
-
-  const actaPdfBlob = await pdfRes.blob();
-  const actaPdfB64 = await new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(actaPdfBlob);
-  });
-
-  const pdfListToMerge = [actaPdfB64];
-
-  // Audio 1: Anexos PDF precedidos de separata oficial
-  if (acta.anexosPdf && acta.anexosPdf.length > 0) {
-    for (const anexo of acta.anexosPdf) {
-      let b64 = anexo.url || anexo.dataUrl;
-      if (!b64 && anexo.id) {
-        const stored = await db.getPdfFile(anexo.id);
-        b64 = stored ? stored.dataUrl : null;
-      }
-      if (b64) {
-        pdfListToMerge.push({
-          type: 'separata',
-          tipo: 'documento_anexo',
-          titulo: `ANEXO DOCUMENTAL: ${(anexo.nombre || 'DOCUMENTO').toUpperCase()}`,
-          subtitulo: `Documentación complementaria incorporada á Acta de Obra nº ${acta.numero}.`,
-          tipo_doc: 'ACTA SEMANAL',
-          obra: obraTitulo,
-          expediente: expediente,
-          fecha: formatDate(acta.fecha),
-          detalles: [`Nome do arquivo: ${anexo.nombre}`, `Tamaño: ${formatFileSize(anexo.tamano)}`]
+    const enrichedActa = {
+      ...acta,
+      obraTitulo,
+      obra: obraTitulo,
+      expediente,
+      situacion,
+      contratista,
+      doClean,
+      deClean,
+      coordinadorCSSStr,
+      jefeObraStr,
+      currentObra,
+      agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : []
+    };
+    if (acta.anexosPdf && acta.anexosPdf.length > 0) {
+      const list = [];
+      for (const item of acta.anexosPdf) {
+        let b64 = item.url || item.dataUrl || item.data;
+        if (!b64 && item.id && db?.getPdfFile) {
+          const stored = await db.getPdfFile(item.id);
+          b64 = stored ? stored.dataUrl : null;
+        }
+        list.push({
+          nombre: item.nombre || item.archivo || 'Documento',
+          descripcion: item.descripcion || '',
+          archivo: item.archivo || item.nombre || 'documento.pdf',
+          tamano: item.tamano || 0,
+          dataUrl: b64,
+          url: b64,
+          data: b64
         });
-        pdfListToMerge.push(b64);
       }
+      enrichedActa.anexosPdf = list;
     }
-  }
 
+    // 1. Prioritize Python backend with official plantilla_acta.docx + Word COM + separatas
+    try {
+      const res = await fetch(`${API_BASE}/api/export-acta`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acta: enrichedActa, format: 'pdf', responseType: 'token', filename })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.downloadUrl) {
+          triggerDownload(data.downloadUrl, data.filename || filename);
+          return data.filename || filename;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend export-acta pdf failed, fallback to client:', err);
+    }
 
-  if (pdfListToMerge.length > 1) {
-    const mergeRes = await fetch('/api/merge-pdfs', {
+    // 2. Client-side fallback
+    const doc = await buildModernActaDocx(enrichedActa);
+    const docxBlob = await Packer.toBlob(doc);
+
+    const docxBase64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(docxBlob);
+    });
+
+    const pdfRes = await fetch('/api/convert-docx-to-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdfs: pdfListToMerge, filename })
+      body: JSON.stringify({ docxBase64 })
     });
-    if (mergeRes.ok) {
-      const mergedBlob = await mergeRes.blob();
-      downloadBlob(mergedBlob, filename);
-      return filename;
-    }
-  }
 
-  downloadBlob(actaPdfBlob, filename);
-  return filename;
+    if (!pdfRes.ok) {
+      const errData = await pdfRes.json().catch(() => ({}));
+      throw new Error(errData.error || 'Non se puido converter o documento a PDF');
+    }
+
+    const actaPdfBlob = await pdfRes.blob();
+    const actaPdfB64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(actaPdfBlob);
+    });
+
+    const pdfListToMerge = [actaPdfB64];
+
+    // Audio 1: Anexos PDF precedidos de separata oficial
+    if (acta.anexosPdf && acta.anexosPdf.length > 0) {
+      for (const anexo of acta.anexosPdf) {
+        let b64 = anexo.url || anexo.dataUrl;
+        if (!b64 && anexo.id) {
+          const stored = await db.getPdfFile(anexo.id);
+          b64 = stored ? stored.dataUrl : null;
+        }
+        if (b64) {
+          pdfListToMerge.push({
+            type: 'separata',
+            tipo: 'documento_anexo',
+            titulo: `ANEXO DOCUMENTAL: ${(anexo.nombre || 'DOCUMENTO').toUpperCase()}`,
+            subtitulo: `Documentación complementaria incorporada á Acta de Obra nº ${acta.numero}.`,
+            tipo_doc: 'ACTA SEMANAL',
+            obra: obraTitulo,
+            expediente: expediente,
+            fecha: formatDate(acta.fecha),
+            detalles: [`Nome do arquivo: ${anexo.nombre}`, `Tamaño: ${formatFileSize(anexo.tamano)}`]
+          });
+          pdfListToMerge.push(b64);
+        }
+      }
+    }
+
+    if (pdfListToMerge.length > 1) {
+      const mergeRes = await fetch('/api/merge-pdfs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfs: pdfListToMerge, filename })
+      });
+      if (mergeRes.ok) {
+        const mergedBlob = await mergeRes.blob();
+        downloadBlob(mergedBlob, filename);
+        return filename;
+      }
+    }
+
+    downloadBlob(actaPdfBlob, filename);
+    return filename;
+  } finally {
+    hideExportOverlay();
+  }
 }
 
 export async function buildModernActaDocx(acta) {
@@ -1905,69 +1985,183 @@ export async function buildInformeDocx(inf) {
 }
 
 export async function exportInformeToDocx(inf) {
-  const { db } = await import('./db.js');
-  const numStr = inf.numero ? `N${inf.numero}_` : '';
-  const rawName = inf.datosXerais?.mesInformado || inf.numero || 'seguimento';
-  const cleanName = String(rawName)
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9_-]/g, '_')
-    .replace(/_+/g, '_')
-    .slice(0, 30);
-  const tipoPrefix = (inf.tipo === 'semanal' || inf.tipo === 'informe_semanal') ? 'Informe_Semanal' : 'Informe_Mensual';
-  const filename = `${tipoPrefix}_${numStr}${cleanName || 'DT05'}.docx`;
-
-  const obraId = inf.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
-  const currentObra = (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
-  const obraTitulo = currentObra?.titulo || inf.obraTitulo || (typeof inf.obra === 'string' ? inf.obra : null) || currentObra?.nombre || inf.datosXerais?.proxecto || 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
-  const expte = currentObra?.expediente || inf.expediente || inf.datosXerais?.expediente || 'AVS 03007 25/05';
-
-  const enrichedInf = {
-    ...inf,
-    obraTitulo,
-    obra: obraTitulo,
-    expediente: expte,
-    currentObra,
-    agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : [],
-    datosXerais: {
-      ...(inf.datosXerais || {}),
-      proxecto: obraTitulo,
-      expediente: expte,
-      emprazamento: currentObra?.situacion || inf.datosXerais?.emprazamento || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
-      situacion: currentObra?.situacion || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
-      contratista: currentObra?.contratista || inf.datosXerais?.contratista || '',
-      direccionObra: currentObra?.direccionObra || inf.datosXerais?.direccionObra || '',
-      direccionEjecucion: currentObra?.direccionEjecucion || inf.datosXerais?.direccionEjecucion || '',
-      coordinadorCSS: currentObra?.coordinadorCSS || inf.datosXerais?.coordinadorCSS || '',
-      xefeObra: currentObra?.jefeObra || inf.datosXerais?.xefeObra || ''
-    }
-  };
-
-  if (inf.actasPdf && inf.actasPdf.length > 0) {
-    enrichedInf.actasPdf = inf.actasPdf.map(item => ({
-      nombre: item.nombre || item.archivo || 'Acta de Visita',
-      fecha: item.fecha || '',
-      descripcion: item.descripcion || '',
-      archivo: item.archivo || item.nombre || 'acta.pdf',
-      tamano: item.tamano || 0
-    }));
-  } else if (inf.actasAnexasIds && inf.actasAnexasIds.length > 0) {
-    enrichedInf.actasAnexas = inf.actasAnexasIds.map(id => db.getActaById(id)).filter(Boolean);
-  }
-  if (inf.anexosPdf && inf.anexosPdf.length > 0) {
-    enrichedInf.anexosPdf = inf.anexosPdf.map(item => ({
-      nombre: item.nombre || item.archivo || 'Documento',
-      descripcion: item.descripcion || '',
-      archivo: item.archivo || item.nombre || 'documento.pdf',
-      tamano: item.tamano || 0
-    }));
-  }
-
-  // 1. Prioritize official backend generation with plantilla_informe.docx
+  showExportOverlay('docx');
   try {
+    const { db } = await import('./db.js');
+    const numStr = inf.numero ? `N${inf.numero}_` : '';
+    const rawName = inf.datosXerais?.mesInformado || inf.numero || 'seguimento';
+    const cleanName = String(rawName)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .slice(0, 30);
+    const tipoPrefix = (inf.tipo === 'semanal' || inf.tipo === 'informe_semanal') ? 'Informe_Semanal' : 'Informe_Mensual';
+    const filename = `${tipoPrefix}_${numStr}${cleanName || 'DT05'}.docx`;
+
+    const obraId = inf.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
+    const currentObra = (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
+    const obraTitulo = currentObra?.titulo || inf.obraTitulo || (typeof inf.obra === 'string' ? inf.obra : null) || currentObra?.nombre || inf.datosXerais?.proxecto || 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
+    const expte = currentObra?.expediente || inf.expediente || inf.datosXerais?.expediente || 'AVS 03007 25/05';
+
+    const enrichedInf = {
+      ...inf,
+      obraTitulo,
+      obra: obraTitulo,
+      expediente: expte,
+      currentObra,
+      agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : [],
+      datosXerais: {
+        ...(inf.datosXerais || {}),
+        proxecto: obraTitulo,
+        expediente: expte,
+        emprazamento: currentObra?.situacion || inf.datosXerais?.emprazamento || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
+        situacion: currentObra?.situacion || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
+        contratista: currentObra?.contratista || inf.datosXerais?.contratista || '',
+        direccionObra: currentObra?.direccionObra || inf.datosXerais?.direccionObra || '',
+        direccionEjecucion: currentObra?.direccionEjecucion || inf.datosXerais?.direccionEjecucion || '',
+        coordinadorCSS: currentObra?.coordinadorCSS || inf.datosXerais?.coordinadorCSS || '',
+        xefeObra: currentObra?.jefeObra || inf.datosXerais?.xefeObra || ''
+      }
+    };
+
+    if (inf.actasPdf && inf.actasPdf.length > 0) {
+      enrichedInf.actasPdf = inf.actasPdf.map(item => ({
+        nombre: item.nombre || item.archivo || 'Acta de Visita',
+        fecha: item.fecha || '',
+        descripcion: item.descripcion || '',
+        archivo: item.archivo || item.nombre || 'acta.pdf',
+        tamano: item.tamano || 0
+      }));
+    } else if (inf.actasAnexasIds && inf.actasAnexasIds.length > 0) {
+      enrichedInf.actasAnexas = inf.actasAnexasIds.map(id => db.getActaById(id)).filter(Boolean);
+    }
+    if (inf.anexosPdf && inf.anexosPdf.length > 0) {
+      enrichedInf.anexosPdf = inf.anexosPdf.map(item => ({
+        nombre: item.nombre || item.archivo || 'Documento',
+        descripcion: item.descripcion || '',
+        archivo: item.archivo || item.nombre || 'documento.pdf',
+        tamano: item.tamano || 0
+      }));
+    }
+
+    // 1. Prioritize official backend generation with plantilla_informe.docx
+    try {
+      const res = await fetch(`${API_BASE}/api/export-informe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ informe: enrichedInf, format: 'docx', responseType: 'token', filename })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.downloadUrl) {
+          triggerDownload(data.downloadUrl, data.filename || filename);
+          return data.filename || filename;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend export-informe docx failed, fallback to client:', err);
+    }
+
+    // 2. Client-side fallback
+    const doc = await buildInformeDocx(enrichedInf);
+    if (typeof window !== 'undefined') {
+      const blob = await Packer.toBlob(doc);
+      downloadBlob(blob, filename);
+    }
+    return filename;
+  } finally {
+    hideExportOverlay();
+  }
+}
+
+export async function exportInformeCompletoPdf(inf) {
+  showExportOverlay('pdf');
+  try {
+    const { db } = await import('./db.js');
+    const numStr = inf.numero ? `N${inf.numero}_` : '';
+    const rawName = inf.datosXerais?.mesInformado || inf.numero || 'seguimento';
+    const cleanName = String(rawName)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .slice(0, 30);
+    const tipoPrefix = (inf.tipo === 'semanal' || inf.tipo === 'informe_semanal') ? 'Informe_Semanal' : 'Informe_Mensual';
+    const filename = `${tipoPrefix}_Completo_${numStr}${cleanName || 'DT05'}.pdf`;
+
+    const obraId = inf.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
+    const currentObra = (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
+    const obraTitulo = currentObra?.titulo || inf.obraTitulo || (typeof inf.obra === 'string' ? inf.obra : null) || currentObra?.nombre || inf.datosXerais?.proxecto || 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
+    const expte = currentObra?.expediente || inf.expediente || inf.datosXerais?.expediente || 'AVS 03007 25/05';
+
+    // 1. Enrich data with attached weekly actas and attached PDF annexes
+    const enrichedInf = {
+      ...inf,
+      obraTitulo,
+      obra: obraTitulo,
+      expediente: expte,
+      currentObra,
+      agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : [],
+      datosXerais: {
+        ...(inf.datosXerais || {}),
+        proxecto: obraTitulo,
+        expediente: expte,
+        emprazamento: currentObra?.situacion || inf.datosXerais?.emprazamento || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
+        situacion: currentObra?.situacion || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
+        contratista: currentObra?.contratista || inf.datosXerais?.contratista || '',
+        direccionObra: currentObra?.direccionObra || inf.datosXerais?.direccionObra || '',
+        direccionEjecucion: currentObra?.direccionEjecucion || inf.datosXerais?.direccionEjecucion || '',
+        coordinadorCSS: currentObra?.coordinadorCSS || inf.datosXerais?.coordinadorCSS || '',
+        xefeObra: currentObra?.jefeObra || inf.datosXerais?.xefeObra || ''
+      }
+    };
+
+    if (inf.actasPdf && inf.actasPdf.length > 0) {
+      const actasList = [];
+      for (const item of inf.actasPdf) {
+        let b64 = item.url || item.dataUrl;
+        if (!b64 && item.id) {
+          const stored = await db.getPdfFile(item.id);
+          b64 = stored ? stored.dataUrl : null;
+        }
+        actasList.push({
+          nombre: item.nombre || item.archivo || 'Acta de Visita',
+          fecha: item.fecha || '',
+          descripcion: item.descripcion || '',
+          archivo: item.archivo || item.nombre || 'acta.pdf',
+          tamano: item.tamano || 0,
+          dataUrl: b64,
+          url: b64
+        });
+      }
+      enrichedInf.actasPdf = actasList;
+    } else if (inf.actasAnexasIds && inf.actasAnexasIds.length > 0) {
+      enrichedInf.actasAnexas = inf.actasAnexasIds.map(id => db.getActaById(id)).filter(Boolean);
+    }
+    if (inf.anexosPdf && inf.anexosPdf.length > 0) {
+      const list = [];
+      for (const item of inf.anexosPdf) {
+        let b64 = item.url || item.dataUrl;
+        if (!b64 && item.id) {
+          const stored = await db.getPdfFile(item.id);
+          b64 = stored ? stored.dataUrl : null;
+        }
+        list.push({
+          nombre: item.nombre || item.archivo || 'Documento',
+          descripcion: item.descripcion || '',
+          archivo: item.archivo || item.nombre || 'documento.pdf',
+          tamano: item.tamano || 0,
+          dataUrl: b64,
+          url: b64
+        });
+      }
+      enrichedInf.anexosPdf = list;
+    }
+
+    // 2. Prioritize official backend generation with Word COM / LibreOffice + official plantilla_informe.docx + separatas
     const res = await fetch(`${API_BASE}/api/export-informe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ informe: enrichedInf, format: 'docx', responseType: 'token', filename })
+      body: JSON.stringify({ informe: enrichedInf, format: 'pdf', responseType: 'token', filename })
     });
     if (res.ok) {
       const data = await res.json();
@@ -1976,114 +2170,10 @@ export async function exportInformeToDocx(inf) {
         return data.filename || filename;
       }
     }
-  } catch (err) {
-    console.warn('Backend export-informe docx failed, fallback to client:', err);
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || errData.error || `Erro do servidor (${res.status}) ao xerar o PDF oficial do informe`);
+  } finally {
+    hideExportOverlay();
   }
-
-  // 2. Client-side fallback
-  const doc = await buildInformeDocx(enrichedInf);
-  if (typeof window !== 'undefined') {
-    const blob = await Packer.toBlob(doc);
-    downloadBlob(blob, filename);
-  }
-  return filename;
-}
-
-export async function exportInformeCompletoPdf(inf) {
-  const { db } = await import('./db.js');
-  const numStr = inf.numero ? `N${inf.numero}_` : '';
-  const rawName = inf.datosXerais?.mesInformado || inf.numero || 'seguimento';
-  const cleanName = String(rawName)
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9_-]/g, '_')
-    .replace(/_+/g, '_')
-    .slice(0, 30);
-  const tipoPrefix = (inf.tipo === 'semanal' || inf.tipo === 'informe_semanal') ? 'Informe_Semanal' : 'Informe_Mensual';
-  const filename = `${tipoPrefix}_Completo_${numStr}${cleanName || 'DT05'}.pdf`;
-
-  const obraId = inf.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
-  const currentObra = (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
-  const obraTitulo = currentObra?.titulo || inf.obraTitulo || (typeof inf.obra === 'string' ? inf.obra : null) || currentObra?.nombre || inf.datosXerais?.proxecto || 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU';
-  const expte = currentObra?.expediente || inf.expediente || inf.datosXerais?.expediente || 'AVS 03007 25/05';
-
-  // 1. Enrich data with attached weekly actas and attached PDF annexes
-  const enrichedInf = {
-    ...inf,
-    obraTitulo,
-    obra: obraTitulo,
-    expediente: expte,
-    currentObra,
-    agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : [],
-    datosXerais: {
-      ...(inf.datosXerais || {}),
-      proxecto: obraTitulo,
-      expediente: expte,
-      emprazamento: currentObra?.situacion || inf.datosXerais?.emprazamento || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
-      situacion: currentObra?.situacion || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
-      contratista: currentObra?.contratista || inf.datosXerais?.contratista || '',
-      direccionObra: currentObra?.direccionObra || inf.datosXerais?.direccionObra || '',
-      direccionEjecucion: currentObra?.direccionEjecucion || inf.datosXerais?.direccionEjecucion || '',
-      coordinadorCSS: currentObra?.coordinadorCSS || inf.datosXerais?.coordinadorCSS || '',
-      xefeObra: currentObra?.jefeObra || inf.datosXerais?.xefeObra || ''
-    }
-  };
-
-  if (inf.actasPdf && inf.actasPdf.length > 0) {
-    const actasList = [];
-    for (const item of inf.actasPdf) {
-      let b64 = item.url || item.dataUrl;
-      if (!b64 && item.id) {
-        const stored = await db.getPdfFile(item.id);
-        b64 = stored ? stored.dataUrl : null;
-      }
-      actasList.push({
-        nombre: item.nombre || item.archivo || 'Acta de Visita',
-        fecha: item.fecha || '',
-        descripcion: item.descripcion || '',
-        archivo: item.archivo || item.nombre || 'acta.pdf',
-        tamano: item.tamano || 0,
-        dataUrl: b64,
-        url: b64
-      });
-    }
-    enrichedInf.actasPdf = actasList;
-  } else if (inf.actasAnexasIds && inf.actasAnexasIds.length > 0) {
-    enrichedInf.actasAnexas = inf.actasAnexasIds.map(id => db.getActaById(id)).filter(Boolean);
-  }
-  if (inf.anexosPdf && inf.anexosPdf.length > 0) {
-    const list = [];
-    for (const item of inf.anexosPdf) {
-      let b64 = item.url || item.dataUrl;
-      if (!b64 && item.id) {
-        const stored = await db.getPdfFile(item.id);
-        b64 = stored ? stored.dataUrl : null;
-      }
-      list.push({
-        nombre: item.nombre || item.archivo || 'Documento',
-        descripcion: item.descripcion || '',
-        archivo: item.archivo || item.nombre || 'documento.pdf',
-        tamano: item.tamano || 0,
-        dataUrl: b64,
-        url: b64
-      });
-    }
-    enrichedInf.anexosPdf = list;
-  }
-
-  // 2. Prioritize official backend generation with Word COM / LibreOffice + official plantilla_informe.docx + separatas
-  const res = await fetch(`${API_BASE}/api/export-informe`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ informe: enrichedInf, format: 'pdf', responseType: 'token', filename })
-  });
-  if (res.ok) {
-    const data = await res.json();
-    if (data.downloadUrl) {
-      triggerDownload(data.downloadUrl, data.filename || filename);
-      return data.filename || filename;
-    }
-  }
-  const errData = await res.json().catch(() => ({}));
-  throw new Error(errData.detail || errData.error || `Erro do servidor (${res.status}) ao xerar o PDF oficial do informe`);
 }
 

@@ -384,3 +384,138 @@ textarea.form-control {
   animation: spin 1s linear infinite;
 }
 
+/* ==========================================================================
+   ANTA OBRA - Document Export Blocking Overlay & Pop-up
+   Blocks entire viewport and displays animated spinner during DOCX/PDF export.
+   ========================================================================== */
+.export-blocking-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  user-select: none;
+  animation: fadeInExport 0.2s ease-out forwards;
+}
+
+@keyframes fadeInExport {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.export-popup-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.9);
+  padding: 2.25rem 2.75rem;
+  max-width: 420px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: popInExport 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes popInExport {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.export-icon-container {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.export-spinner-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid #e2e8f0;
+  border-top-color: #0f4761;
+  border-right-color: #38bdf8;
+  animation: spinExport 0.9s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+}
+
+.export-spinner-ring.pdf {
+  border-top-color: #dc2626;
+  border-right-color: #f87171;
+}
+
+.export-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f4761;
+}
+
+.export-icon-badge.pdf {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.export-popup-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.01em;
+}
+
+.export-popup-desc {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.export-popup-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1.25rem;
+  padding: 5px 14px;
+  border-radius: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.export-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0284c7;
+  animation: pulseDotExport 1.4s ease-in-out infinite;
+}
+
+.export-pulse-dot.pdf {
+  background: #dc2626;
+}
+
+@keyframes pulseDotExport {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+
+@keyframes spinExport {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
