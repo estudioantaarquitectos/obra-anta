@@ -1129,11 +1129,11 @@ export function renderExpedienteView(container, router, params = {}) {
                 </div>
                 <div>
                   <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Dirección de Ejecución Material (DEM)</div>
-                  <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(obra.direccionEjecucion || 'Ana Gallego Núñez')}</div>
+                  <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(obra.direccionEjecucion || '—')}</div>
                 </div>
                 <div>
                   <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Coordinación de Seguridad y Salud (CSS)</div>
-                  <div style="color: var(--text-secondary);">${escapeHtml(obra.coordinadorCSS || 'Juan Carlos Bello Criado')}</div>
+                  <div style="color: var(--text-secondary);">${escapeHtml(obra.coordinadorCSS || '—')}</div>
                 </div>
                 <div>
                   <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Supervisión Municipal</div>

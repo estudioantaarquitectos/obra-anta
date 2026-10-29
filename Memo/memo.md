@@ -2453,3 +2453,29 @@ Se han aplicado ambos cambios:
    - En `src/py/server.py` se corrigió el desempaquetado del payload (`data.get("acta", data)` y `data.get("informe", data)`) y se añadieron los endpoints `/api/convert-docx-to-pdf`, `/api/store-download`, `/api/merge-pdfs` y `/api/generate-separata` con soporte nativo para LibreOffice headless en producción.
 
 ---
+
+
+## Conversación #71
+
+### 👤 Usuario:
+
+Ha pasao una cosa rarísima.
+He iniciado en otro PC con usuario Rosa_Vilas y la previsualización sale bien, pero al exportar a PDF ha salido un Director de Ejecución distinto, e incluso uno que ya se borró de la BD.
+¿puede ser que quede almacenado en el antiguo PC?
+
+Hay mucha diferencia entre: 
+- Previsualización
+- Docx generado
+- PDF generado
+/docx-pdf Dime cómo podemos hacer para que las tres visualizaciones sean perfectas, e idénticas a las plantillas.
+
+### 🤖 Antigravity:
+
+Se ha diagnosticado y corregido la aparición de agentes antiguos en el PDF exportado y se ha planteado la arquitectura unificada bajo el protocolo **Agente DOCX / PDF**:
+1. **Causa raíz del Director de Ejecución antiguo en el PDF (`Ana Gallego Núñez (DEM)`)**:
+   - No procedía del otro PC ni de la base de datos: en `src/js/exportDocx.js` no se estaban enviando al backend Python los campos calculados de agentes del expediente (`doClean`, `deClean`, `coordinadorCSSStr`, `jefeObraStr`), y tanto `src/py/generar_acta.py` como `src/py/generar_informe.py` tenían como valores de respaldo (fallback) en código los nombres de la antigua obra demo (`Ana Gallego Núñez (DEM)`, `Juan Carlos Bello Criado (CSS)`, `Miguel López Rodríguez`).
+   - Se han eliminado por completo todos esos nombres antiguos de `src/py/generar_acta.py`, `src/py/generar_informe.py`, `src/js/exportDocx.js` y de todas las vistas (`actaEditor.js`, `actaPrint.js`, `informeEditor.js`, `informePrint.js`, `expedienteView.js`), inyectando siempre los agentes reales del expediente activo.
+2. **Propuesta de paridad 1:1:1 entre Previsualización, DOCX y PDF respecto a las plantillas oficiales**:
+   - Se detalla la estrategia de **Fuente Única de Verdad** basada en las plantillas oficiales (`ejemplo_modificado_acta_semanal.docx` y `ejemplo_modificado_informe_mensual.docx`).
+
+---

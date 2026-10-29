@@ -190,8 +190,9 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
 
     if header.tables:
         t_head = header.tables[0]
-        obra_titulo = acta_data.get('obraTitulo') or acta_data.get('obra') or acta_data.get('proxecto') or acta_data.get('proyecto') or 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU'
-        expte = acta_data.get('expediente') or 'AVS 03007 25/05'
+        co_head = acta_data.get('currentObra') or {}
+        obra_titulo = acta_data.get('obraTitulo') or acta_data.get('obra') or co_head.get('titulo') or acta_data.get('proxecto') or acta_data.get('proyecto') or '—'
+        expte = acta_data.get('expediente') or co_head.get('expediente') or '—'
 
         # Celda central: Proyecto y Expediente con formato oficial idéntico al informe mensual
         c_proj = t_head.cell(0, 1)
@@ -255,12 +256,14 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
     style_h1 = 'Heading 1' if 'Heading 1' in doc.styles else ('Ttulo1' if 'Ttulo1' in doc.styles else 'Heading 1')
     style_h2 = 'Heading 2' if 'Heading 2' in doc.styles else ('Ttulo2' if 'Ttulo2' in doc.styles else 'Heading 2')
 
-    situacion = acta_data.get('situacion') or '—'
-    contratista = acta_data.get('contratista') or '—'
-    do_clean = acta_data.get('doClean') or 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)'
-    de_clean = acta_data.get('deClean') or 'Ana Gallego Núñez (DEM)'
-    css_str = acta_data.get('coordinadorCSSStr') or 'Juan Carlos Bello Criado (CSS)'
-    jo_str = acta_data.get('jefeObraStr') or 'Miguel López Rodríguez'
+    co = acta_data.get('currentObra') or {}
+    situacion = acta_data.get('situacion') or co.get('situacion') or '—'
+    contratista = acta_data.get('contratista') or co.get('contratista') or '—'
+    raw_do = acta_data.get('doClean') or co.get('direccionObra') or acta_data.get('direccionObra') or ''
+    do_clean = raw_do.split(' / ')[0].strip() if ' / ' in raw_do else (raw_do or '—')
+    de_clean = acta_data.get('deClean') or co.get('direccionEjecucion') or acta_data.get('direccionEjecucion') or (raw_do.split(' / ')[1].strip() if ' / ' in raw_do else '—')
+    css_str = acta_data.get('coordinadorCSSStr') or co.get('coordinadorCSS') or acta_data.get('coordinadorCSS') or '—'
+    jo_str = acta_data.get('jefeObraStr') or co.get('jefeObra') or acta_data.get('jefeObra') or '—'
     es_reunion = acta_data.get('tipoDocumento') == 'reunion' or acta_data.get('tipo') == 'reunion' or acta_data.get('esReunion') is True
 
     if es_reunion:
@@ -663,13 +666,11 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                 r_t.font.size = Pt(8.5)
                 r_t.font.color.rgb = RGBColor(30, 41, 59)
 
-        # 8. SECCIÓN 6: DILIXENCIA DE FIRMAS (DO y DE separadas)
+        # 8. SECCIÓN 6: DILIXENCIA DE FIRMAS
         asistentes_raw = acta_data.get('asistentes', [])
-        has_firmas_acta = True
-        if asistentes_raw and any('firma' in a for a in asistentes_raw):
-            has_firmas_acta = any(a.get('firma') for a in asistentes_raw if a.get('asistio') is not False and a.get('asiste') is not False and a.get('estado') != 'non_asiste')
+        firmantes_acta = [a for a in asistentes_raw if a.get('asistio') is not False and a.get('asiste') is not False and a.get('estado') != 'non_asiste' and a.get('firma')]
 
-        if has_firmas_acta:
+        if firmantes_acta:
             doc.add_paragraph('DILIXENCIA DE FIRMAS', style=style_h1)
             p_f_intro = doc.add_paragraph(style='Normal')
             p_f_intro.paragraph_format.space_after = Pt(8)
@@ -679,44 +680,34 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
             r_fi.font.size = Pt(8.5)
             r_fi.font.color.rgb = RGBColor(71, 85, 105)
 
-            t_f = doc.add_table(rows=1, cols=2)
+            t_f = doc.add_table(rows=0, cols=2)
             t_f.alignment = WD_TABLE_ALIGNMENT.CENTER
             t_f.autofit = False
-            row_f = t_f.rows[0]
 
-            # Firma DO
-            cf0 = row_f.cells[0]
-            cf0.width = Inches(3.6)
-            set_cell_shading(cf0, "F8FAFC")
-            set_cell_margins(cf0, 60, 140, 60, 60)
-            pf0 = cf0.paragraphs[0]
-            r_do_h = pf0.add_run("Pola Dirección de Obra (DO):\n")
-            r_do_h.bold = True
-            r_do_h.font.size = Pt(8.5)
-            r_do_h.font.color.rgb = RGBColor(30, 58, 138)
-            r_do_n = pf0.add_run(f"{do_clean}\n\n\n")
-            r_do_n.bold = True
-            r_do_n.font.size = Pt(8.5)
-            r_do_s = pf0.add_run("Asdo.: ____________________________")
-            r_do_s.font.size = Pt(8)
-            r_do_s.font.color.rgb = RGBColor(148, 163, 184)
-
-            # Firma DE
-            cf1 = row_f.cells[1]
-            cf1.width = Inches(3.6)
-            set_cell_shading(cf1, "F8FAFC")
-            set_cell_margins(cf1, 60, 140, 60, 60)
-            pf1 = cf1.paragraphs[0]
-            r_de_h = pf1.add_run("Pola Dirección de Execución (DE):\n")
-            r_de_h.bold = True
-            r_de_h.font.size = Pt(8.5)
-            r_de_h.font.color.rgb = RGBColor(2, 132, 199)
-            r_de_n = pf1.add_run(f"{de_clean}\n\n\n")
-            r_de_n.bold = True
-            r_de_n.font.size = Pt(8.5)
-            r_de_s = pf1.add_run("Asdo.: ____________________________")
-            r_de_s.font.size = Pt(8)
-            r_de_s.font.color.rgb = RGBColor(148, 163, 184)
+            for f_i in range(0, len(firmantes_acta), 2):
+                rf = t_f.add_row()
+                pair = firmantes_acta[f_i:f_i+2]
+                for c_i, signer in enumerate(pair):
+                    c_cell = rf.cells[c_i]
+                    c_cell.width = Inches(3.6)
+                    set_cell_shading(c_cell, "F8FAFC")
+                    set_cell_margins(c_cell, 60, 140, 60, 60)
+                    p_s = c_cell.paragraphs[0]
+                    cargo_s = signer.get('cargo') or 'Asistente'
+                    ent_s = signer.get('entidad') or signer.get('empresa') or signer.get('entidade') or ''
+                    r_c = p_s.add_run(f"{cargo_s}{f' ({ent_s})' if ent_s else ''}:\n")
+                    r_c.bold = True
+                    r_c.font.size = Pt(8.5)
+                    r_c.font.color.rgb = RGBColor(30, 58, 138)
+                    r_n = p_s.add_run(f"{signer.get('nombre') or signer.get('nome') or ''}\n\n\n")
+                    r_n.bold = True
+                    r_n.font.size = Pt(8.5)
+                    r_sig = p_s.add_run("Asdo.: ____________________________")
+                    r_sig.font.size = Pt(8)
+                    r_sig.font.color.rgb = RGBColor(148, 163, 184)
+                if len(pair) == 1:
+                    c_empty = rf.cells[1]
+                    c_empty.width = Inches(3.6)
 
     # 9. SECCIÓN 7: ANEXO REPORTAXE FOTOGRÁFICO (Cuadrícula 2x2 preservando proporciones)
     fotos = acta_data.get('fotos', [])

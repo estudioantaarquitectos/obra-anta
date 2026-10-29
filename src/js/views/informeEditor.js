@@ -859,7 +859,7 @@ export function renderInformeEditor(container, router, params = {}) {
       expediente: curExp,
       contratista: currentObra ? (currentObra.contratista || '') : (infData.datosXerais?.contratista || settings.contratista),
       direccionObra: currentObra ? currentObra.direccionObra : (infData.datosXerais?.direccionObra || settings.direccionObra || 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)'),
-      direccionEjecucion: currentObra ? currentObra.direccionEjecucion : (infData.datosXerais?.direccionEjecucion || settings.direccionEjecucion || 'Ana Gallego Núñez (DEM)'),
+      direccionEjecucion: currentObra ? currentObra.direccionEjecucion : (infData.datosXerais?.direccionEjecucion || settings.direccionEjecucion || '—'),
       mesInformado: container.querySelector('#mes-informado')?.value.trim() || '',
       dataInforme: container.querySelector('#data-informe')?.value || ''
     };

@@ -153,8 +153,8 @@ export function renderActaEditor(container, router, params = {}) {
   function render() {
     const rawDO = currentObra?.direccionObra || 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)';
     const doClean = rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO;
-    const deClean = currentObra?.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : 'Ana Gallego Núñez (DEM)');
-    const coordinadorCSSStr = currentObra?.coordinadorCSS || 'Juan Carlos Bello Criado (CSS)';
+    const deClean = currentObra?.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '—');
+    const coordinadorCSSStr = currentObra?.coordinadorCSS || '—';
 
     container.innerHTML = `
       <div class="content-wrapper">
@@ -1915,7 +1915,7 @@ export function generateDefaultFirmas(asistentes = []) {
   if (!asistentes || !asistentes.length) {
     return [
       { cargo: 'DO', texto: 'Rosa Vilas Romalde / Sergio Beceiro Lodeiro (Dirección de Obra)' },
-      { cargo: 'DE', texto: 'Ana Gallego Núñez (Dirección de Ejecución)' }
+      { cargo: 'DE', texto: '— (Dirección de Ejecución)' }
     ];
   }
   const defaultSigners = asistentes.filter(a => isDefaultSignerRole(a.cargo, a.entidad));

@@ -287,8 +287,9 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
 
     # 2. Extraer datos del informe
     dx = informe_data.get('datosXerais') or {}
-    obra_titulo = informe_data.get('obraTitulo') or informe_data.get('obra') or dx.get('proxecto') or dx.get('proyecto') or 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU'
-    expte = informe_data.get('expediente') or dx.get('expediente') or 'AVS 03007 25/05'
+    co = informe_data.get('currentObra') or {}
+    obra_titulo = informe_data.get('obraTitulo') or informe_data.get('obra') or dx.get('proxecto') or dx.get('proyecto') or co.get('titulo') or '—'
+    expte = informe_data.get('expediente') or dx.get('expediente') or co.get('expediente') or '—'
     data_inf = dx.get('dataInforme') or informe_data.get('fecha') or ''
     mes_inf = dx.get('mesInformado') or str(informe_data.get('numero') or '1')
     report_num = str(informe_data.get('numero') or mes_inf or '1')
@@ -362,18 +363,18 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
     if len(tables) > 0:
         t0 = tables[0]
         set_cell_clean_text(t0.cell(0, 1), obra_titulo, bold=True, font_size_pt=10.0)
-        set_cell_clean_text(t0.cell(1, 1), dx.get('emprazamento') or informe_data.get('situacion') or '—', font_size_pt=10.0)
+        set_cell_clean_text(t0.cell(1, 1), dx.get('emprazamento') or dx.get('situacion') or informe_data.get('situacion') or co.get('situacion') or '—', font_size_pt=10.0)
         set_cell_clean_text(t0.cell(2, 1), expte, bold=True, font_size_pt=10.0)
-        set_cell_clean_text(t0.cell(3, 1), dx.get('contratista') or informe_data.get('contratista') or '—', font_size_pt=10.0)
+        set_cell_clean_text(t0.cell(3, 1), dx.get('contratista') or informe_data.get('contratista') or co.get('contratista') or '—', font_size_pt=10.0)
 
-        raw_do = dx.get('direccionObra') or informe_data.get('doClean') or 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro'
-        de_clean = dx.get('direccionExecucion') or dx.get('direccionEjecucion') or informe_data.get('deClean') or 'Ana Gallego Núñez (DEM)'
-        css_clean = dx.get('coordinadorCSS') or informe_data.get('coordinadorCSSStr') or 'Juan Carlos Bello Criado (CSS)'
-        jo_clean = dx.get('xefeObra') or informe_data.get('jefeObraStr') or 'Miguel López Rodríguez'
+        raw_do = dx.get('direccionObra') or informe_data.get('doClean') or co.get('direccionObra') or '—'
+        de_clean = dx.get('direccionExecucion') or dx.get('direccionEjecucion') or informe_data.get('deClean') or co.get('direccionEjecucion') or '—'
+        css_clean = dx.get('coordinadorCSS') or informe_data.get('coordinadorCSSStr') or co.get('coordinadorCSS') or '—'
+        jo_clean = dx.get('xefeObra') or informe_data.get('jefeObraStr') or co.get('jefeObra') or '—'
 
         # Separar nombres de Dirección de Obra para evitar duplicar en filas 4 y 5
         do_parts = [p.strip() for p in re.split(r'\s+(?:e|y|&)\s+|;\s*|\n', raw_do, flags=re.IGNORECASE) if p.strip()]
-        clean_do = [re.sub(r'\s*\([Dd][Oo]\)\s*$', '', p).strip() for p in do_parts]
+        clean_do = [re.sub(r'\s*\([Dd][Oo]\)\s*$', '', p).strip() for p in do_parts if p.strip() and p.strip() != '—']
 
         r_do = t0.rows[4]
         r_do2 = t0.rows[5] if len(t0.rows) > 5 else None
@@ -384,7 +385,7 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
         if len(clean_do) >= 2:
             set_cell_clean_text(r_do.cells[1], clean_do[0], bold=True, color_rgb=(15, 71, 97), font_size_pt=10.0)
             if r_do2:
-                set_cell_clean_text(r_do2.cells[1], clean_do[1], bold=True, color_rgb=(15, 71, 97), font_size_pt=10.0)
+                set_cell_clean_text(r_do2.cells[1], " / ".join(clean_do[1:]), bold=True, color_rgb=(15, 71, 97), font_size_pt=10.0)
         else:
             set_cell_clean_text(r_do.cells[1], clean_do[0] if clean_do else raw_do, bold=True, color_rgb=(15, 71, 97), font_size_pt=10.0)
             if r_do2:
@@ -596,30 +597,23 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
             for ag in agentes_list:
                 ag_nom = (ag.get('nombre') or ag.get('nome') or '').lower()
                 if ag_nom and (ag_nom in norm or norm in ag_nom):
-                    cargo = ag.get('cargo') or ag.get('cargoHabitual') or rol_default
+                    cargo = ag.get('cargoHabitual') or ag.get('cargo') or rol_default
                     ent = ag.get('entidad') or ag.get('empresa') or empresa_default
                     col = ag.get('colegiado') or colegiado_default
                     emp_str = f"{ent} ({col})" if col and col not in ent else ent
                     return ag.get('nombre') or nombre_clean, cargo, emp_str
-
-            if "rosa vilas" in norm:
-                return "Rosa Vilas Romalde", "Arquitecta Directora de Obra (DO)", "UTE ANTA-BOG (COAG 2.415)"
-            elif "sergio beceiro" in norm:
-                return "Sergio Beceiro Lodeiro", "Arquitecto Director de Obra (DO)", "UTE ANTA-BOG (COAG 2.890)"
-            elif "ana gallego" in norm:
-                return "Ana Gallego Núñez (DEM)", "Dirección de Execución Material", "Aparelladores Galicia (COAAT 1.108)"
 
             col_str = f" ({colegiado_default})" if colegiado_default else ""
             return nombre_clean, rol_default, f"{empresa_default}{col_str}"
 
         firmantes_inf = []
         for do_name in clean_do:
-            f_nom, f_rol, f_emp = get_firmante_info(do_name, "Dirección Facultativa de Obra (DO)", "UTE ANTA-BOG", "")
+            f_nom, f_rol, f_emp = get_firmante_info(do_name, "Dirección Facultativa de Obra (DO)", "Dirección Facultativa", "")
             firmantes_inf.append((f_nom, f_rol, f_emp))
 
-        clean_de = re.sub(r'\s*\([Dd][Ee][Mm]\)\s*$', '', de_clean).strip() if de_clean else ""
+        clean_de = re.sub(r'\s*\([Dd][Ee][Mm]\)\s*$', '', de_clean).strip() if de_clean and de_clean != '—' else ""
         if clean_de:
-            f_nom, f_rol, f_emp = get_firmante_info(clean_de, "Dirección de Execución Material", "Aparelladores Galicia", "")
+            f_nom, f_rol, f_emp = get_firmante_info(clean_de, "Dirección de Execución Material (DEM)", "Dirección de Execución", "")
             firmantes_inf.append((f_nom, f_rol, f_emp))
 
         # Ajustar número de filas de la tabla de firmas

@@ -37,7 +37,7 @@ export function renderActaPrint(container, router, params = {}) {
   // Separación estricta de Dirección de Obra y Dirección de Ejecución (Audio 4)
   const rawDO = currentObra?.direccionObra || 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)';
   const doClean = rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO;
-  const deClean = currentObra?.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : 'Ana Gallego Núñez (DEM)');
+  const deClean = currentObra?.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '—');
   const coordinadorCSSStr = currentObra?.coordinadorCSS || '';
   const jefeObraStr = currentObra?.jefeObra || '';
 

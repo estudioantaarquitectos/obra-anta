@@ -142,11 +142,11 @@ export function renderInformePrint(container, router, params = {}) {
                 </tr>
                 <tr>
                   <td style="font-weight: 600; color: #64748b; background: #f8fafc;">Coordinador CSS:</td>
-                  <td colspan="2" style="color: #334155;">${escapeHtml(inf.datosXerais?.coordinadorCSS || currentObra?.coordinadorCSS || 'Juan Carlos Bello Criado (CSS)')}</td>
+                  <td colspan="2" style="color: #334155;">${escapeHtml(inf.datosXerais?.coordinadorCSS || currentObra?.coordinadorCSS || '—')}</td>
                 </tr>
                 <tr>
                   <td style="font-weight: 600; color: #64748b; background: #f8fafc;">Xefe de Obra:</td>
-                  <td colspan="2" style="color: #334155;">${escapeHtml(inf.datosXerais?.xefeObra || currentObra?.jefeObra || 'Miguel López Rodríguez')}</td>
+                  <td colspan="2" style="color: #334155;">${escapeHtml(inf.datosXerais?.xefeObra || currentObra?.jefeObra || '—')}</td>
                 </tr>
               </tbody>
             </table>
@@ -476,7 +476,7 @@ export function renderInformePrint(container, router, params = {}) {
                     <td style="width: 55%; padding: 8px 10px; background: #f8fafc;">
                       <div style="font-weight: bold; color: #0f172a;">${escapeHtml(deClean)}</div>
                       <div style="color: #475569; font-size: 8pt; margin-top: 1px;">Dirección de Execución Material</div>
-                      <div style="color: #64748b; font-size: 7.8pt; margin-top: 1px;">Aparelladores Galicia (COAAT 1.108)</div>
+                      <div style="color: #64748b; font-size: 7.8pt; margin-top: 1px;"></div>
                     </td>
                     <td style="width: 45%; padding: 8px 10px; text-align: right; vertical-align: bottom; color: #94a3b8; font-size: 8pt;">
                       Asdo.: ____________________________

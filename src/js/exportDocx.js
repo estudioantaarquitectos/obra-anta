@@ -263,6 +263,12 @@ export async function exportActaToDocx(acta) {
   const situacion = currentObra?.situacion || acta.situacion || '—';
   const contratista = currentObra?.contratista || acta.contratista || '—';
 
+  const rawDO = currentObra?.direccionObra || acta.direccionObra || '';
+  const doClean = acta.doClean || (rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO) || '—';
+  const deClean = acta.deClean || currentObra?.direccionEjecucion || acta.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '') || '—';
+  const coordinadorCSSStr = acta.coordinadorCSSStr || currentObra?.coordinadorCSS || acta.coordinadorCSS || '—';
+  const jefeObraStr = acta.jefeObraStr || currentObra?.jefeObra || acta.jefeObra || '—';
+
   const enrichedActa = {
     ...acta,
     obraTitulo,
@@ -270,7 +276,12 @@ export async function exportActaToDocx(acta) {
     expediente,
     situacion,
     contratista,
-    currentObra
+    doClean,
+    deClean,
+    coordinadorCSSStr,
+    jefeObraStr,
+    currentObra,
+    agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : []
   };
   if (acta.anexosPdf && acta.anexosPdf.length > 0) {
     const list = [];
@@ -336,6 +347,12 @@ export async function exportActaToPdf(acta) {
   const situacion = currentObra?.situacion || acta.situacion || '—';
   const contratista = currentObra?.contratista || acta.contratista || '—';
 
+  const rawDO = currentObra?.direccionObra || acta.direccionObra || '';
+  const doClean = acta.doClean || (rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO) || '—';
+  const deClean = acta.deClean || currentObra?.direccionEjecucion || acta.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '') || '—';
+  const coordinadorCSSStr = acta.coordinadorCSSStr || currentObra?.coordinadorCSS || acta.coordinadorCSS || '—';
+  const jefeObraStr = acta.jefeObraStr || currentObra?.jefeObra || acta.jefeObra || '—';
+
   const enrichedActa = {
     ...acta,
     obraTitulo,
@@ -343,7 +360,12 @@ export async function exportActaToPdf(acta) {
     expediente,
     situacion,
     contratista,
-    currentObra
+    doClean,
+    deClean,
+    coordinadorCSSStr,
+    jefeObraStr,
+    currentObra,
+    agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : []
   };
   if (acta.anexosPdf && acta.anexosPdf.length > 0) {
     const list = [];
@@ -479,7 +501,7 @@ export async function buildModernActaDocx(acta) {
 
   const rawDO = currentObra.direccionObra || acta.direccionObra || 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)';
   const doClean = acta.doClean || (rawDO.includes(' / ') ? rawDO.split(' / ')[0].trim() : rawDO);
-  const deClean = acta.deClean || currentObra.direccionEjecucion || acta.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : 'Ana Gallego Núñez (DEM)');
+  const deClean = acta.deClean || currentObra.direccionEjecucion || acta.direccionEjecucion || (rawDO.includes(' / ') ? rawDO.split(' / ')[1].trim() : '—');
   const coordinadorCSSStr = acta.coordinadorCSSStr || currentObra.coordinadorCSS || '';
   const jefeObraStr = acta.jefeObraStr || currentObra.jefeObra || '';
 
@@ -1900,14 +1922,19 @@ export async function exportInformeToDocx(inf) {
     obraTitulo,
     obra: obraTitulo,
     expediente: expte,
+    currentObra,
+    agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : [],
     datosXerais: {
       ...(inf.datosXerais || {}),
       proxecto: obraTitulo,
       expediente: expte,
+      emprazamento: currentObra?.situacion || inf.datosXerais?.emprazamento || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
       situacion: currentObra?.situacion || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
       contratista: currentObra?.contratista || inf.datosXerais?.contratista || '',
       direccionObra: currentObra?.direccionObra || inf.datosXerais?.direccionObra || '',
-      direccionEjecucion: currentObra?.direccionEjecucion || inf.datosXerais?.direccionEjecucion || ''
+      direccionEjecucion: currentObra?.direccionEjecucion || inf.datosXerais?.direccionEjecucion || '',
+      coordinadorCSS: currentObra?.coordinadorCSS || inf.datosXerais?.coordinadorCSS || '',
+      xefeObra: currentObra?.jefeObra || inf.datosXerais?.xefeObra || ''
     }
   };
 
@@ -1981,14 +2008,19 @@ export async function exportInformeCompletoPdf(inf) {
     obraTitulo,
     obra: obraTitulo,
     expediente: expte,
+    currentObra,
+    agentes: (typeof db !== 'undefined' && db.getAgentes) ? db.getAgentes() : [],
     datosXerais: {
       ...(inf.datosXerais || {}),
       proxecto: obraTitulo,
       expediente: expte,
+      emprazamento: currentObra?.situacion || inf.datosXerais?.emprazamento || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
       situacion: currentObra?.situacion || inf.datosXerais?.situacion || currentObra?.ubicacion || '',
       contratista: currentObra?.contratista || inf.datosXerais?.contratista || '',
       direccionObra: currentObra?.direccionObra || inf.datosXerais?.direccionObra || '',
-      direccionEjecucion: currentObra?.direccionEjecucion || inf.datosXerais?.direccionEjecucion || ''
+      direccionEjecucion: currentObra?.direccionEjecucion || inf.datosXerais?.direccionEjecucion || '',
+      coordinadorCSS: currentObra?.coordinadorCSS || inf.datosXerais?.coordinadorCSS || '',
+      xefeObra: currentObra?.jefeObra || inf.datosXerais?.xefeObra || ''
     }
   };
 
