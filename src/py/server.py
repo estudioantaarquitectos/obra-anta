@@ -113,7 +113,26 @@ async def export_acta(request: Request):
         req_filename = (data.get("filename") if isinstance(data, dict) else None) or default_name
         out_docx = os.path.join(tmp_dir, f"Acta_N{num}.docx")
         out_pdf = os.path.join(tmp_dir, f"Acta_N{num}.pdf")
-        plantilla = os.path.join(BASE_DIR, "ejemplo_modificado_acta_semanal.docx")
+        
+        es_reunion = (
+            acta_payload.get("tipoDocumento") == "reunion"
+            or acta_payload.get("tipo") == "reunion"
+            or acta_payload.get("esReunion") is True
+        ) if isinstance(acta_payload, dict) else False
+        
+        if es_reunion:
+            cand_r = [
+                os.path.join(BASE_DIR, "ejemplo_modificado_acta_reunión.docx"),
+                os.path.join(BASE_DIR, "plantilla_reunion.docx")
+            ]
+            plantilla = next((p for p in cand_r if os.path.exists(p)), cand_r[0])
+        else:
+            cand_s = [
+                os.path.join(BASE_DIR, "ejemplo_modificado_acta_semanal.docx"),
+                os.path.join(BASE_DIR, "plantilla_acta.docx")
+            ]
+            plantilla = next((p for p in cand_s if os.path.exists(p)), cand_s[0])
+            
         script = os.path.join(PY_DIR, "generar_acta.py")
 
         cmd = ["python", script, "--data", in_json, "--output-docx", out_docx, "--plantilla", plantilla]

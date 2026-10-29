@@ -142,9 +142,17 @@ function actaExportServerPlugin() {
             fs.writeFileSync(tmpJson, JSON.stringify(acta, null, 2), 'utf-8');
 
             const scriptPath = path.resolve(__dirname, 'src/py/generar_acta.py');
-            const plantillaPath = fs.existsSync(path.resolve(__dirname, 'ejemplo_modificado_acta_semanal.docx'))
-              ? path.resolve(__dirname, 'ejemplo_modificado_acta_semanal.docx')
-              : path.resolve(__dirname, 'plantilla_acta.docx');
+            const isReunion = acta && (acta.tipoDocumento === 'reunion' || acta.tipo === 'reunion' || acta.esReunion === true);
+            let plantillaPath;
+            if (isReunion) {
+              plantillaPath = fs.existsSync(path.resolve(__dirname, 'ejemplo_modificado_acta_reunión.docx'))
+                ? path.resolve(__dirname, 'ejemplo_modificado_acta_reunión.docx')
+                : path.resolve(__dirname, 'plantilla_reunion.docx');
+            } else {
+              plantillaPath = fs.existsSync(path.resolve(__dirname, 'ejemplo_modificado_acta_semanal.docx'))
+                ? path.resolve(__dirname, 'ejemplo_modificado_acta_semanal.docx')
+                : path.resolve(__dirname, 'plantilla_acta.docx');
+            }
 
             const pyArgs = [
               scriptPath,

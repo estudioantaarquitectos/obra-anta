@@ -139,72 +139,59 @@ export function renderActaPrint(container, router, params = {}) {
             </div>
           </div>
 
-          ${isReunion ? `
-            <!-- 1. SECTION 1: DATOS XERAIS DA OBRA -->
+                    ${isReunion ? `
+            <!-- 1. SECTION: DATOS XERAIS -->
             <div class="dt05-section">
-              <div class="dt05-sec-header">1.- DATOS XERAIS DA OBRA</div>
-              <div class="dt05-info-grid">
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Proxecto:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(obraTitulo)}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Emprazamento:</span>
-                  <span class="dt05-val">${escapeHtml(acta.situacion || currentObra?.situacion || '—')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Expediente nº:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(acta.expediente || currentObra?.expediente || '—')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Contratista:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(currentObra?.contratista || '—')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Dirección de obra:</span>
-                  <span class="dt05-val" style="font-weight: 600; color: #1e3a8a;">${escapeHtml(doClean)}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Dirección de execución:</span>
-                  <span class="dt05-val" style="font-weight: 600; color: #0284c7;">${escapeHtml(deClean)}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Coordinador CSS:</span>
-                  <span class="dt05-val">${escapeHtml(coordinadorCSSStr || '—')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Xefe de Obra:</span>
-                  <span class="dt05-val">${escapeHtml(jefeObraStr || '—')}</span>
-                </div>
-              </div>
+              <div class="dt05-sec-header">DATOS XERAIS</div>
+              <table class="dt05-table-accent1" style="margin-top: 8px;">
+                <tbody>
+                  <tr>
+                    <td style="width: 25%; font-weight: bold; color: #475569;">Proxecto:</td>
+                    <td colspan="3" style="font-weight: bold; color: #0F172A;">${escapeHtml(obraTitulo)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Emprazamento:</td>
+                    <td colspan="3">${escapeHtml(acta.situacion || currentObra?.situacion || '—')}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Expediente:</td>
+                    <td colspan="3" style="font-weight: bold; color: #0F172A;">${escapeHtml(acta.expediente || currentObra?.expediente || '—')}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Dirección de obra (DO):</td>
+                    <td style="font-weight: bold; color: #1E3A8A;">${escapeHtml(doClean)}</td>
+                    <td style="width: 25%; font-weight: bold; color: #475569;">Dirección de Execución (DE):</td>
+                    <td style="font-weight: bold; color: #0284C7;">${escapeHtml(deClean)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;"></td>
+                    <td></td>
+                    <td style="font-weight: bold; color: #475569;">Coordinador de seguridade e saúde (CSS):</td>
+                    <td>${escapeHtml(coordinadorCSSStr || '—')}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Contratista:</td>
+                    <td style="font-weight: bold; color: #0F172A;">${escapeHtml(currentObra?.contratista || '—')}</td>
+                    <td style="font-weight: bold; color: #475569;">Xefe de obra (XO):</td>
+                    <td>${escapeHtml(jefeObraStr || '—')}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Data da reunión:</td>
+                    <td style="font-weight: bold; color: #0F172A;">${formatDate(acta.fecha)}</td>
+                    <td style="font-weight: bold; color: #475569;">Tipo:</td>
+                    <td style="font-weight: bold; color: #1E3A8A;">${escapeHtml(acta.tipoModalidad || 'Presencial')}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Lugar da reunión:</td>
+                    <td colspan="3">${escapeHtml(acta.lugar || (currentObra?.situacion || 'Caseta de obra'))}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <!-- 2. SECTION 2: DATOS XERAIS DA REUNIÓN -->
+            <!-- 2. SECTION: ASISTENTES -->
             <div class="dt05-section" style="margin-top: 14px;">
-              <div class="dt05-sec-header">2.- DATOS XERAIS DA REUNIÓN</div>
-              <div class="dt05-info-grid">
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Data:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${formatDate(acta.fecha)}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Hora:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(acta.hora || '10:00')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Tipo de reunión:</span>
-                  <span class="dt05-val" style="font-weight: 600; color: #1e3a8a;">${escapeHtml(acta.tipoModalidad || 'Presencial')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Lugar / Canle:</span>
-                  <span class="dt05-val">${escapeHtml(acta.lugar || (currentObra?.situacion || 'Caseta de obra'))}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 3. SECTION 3: ASISTENTES -->
-            <div class="dt05-section" style="margin-top: 14px;">
-              <div class="dt05-sec-header">3.- ASISTENTES</div>
+              <div class="dt05-sec-header">ASISTENTES</div>
               <table class="dt05-table-accent1" style="margin-top: 8px;">
                 <thead>
                   <tr>
@@ -237,16 +224,16 @@ export function renderActaPrint(container, router, params = {}) {
               </table>
             </div>
 
-            <!-- 4. SECTION 4: CUESTIÓNS TRATADAS NA REUNIÓN -->
+            <!-- 3. SECTION: CUESTIÓNS TRATADAS NA VISITA / REUNIÓN -->
             <div class="dt05-section" style="margin-top: 14px;">
-              <div class="dt05-sec-header">4.- CUESTIÓNS TRATADAS NA REUNIÓN</div>
-              ${renderApartadosHtmlModern(acta, 4)}
+              <div class="dt05-sec-header">CUESTIÓNS TRATADAS NA VISITA / REUNIÓN</div>
+              ${renderApartadosHtmlModern(acta, 3)}
             </div>
 
-            <!-- 5. SECTION 5: DILIXENCIA DE FIRMAS (Sólo si hay asistentes con firma marcada) -->
+            <!-- 4. SECTION: DILIXENCIA DE FIRMAS -->
             ${hasFirmas ? `
               <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
-                <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS</div>
+                <div class="dt05-sec-header">DILIXENCIA DE FIRMAS</div>
                 <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
                   En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta de reunión:
                 </div>
@@ -265,66 +252,50 @@ export function renderActaPrint(container, router, params = {}) {
               </div>
             ` : ''}
           ` : `
-            <!-- 2. SECTION 1: DATOS XERAIS (Audio 4: DO and DE strictly separated) -->
+            <!-- 1. SECTION: DATOS XERAIS -->
             <div class="dt05-section">
-              <div class="dt05-sec-header">1.- DATOS XERAIS</div>
-              
-              <div class="dt05-info-grid">
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Proxecto:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(obraTitulo)}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Data da visita:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${formatDate(acta.fecha)}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Emprazamento:</span>
-                  <span class="dt05-val">${escapeHtml(acta.situacion || currentObra?.situacion || '—')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Expediente nº:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(acta.expediente || currentObra?.expediente || '—')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Contratista:</span>
-                  <span class="dt05-val" style="font-weight: bold;">${escapeHtml(currentObra?.contratista || '—')}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Estado da acta:</span>
-                  <span class="dt05-val">
-                    <span class="dt05-status-pill" style="background: ${acta.estado === 'pechada' ? '#dcfce7; color: #166534;' : '#fef9c3; color: #854d0e;'}">
-                      ${acta.estado === 'pechada' ? '● Pechada / Emitida' : '○ Borrador'}
-                    </span>
-                  </span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Dirección de obra:</span>
-                  <span class="dt05-val" style="font-weight: 600; color: #1e3a8a;">${escapeHtml(doClean)}</span>
-                </div>
-                <div class="dt05-info-row">
-                  <span class="dt05-lbl">Dirección de execución:</span>
-                  <span class="dt05-val" style="font-weight: 600; color: #0284c7;">${escapeHtml(deClean)}</span>
-                </div>
-                ${coordinadorCSSStr ? `
-                  <div class="dt05-info-row">
-                    <span class="dt05-lbl">Coordinador CSS:</span>
-                    <span class="dt05-val">${escapeHtml(coordinadorCSSStr)}</span>
-                  </div>
-                ` : ''}
-                ${jefeObraStr ? `
-                  <div class="dt05-info-row">
-                    <span class="dt05-lbl">Xefe de Obra:</span>
-                    <span class="dt05-val">${escapeHtml(jefeObraStr)}</span>
-                  </div>
-                ` : ''}
-              </div>
+              <div class="dt05-sec-header">DATOS XERAIS</div>
+              <table class="dt05-table-accent1" style="margin-top: 8px;">
+                <tbody>
+                  <tr>
+                    <td style="width: 25%; font-weight: bold; color: #475569;">Proxecto:</td>
+                    <td colspan="3" style="font-weight: bold; color: #0F172A;">${escapeHtml(obraTitulo)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Emprazamento:</td>
+                    <td colspan="3">${escapeHtml(acta.situacion || currentObra?.situacion || '—')}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Expediente:</td>
+                    <td style="font-weight: bold; color: #0F172A;">${escapeHtml(acta.expediente || currentObra?.expediente || '—')}</td>
+                    <td style="width: 25%; font-weight: bold; color: #475569;">Data da acta:</td>
+                    <td style="font-weight: bold; color: #0F172A;">${formatDate(acta.fecha)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Dirección de obra (DO):</td>
+                    <td style="font-weight: bold; color: #1E3A8A;">${escapeHtml(doClean)}</td>
+                    <td style="width: 25%; font-weight: bold; color: #475569;">Dirección de Execución (DE):</td>
+                    <td style="font-weight: bold; color: #0284C7;">${escapeHtml(deClean)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;"></td>
+                    <td></td>
+                    <td style="font-weight: bold; color: #475569;">Coordinador de seguridade e saúde (CSS):</td>
+                    <td>${escapeHtml(coordinadorCSSStr || '—')}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #475569;">Contratista:</td>
+                    <td style="font-weight: bold; color: #0F172A;">${escapeHtml(currentObra?.contratista || '—')}</td>
+                    <td style="font-weight: bold; color: #475569;">Xefe de obra (XO):</td>
+                    <td>${escapeHtml(jefeObraStr || '—')}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <!-- 3. SECTION 2: ASISTENTES -->
-            <div class="dt05-section">
-              <div class="dt05-sec-header">2.- ASISTENTES</div>
-              
+            <!-- 2. SECTION: ASISTENTES -->
+            <div class="dt05-section" style="margin-top: 14px;">
+              <div class="dt05-sec-header">ASISTENTES</div>
               <table class="dt05-table-accent1" style="margin-top: 8px;">
                 <thead>
                   <tr>
@@ -357,40 +328,19 @@ export function renderActaPrint(container, router, params = {}) {
               </table>
             </div>
 
-            <!-- 4. SECTION 3: CUESTIÓNS TRATADAS NA VISITA / REUNIÓN -->
-            <div class="dt05-section">
-              <div class="dt05-sec-header">3.- CUESTIÓNS TRATADAS NA VISITA / REUNIÓN</div>
+            <!-- 3. SECTION: CUESTIÓNS TRATADAS NA VISITA / REUNIÓN -->
+            <div class="dt05-section" style="margin-top: 14px;">
+              <div class="dt05-sec-header">CUESTIÓNS TRATADAS NA VISITA / REUNIÓN</div>
               ${renderApartadosHtmlModern(acta, 3)}
             </div>
 
-            <!-- 5. INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS) -->
-            ${hasCSS ? `
-              <div class="dt05-section" style="margin-top: 14px;">
-                <div class="dt05-sec-header">${numCSS}.- INDICACIÓNS DO COORDINADOR DE SEGURIDADE E SAÚDE (CSS)</div>
-                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; padding: 10px 12px; border-radius: 4px; font-size: 9pt; line-height: 1.45;">
-                  ${renderListOrText(acta.indicacionesSeguridad)}
-                </div>
-              </div>
-            ` : ''}
-
-            <!-- 6. PRÓXIMAS ACTUACIÓNS PREVISTAS -->
-            ${hasPrevistas ? `
-              <div class="dt05-section" style="margin-top: 14px;">
-                <div class="dt05-sec-header">${numPrevistas}.- PRÓXIMAS ACTUACIÓNS PREVISTAS</div>
-                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #1e3a8a; padding: 10px 12px; border-radius: 4px; font-size: 9pt; line-height: 1.45;">
-                  ${renderListOrText(acta.actuacionesPrevistas)}
-                </div>
-              </div>
-            ` : ''}
-
-            <!-- 7. DILIXENCIA DE FIRMAS (Sólo si hasFirmas) -->
+            <!-- 4. SECTION: DILIXENCIA DE FIRMAS -->
             ${hasFirmas ? `
               <div class="dt05-section" style="margin-top: 18px; page-break-inside: avoid;">
-                <div class="dt05-sec-header">${numFirmas}.- DILIXENCIA DE FIRMAS</div>
+                <div class="dt05-sec-header">DILIXENCIA DE FIRMAS</div>
                 <div style="font-size: 8.5pt; color: #475569; margin-bottom: 8px; font-style: italic;">
                   En ${getLugar(acta.situacion)} a ${formatDateLong(acta.fecha)}. Para que así conste e aos efectos oportunos, asinan a presente acta:
                 </div>
-                
                 <div class="acta-modern-firmas-grid">
                   ${firmantes.map(f => `
                     <div class="acta-modern-firma-card">
@@ -410,7 +360,7 @@ export function renderActaPrint(container, router, params = {}) {
           <!-- 8. ANEXO REPORTAXE FOTOGRÁFICO EN MODO GRID 2x2 (Audio 2) -->
           ${numFotos ? `
             <div class="dt05-section" style="margin-top: 22px; page-break-before: auto;">
-              <div class="dt05-sec-header">${numFotos}.- ANEXO: REPORTAXE FOTOGRÁFICO</div>
+              <div class="dt05-sec-header">ANEXO REPORTAXE FOTOGRÁFICO</div>
               <div style="font-size: 8pt; color: #64748b; margin-bottom: 6px;">
                 Imaxes capturadas na visita de obra (distribución uniforme en cuadrícula de 4 fotos por páxina, respectando a proporción orixinal):
               </div>
@@ -434,7 +384,7 @@ export function renderActaPrint(container, router, params = {}) {
           <!-- 9. ANEXO DOCUMENTOS PDF ADXUNTOS (Audio 1) -->
           ${numAnexos ? `
             <div class="dt05-section" style="margin-top: 22px; page-break-inside: avoid;">
-              <div class="dt05-sec-header">${numAnexos}.- ANEXO: DOCUMENTOS PDF ADXUNTOS</div>
+              <div class="dt05-sec-header">ANEXO DOCUMENTOS PDF ADXUNTOS</div>
               <div style="font-size: 8pt; color: #64748b; margin-bottom: 8px;">
                 Relación de documentos complementarios incorporados correlativamente ao final do PDF oficial, cada un precedido pola súa folla de separata institucional:
               </div>

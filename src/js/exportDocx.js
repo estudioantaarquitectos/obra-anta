@@ -252,9 +252,11 @@ async function getPhotoBytes(url, targetMaxW = 540, targetMaxH = 340) {
  */
 export async function exportActaToDocx(acta) {
   const { db } = await import('./db.js');
-  const numStr = String(acta.numero || 'acta').padStart(2, '0');
+  const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
+  const numStr = String(acta.numero || (isReunion ? 'reunion' : 'acta')).padStart(2, '0');
   const dateStr = (acta.fecha || '').replace(/-/g, '');
-  const filename = `Acta_${numStr}_${dateStr || 'reunion'}.docx`;
+  const prefix = isReunion ? 'Reunion' : 'Acta';
+  const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.docx`;
 
   const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
   const currentObra = acta.currentObra || (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
@@ -336,9 +338,11 @@ export async function exportActaToDocx(acta) {
  */
 export async function exportActaToPdf(acta) {
   const { db } = await import('./db.js');
-  const numStr = String(acta.numero || 'acta').padStart(2, '0');
+  const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
+  const numStr = String(acta.numero || (isReunion ? 'reunion' : 'acta')).padStart(2, '0');
   const dateStr = (acta.fecha || '').replace(/-/g, '');
-  const filename = `Acta_${numStr}_${dateStr || 'reunion'}.pdf`;
+  const prefix = isReunion ? 'Reunion' : 'Acta';
+  const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.pdf`;
 
   const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
   const currentObra = acta.currentObra || (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
