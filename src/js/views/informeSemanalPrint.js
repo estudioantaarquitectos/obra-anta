@@ -47,6 +47,40 @@ export function renderInformeSemanalPrint(container, router, params = {}) {
 
   const relacion = Array.isArray(informe.relacion) ? informe.relacion : [];
 
+  // Individual signers (cada persoa ten o seu propio caixetín de firma)
+  const signers = [];
+  if (Array.isArray(informe.firmas) && informe.firmas.length > 0) {
+    informe.firmas.forEach(f => signers.push(f));
+  } else {
+    if (doAgentes.length > 0) {
+      doAgentes.forEach(a => {
+        signers.push({
+          nombre: a.nombre,
+          cargo: 'DIRECCIÓN DE OBRA (DO)',
+          entidad: a.entidad || 'UTE ANTA-BOG'
+        });
+      });
+    } else if (currentObra?.direccionObra) {
+      const names = currentObra.direccionObra.replace(/\s+(?:e|y|and)\s+/g, ', ').split(',').map(s => s.trim()).filter(Boolean);
+      names.forEach(n => signers.push({ nombre: n, cargo: 'DIRECCIÓN DE OBRA (DO)', entidad: 'UTE ANTA-BOG' }));
+    }
+
+    if (deAgentes.length > 0) {
+      deAgentes.forEach(a => {
+        signers.push({
+          nombre: a.nombre,
+          cargo: 'DIRECCIÓN DE EXECUCIÓN (DE)',
+          entidad: a.entidad || ''
+        });
+      });
+    } else if (currentObra?.direccionEjecucion) {
+      const names = currentObra.direccionEjecucion.replace(/\s+(?:e|y|and)\s+/g, ', ').split(',').map(s => s.trim()).filter(Boolean);
+      names.forEach(n => signers.push({ nombre: n, cargo: 'DIRECCIÓN DE EXECUCIÓN (DE)', entidad: '' }));
+    }
+  }
+
+  const anexosPdf = Array.isArray(informe.anexosPdf) ? informe.anexosPdf : [];
+
   container.innerHTML = `
     <div class="content-wrapper">
       <div class="document-viewer-container" style="max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem;">
@@ -194,7 +228,7 @@ export function renderInformeSemanalPrint(container, router, params = {}) {
             </p>
           </div>
 
-          <!-- 3. DILIXENCIA DE FIRMAS -->
+          <!-- 3. DILIXENCIA DE FIRMAS (CADA PERSOA TEN O SEU PROPIO CAIXETÍN) -->
           <div style="margin-top: 2rem; page-break-inside: avoid;">
             <div style="font-size: 11pt; font-weight: 700; color: #0F4761; border-bottom: 1px solid #4C94D8; padding-bottom: 3px; margin-bottom: 0.75rem;">
               DILIXENCIA DE FIRMAS
@@ -203,33 +237,57 @@ export function renderInformeSemanalPrint(container, router, params = {}) {
               En Ferrol a ${dateFormatted}. Para que así conste e aos efectos oportunos, asinan a presente dilixencia de informe semanal:
             </p>
 
-            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
-              <tr>
-                <td style="width: 50%; padding-right: 0.75rem; vertical-align: top;">
-                  <div style="border: 1px solid #CBD5E1; border-radius: 4px; padding: 0.85rem; background: #F8FAFC; text-align: center; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                      <div style="font-size: 8pt; font-weight: 700; color: #1e3a8a; text-transform: uppercase;">DIRECCIÓN DE OBRA (DO)</div>
-                      <div style="font-size: 8.5pt; font-weight: 600; color: #1e293b; margin-top: 2px;">${escapeHtml(doClean)}</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+              ${signers.map(s => `
+                <div style="border: 1px solid #CBD5E1; border-radius: 4px; padding: 0.85rem; background: #F8FAFC; text-align: center; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="font-size: 8pt; font-weight: 700; color: ${s.cargo?.includes('OBRA') || s.cargo?.includes('DO') ? '#1e3a8a' : '#0284c7'}; text-transform: uppercase;">
+                      ${escapeHtml(s.cargo || 'Dirección Facultativa')}
                     </div>
-                    <div style="font-size: 7.5pt; color: #64748b; margin-top: 2rem; border-top: 1px dashed #CBD5E1; padding-top: 4px;">
-                      Asdo.: ____________________________
+                    <div style="font-size: 8.5pt; font-weight: 700; color: #1e293b; margin-top: 3px;">
+                      ${escapeHtml(s.nombre)}
                     </div>
+                    ${s.entidad ? `<div style="font-size: 7.5pt; color: #64748b; margin-top: 1px;">${escapeHtml(s.entidad)}</div>` : ''}
                   </div>
-                </td>
-                <td style="width: 50%; padding-left: 0.75rem; vertical-align: top;">
-                  <div style="border: 1px solid #CBD5E1; border-radius: 4px; padding: 0.85rem; background: #F8FAFC; text-align: center; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                      <div style="font-size: 8pt; font-weight: 700; color: #0284c7; text-transform: uppercase;">DIRECCIÓN DE EXECUCIÓN (DE)</div>
-                      <div style="font-size: 8.5pt; font-weight: 600; color: #1e293b; margin-top: 2px;">${escapeHtml(deClean)}</div>
-                    </div>
-                    <div style="font-size: 7.5pt; color: #64748b; margin-top: 2rem; border-top: 1px dashed #CBD5E1; padding-top: 4px;">
-                      Asdo.: ____________________________
-                    </div>
+                  <div style="font-size: 7.5pt; color: #64748b; margin-top: 1.5rem; border-top: 1px dashed #CBD5E1; padding-top: 4px;">
+                    Asdo.: ____________________________
                   </div>
-                </td>
-              </tr>
-            </table>
+                </div>
+              `).join('')}
+            </div>
           </div>
+
+          <!-- 4. ANEXOS DOCUMENTAIS DO INFORME -->
+          ${anexosPdf.length > 0 ? `
+            <div style="margin-top: 2rem; page-break-inside: avoid;">
+              <div style="font-size: 11pt; font-weight: 700; color: #0F4761; border-bottom: 1px solid #4C94D8; padding-bottom: 3px; margin-bottom: 0.75rem;">
+                4. ANEXOS DOCUMENTAIS DO INFORME
+              </div>
+              <p style="font-size: 9pt; color: #475569; margin-bottom: 0.75rem;">
+                A continuación incorpóranse os seguintes documentos e actas concatenadas mediante separata oficial:
+              </p>
+              <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt; border: 1px solid #CBD5E1;">
+                <thead>
+                  <tr style="background: #F1F5F9; border-bottom: 2px solid #CBD5E1; color: #0F4761; font-weight: 700;">
+                    <th style="padding: 0.45rem 0.6rem; text-align: center; width: 45px;">Nº</th>
+                    <th style="padding: 0.45rem 0.6rem; text-align: left;">Título do Documento Anexo</th>
+                    <th style="padding: 0.45rem 0.6rem; text-align: left;">Nome do Ficheiro</th>
+                    <th style="padding: 0.45rem 0.6rem; text-align: center; width: 90px;">Tamaño</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${anexosPdf.map((anx, aIdx) => `
+                    <tr style="border-bottom: 1px solid #E2E8F0;">
+                      <td style="padding: 0.45rem 0.6rem; text-align: center; font-weight: 700; color: #0F4761;">${aIdx + 1}</td>
+                      <td style="padding: 0.45rem 0.6rem; font-weight: 600;">${escapeHtml(anx.titulo || anx.nombre || `Anexo ${aIdx + 1}`)}</td>
+                      <td style="padding: 0.45rem 0.6rem; color: #64748b; font-family: monospace; font-size: 8pt;">${escapeHtml(anx.nombre || 'documento.pdf')}</td>
+                      <td style="padding: 0.45rem 0.6rem; text-align: center; color: #64748b;">${anx.size ? `${(anx.size / 1024).toFixed(0)} KB` : '—'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
 
         </div>
 

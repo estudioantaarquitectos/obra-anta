@@ -316,14 +316,19 @@ def generar_informe_semanal_desde_plantilla(informe_data, output_docx, output_pd
         r_f.italic = True
         r_f.font.color.rgb = RGBColor(71, 85, 105)
 
-    # 6. TABLA 2: DILIXENCIA DE FIRMAS (DO e DE)
+    # 6. TABLA 2: DILIXENCIA DE FIRMAS (DO e DE individuais)
     firmas = informe_data.get('firmas') or []
     if not firmas:
-        # Generar firmantes estándar a partir de doClean e deClean
-        if do_clean and do_clean != '—':
-            firmas.append({'nombre': do_clean, 'cargo': 'Dirección de Obra', 'entidad': 'UTE-ANTA-BOG'})
-        if de_clean and de_clean != '—':
-            firmas.append({'nombre': de_clean, 'cargo': 'Dirección de Execución', 'entidad': ''})
+        # Generar un firmante individual para cada persona de la DO y de la DE
+        def split_signers(text, default_cargo, default_ent):
+            if not text or text == '—':
+                return []
+            cleaned = re.sub(r'\s+(?:e|y|and)\s+', ', ', str(text))
+            names = [n.strip() for n in cleaned.split(',') if n.strip()]
+            return [{'nombre': n, 'cargo': default_cargo, 'entidad': default_ent} for n in names]
+
+        firmas.extend(split_signers(do_clean, 'DIRECCIÓN DE OBRA (DO)', 'UTE ANTA-BOG'))
+        firmas.extend(split_signers(de_clean, 'DIRECCIÓN DE EXECUCIÓN (DE)', ''))
 
     if len(doc.tables) > 2:
         t2 = doc.tables[2]
@@ -647,3 +652,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

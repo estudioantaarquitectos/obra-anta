@@ -2736,3 +2736,17 @@ Seguirán la plantilla: plantilla_informe_semanal.docx
 
 ---
 
+## Conversación #82
+
+### 👤 Usuario:
+
+En Informes semanales, en "Relación de Visitas e Reunións en Obra" se añadirán las actas/reuniones existentes, de manera que se adopten los numeros, tipos y fechas para la tabla.
+Además, habrá un apartado 4 para incorporar anejos, como en actas de obra, reuniones, etc.
+Las firmas siempre habrá un espacio de firma para cada persona,no como en la captura que hay un espacio de firma para tres personas
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+

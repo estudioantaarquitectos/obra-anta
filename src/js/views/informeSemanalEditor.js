@@ -5,7 +5,7 @@
 
 import { db } from '../db.js';
 import { auth } from '../auth.js';
-import { showToast } from '../modal.js';
+import { modal, showToast } from '../modal.js';
 import { exportInformeToDocx, exportInformeCompletoPdf } from '../exportDocx.js';
 
 export function renderInformeSemanalEditor(container, router, params = {}) {
@@ -47,9 +47,54 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
       estado: 'borrador',
       resumo: '',
       relacion: [],
-      anexosPdf: []
+      anexosPdf: [],
+      firmas: []
     };
   }
+
+  // Ensure arrays exist
+  infData.relacion = Array.isArray(infData.relacion) ? infData.relacion : [];
+  infData.anexosPdf = Array.isArray(infData.anexosPdf) ? infData.anexosPdf : [];
+
+  // Helper to resolve individual signers (one card for EACH person)
+  function resolveSigners() {
+    const doAgentes = (currentObra.agentes || []).filter(a => a.rol === 'DO');
+    const deAgentes = (currentObra.agentes || []).filter(a => a.rol === 'DEM' || a.rol === 'DE');
+
+    const signers = [];
+    if (doAgentes.length > 0) {
+      doAgentes.forEach(a => {
+        signers.push({
+          agenteId: a.agenteId || a.id,
+          nombre: a.nombre,
+          cargo: 'DIRECCIÓN DE OBRA (DO)',
+          entidad: a.entidad || 'UTE ANTA-BOG'
+        });
+      });
+    } else if (currentObra.direccionObra) {
+      const names = currentObra.direccionObra.replace(/\s+(?:e|y|and)\s+/g, ', ').split(',').map(s => s.trim()).filter(Boolean);
+      names.forEach(n => signers.push({ nombre: n, cargo: 'DIRECCIÓN DE OBRA (DO)', entidad: 'UTE ANTA-BOG' }));
+    }
+
+    if (deAgentes.length > 0) {
+      deAgentes.forEach(a => {
+        signers.push({
+          agenteId: a.agenteId || a.id,
+          nombre: a.nombre,
+          cargo: 'DIRECCIÓN DE EXECUCIÓN (DE)',
+          entidad: a.entidad || ''
+        });
+      });
+    } else if (currentObra.direccionEjecucion) {
+      const names = currentObra.direccionEjecucion.replace(/\s+(?:e|y|and)\s+/g, ', ').split(',').map(s => s.trim()).filter(Boolean);
+      names.forEach(n => signers.push({ nombre: n, cargo: 'DIRECCIÓN DE EXECUCIÓN (DE)', entidad: '' }));
+    }
+
+    return signers;
+  }
+
+  const signers = (infData.firmas && infData.firmas.length > 0) ? infData.firmas : resolveSigners();
+  infData.firmas = signers;
 
   function render() {
     const numDisplay = infData.numero || 1;
@@ -58,7 +103,6 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
     const situacion = currentObra.situacion || '—';
     const contratista = currentObra.contratista || '—';
 
-    // Directores y agentes
     const doAgentes = (currentObra.agentes || []).filter(a => a.rol === 'DO');
     const deAgentes = (currentObra.agentes || []).filter(a => a.rol === 'DEM' || a.rol === 'DE');
     const cssAgentes = (currentObra.agentes || []).filter(a => a.rol === 'CSS');
@@ -171,13 +215,12 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
                   <div class="editor-section-desc">Visitas e reunións realizadas durante a presente semana (Táboa 1 da plantilla oficial)</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                  <button type="button" class="btn btn-primary btn-sm" id="btn-add-visita" title="Engadir visita da obra rexistrada">
-                    + Engadir Visita da obra
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-select-docs" title="Seleccionar visitas e reunións rexistradas na obra">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14l2 2 4-4"></path></svg>
+                    + Seleccionar da Obra
                   </button>
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-add-reunion" title="Engadir reunión de obra rexistrada">
-                    + Engadir Reunión de obra
-                  </button>
-                  <button type="button" class="btn btn-ghost btn-sm" id="btn-add-manual" title="Engadir liña manual">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-add-manual" title="Engadir liña manual">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     + Liña manual
                   </button>
                 </div>
@@ -187,13 +230,13 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
                   ${(!infData.relacion || infData.relacion.length === 0) ? `
                     <div style="padding: 1.5rem; text-align: center; background: var(--bg-subtle, #f8fafc); border: 1.5px dashed var(--border-color, #cbd5e1); border-radius: 8px; color: var(--text-muted, #64748b); font-size: 0.9rem;">
                       <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">Non hai visitas nin reunións engadidas a este informe semanal.</div>
-                      <div style="font-size: 0.82rem;">Pulse <strong>+ Engadir Visita da obra</strong> ou <strong>+ Engadir Reunión de obra</strong> para incorporar os documentos da semana.</div>
+                      <div style="font-size: 0.82rem;">Pulse <strong>+ Seleccionar da Obra</strong> para incorporar actas existentes adoptando tipo, data e número.</div>
                     </div>
                   ` : `
                     <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
                       <thead>
                         <tr style="background: var(--bg-subtle); border-bottom: 2px solid var(--border-light); text-align: left;">
-                          <th style="padding: 0.6rem 0.75rem; width: 140px;">Fecha</th>
+                          <th style="padding: 0.6rem 0.75rem; width: 145px;">Fecha</th>
                           <th style="padding: 0.6rem 0.75rem;">Tipo visita / reunión</th>
                           <th style="padding: 0.6rem 0.75rem; width: 90px; text-align: center;">Nº</th>
                           <th style="padding: 0.6rem 0.75rem; width: 50px;"></th>
@@ -206,10 +249,17 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
                               <input type="date" class="form-control rel-fecha" value="${item.fecha || ''}" style="font-size: 0.85rem;" />
                             </td>
                             <td style="padding: 0.5rem 0.75rem;">
-                              <input type="text" class="form-control rel-tipo" value="${escapeHtml(item.tipo || '')}" placeholder="Visita de obra / Reunión de obra" style="font-size: 0.85rem;" />
+                              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <select class="form-control form-select rel-tipo" style="font-size: 0.85rem; font-weight: 600;">
+                                  <option value="Visita de obra" ${item.tipo === 'Visita de obra' ? 'selected' : ''}>Visita de obra</option>
+                                  <option value="Reunión de obra" ${item.tipo === 'Reunión de obra' ? 'selected' : ''}>Reunión de obra</option>
+                                  <option value="Outro" ${item.tipo !== 'Visita de obra' && item.tipo !== 'Reunión de obra' ? 'selected' : ''}>Outro / Extraordinaria</option>
+                                </select>
+                                ${item.documentoId ? `<span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.72rem; white-space: nowrap;">Vinculada</span>` : ''}
+                              </div>
                             </td>
                             <td style="padding: 0.5rem 0.75rem; text-align: center;">
-                              <input type="number" class="form-control rel-num" value="${item.numero || 1}" min="1" style="font-size: 0.85rem; text-align: center;" />
+                              <input type="number" class="form-control rel-num" value="${item.numero || 1}" min="1" style="font-size: 0.85rem; text-align: center; font-weight: 700;" />
                             </td>
                             <td style="padding: 0.5rem 0.75rem; text-align: center;">
                               <button type="button" class="btn btn-ghost btn-sm remove-rel-item" data-index="${idx}" title="Eliminar fila" style="color: var(--color-danger, #ef4444);">
@@ -225,7 +275,7 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
               </div>
             </div>
 
-            <!-- Bloque 3: Dilixencia de Firmas -->
+            <!-- Bloque 3: Dilixencia de Firmas (Individual para CADA PERSOA) -->
             <div class="editor-section">
               <div class="editor-section-header">
                 <div>
@@ -233,26 +283,111 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
                     <span class="section-number-tag">3</span>
                     Dilixencia de Firmas
                   </div>
-                  <div class="editor-section-desc">Cajetíns de firma da Dirección de Obra (DO) e Dirección de Execución (DE)</div>
+                  <div class="editor-section-desc">Espazo individual de firma para cada persoa integrante da Dirección Facultativa</div>
                 </div>
               </div>
               <div class="editor-section-body">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-                  <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 6px; padding: 1rem;">
-                    <div style="font-weight: 700; color: #1e3a8a; font-size: 0.9rem; margin-bottom: 0.25rem;">DIRECCIÓN DE OBRA (DO)</div>
-                    <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 600;">${escapeHtml(doNames)}</div>
-                    <div style="margin-top: 1.5rem; border-top: 1px dashed var(--border-light); padding-top: 0.5rem; font-size: 0.78rem; color: var(--text-muted); text-align: center;">
-                      Asdo.: ____________________________
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+                  ${signers.map((s, sIdx) => `
+                    <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 6px; padding: 1rem; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                      <div>
+                        <div style="font-weight: 700; color: ${s.cargo?.includes('OBRA') || s.cargo?.includes('DO') ? '#1e3a8a' : '#0284c7'}; font-size: 0.82rem; text-transform: uppercase;">
+                          ${escapeHtml(s.cargo || 'Dirección Facultativa')}
+                        </div>
+                        <div style="font-size: 0.95rem; color: var(--text-main); font-weight: 700; margin-top: 0.35rem;">
+                          ${escapeHtml(s.nombre)}
+                        </div>
+                        ${s.entidad ? `<div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(s.entidad)}</div>` : ''}
+                      </div>
+                      <div style="margin-top: 1.75rem; border-top: 1px dashed var(--border-light); padding-top: 0.5rem; font-size: 0.78rem; color: var(--text-muted);">
+                        Asdo.: ____________________________
+                      </div>
                     </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            <!-- Bloque 4: Anexos Documentais PDF e Separata Oficial -->
+            <div class="editor-section">
+              <div class="editor-section-header">
+                <div>
+                  <div class="editor-section-title">
+                    <span class="section-number-tag">4</span>
+                    Anexos Documentais PDF e Separata Oficial
                   </div>
-                  <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 6px; padding: 1rem;">
-                    <div style="font-weight: 700; color: #0284c7; font-size: 0.9rem; margin-bottom: 0.25rem;">DIRECCIÓN DE EXECUCIÓN (DE)</div>
-                    <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 600;">${escapeHtml(deNames)}</div>
-                    <div style="margin-top: 1.5rem; border-top: 1px dashed var(--border-light); padding-top: 0.5rem; font-size: 0.78rem; color: var(--text-muted); text-align: center;">
-                      Asdo.: ____________________________
-                    </div>
+                  <div class="editor-section-desc">
+                    Adxunte as actas de visitas e reunións ou outros documentos PDF que se concatenarán ao PDF oficial con separata A4 institucional.
                   </div>
                 </div>
+              </div>
+              <div class="editor-section-body">
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-sm); padding: 0.65rem 0.9rem; margin-bottom: 1rem; font-size: 0.82rem; color: #1e40af; display: flex; align-items: center; gap: 0.6rem;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <span>Cada anexo PDF intercalará automaticamente unha portada/separata oficial en formato A4 con escudo institucional de Vivenda Pública de Galicia.</span>
+                </div>
+
+                <!-- PDF Upload Dropzone -->
+                <div class="photo-uploader-box" id="pdf-drop-zone" style="border-style: dashed; padding: 1.5rem 1rem; text-align: center; border: 2px dashed var(--border-color, #cbd5e1); border-radius: 8px; cursor: pointer;">
+                  <input type="file" id="pdf-file-input" style="display: none;" accept="application/pdf" multiple />
+                  <div style="color: #dc2626; margin-bottom: 0.5rem;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  </div>
+                  <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 0.25rem;">
+                    Arrastre arquivos PDF aquí ou faga clic para seleccionar
+                  </div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                    Compatibles con actas de obra, ensaios, fichas técnicas ou planos escaneados.
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-trigger-upload">
+                    Seleccionar arquivos PDF
+                  </button>
+                </div>
+
+                <!-- PDF Annexes List -->
+                <div id="pdf-annexes-list" style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                  ${(!infData.anexosPdf || infData.anexosPdf.length === 0) ? `
+                    <div style="text-align: center; padding: 1.25rem; color: var(--text-muted); font-size: 0.85rem; background: var(--bg-surface); border: 1px dashed var(--border-light); border-radius: var(--radius-sm);">
+                      Non se engadiron documentos PDF anexos aínda.
+                    </div>
+                  ` : infData.anexosPdf.map((pdf, pIdx) => `
+                    <div class="pdf-annex-item" data-index="${pIdx}" style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 0.85rem 1rem;">
+                      <div style="display: flex; gap: 0.85rem; align-items: flex-start;">
+                        <div style="width: 36px; height: 36px; border-radius: 6px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; flex-shrink: 0; margin-top: 4px;">
+                          PDF
+                        </div>
+                        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+                          <div>
+                            <label class="form-hint" style="font-weight: 700; color: var(--text-main); margin-bottom: 2px; display: block;">Título do Anexo (aparecerá na separata oficial):</label>
+                            <input type="text" class="form-control annex-nombre-input" value="${escapeHtml(pdf.nombre || '')}" placeholder="Ex: ACTA DE VISITA Nº 17, INFORME DE ENSAIOS..." style="font-weight: 600; font-size: 0.88rem;" />
+                          </div>
+                          <div>
+                            <label class="form-hint" style="margin-bottom: 2px; display: block;">Descrición / Contido do documento:</label>
+                            <input type="text" class="form-control annex-desc-input" value="${escapeHtml(pdf.descripcion || '')}" placeholder="Ex: Acta semanal da visita á obra realizada o 25/10/2026..." style="font-size: 0.82rem;" />
+                          </div>
+                          <div style="font-size: 0.74rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span>Arquivo: <strong>${escapeHtml(pdf.archivo || pdf.nombre || 'documento.pdf')}</strong></span>
+                            ${pdf.tamano ? `<span>•</span><span>${formatFileSize(pdf.tamano)}</span>` : ''}
+                            ${pdf.fecha ? `<span>•</span><span>Añadido o ${pdf.fecha}</span>` : ''}
+                          </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem; flex-shrink: 0;">
+                          ${pdf.pdfData ? `
+                            <button type="button" class="btn btn-ghost btn-sm btn-view-pdf" data-index="${pIdx}" title="Ver ou descargar PDF">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                              <span>Ver</span>
+                            </button>
+                          ` : ''}
+                          <button type="button" class="btn btn-ghost btn-sm btn-delete-pdf" data-index="${pIdx}" title="Eliminar anexo" style="color: var(--color-danger);">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <span>Borrar</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+
               </div>
             </div>
 
@@ -283,17 +418,39 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
     infData.estado = container.querySelector('#input-estado').value;
     infData.resumo = container.querySelector('#input-resumo').value;
 
+    // Relación rows
     const rows = container.querySelectorAll('.relacion-row');
     const relacion = [];
     rows.forEach(r => {
+      const idx = parseInt(r.dataset.index, 10);
+      const existingItem = infData.relacion[idx] || {};
       const fecha = r.querySelector('.rel-fecha').value;
       const tipo = r.querySelector('.rel-tipo').value.trim();
       const num = parseInt(r.querySelector('.rel-num').value, 10) || 1;
       if (tipo || fecha) {
-        relacion.push({ fecha, tipo: tipo || 'Visita de obra', numero: num });
+        relacion.push({
+          ...existingItem,
+          fecha,
+          tipo: tipo || 'Visita de obra',
+          numero: num
+        });
       }
     });
     infData.relacion = relacion;
+
+    // Anexos inputs
+    const annexItems = container.querySelectorAll('.pdf-annex-item');
+    annexItems.forEach(item => {
+      const pIdx = parseInt(item.dataset.index, 10);
+      if (infData.anexosPdf[pIdx]) {
+        const nomInput = item.querySelector('.annex-nombre-input');
+        const descInput = item.querySelector('.annex-desc-input');
+        if (nomInput) infData.anexosPdf[pIdx].nombre = nomInput.value.trim();
+        if (descInput) infData.anexosPdf[pIdx].descripcion = descInput.value.trim();
+      }
+    });
+
+    infData.firmas = signers;
     return infData;
   }
 
@@ -309,6 +466,127 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
       console.error('Error guardando informe semanal:', e);
       showToast('Erro ao gardar informe semanal', 'error');
     }
+  }
+
+  // Modal para seleccionar visitas e reunións existentes
+  function openSelectActasReunionesModal() {
+    const actas = db.getActas(currentObra.id) || [];
+    const reuniones = db.getReuniones(currentObra.id) || [];
+
+    // Combinar documentos
+    const allDocs = [
+      ...actas.map(a => ({
+        id: a.id,
+        tipo: 'Visita de obra',
+        numero: a.numero,
+        fecha: a.fecha,
+        titulo: `Visita de Obra nº ${a.numero}`,
+        resumo: (a.cuestionesTratadas || []).map(c => c.subtitulo).filter(Boolean).slice(0, 2).join(' • ')
+      })),
+      ...reuniones.map(r => ({
+        id: r.id,
+        tipo: 'Reunión de obra',
+        numero: r.numero,
+        fecha: r.fecha,
+        titulo: `Reunión de Obra nº ${r.numero}`,
+        resumo: (r.cuestionesTratadas || []).map(c => c.subtitulo).filter(Boolean).slice(0, 2).join(' • ')
+      }))
+    ];
+
+    allDocs.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+
+    if (allDocs.length === 0) {
+      showToast('Non hai visitas nin reunións rexistradas neste expediente aínda.', 'info', 4000);
+      return;
+    }
+
+    const alreadyAddedIds = new Set(infData.relacion.map(r => String(r.documentoId)).filter(Boolean));
+
+    const contentHtml = `
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.45;">
+          Seleccione as visitas e reunións celebradas na semana. Incorporaranse automaticamente co seu número, tipo e data oficial.
+        </div>
+
+        <div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 0.5rem;">
+          ${allDocs.map(doc => {
+            const isAdded = alreadyAddedIds.has(String(doc.id));
+            const isVisita = doc.tipo === 'Visita de obra';
+            return `
+              <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--border-light); cursor: ${isAdded ? 'default' : 'pointer'}; background: ${isAdded ? 'var(--bg-subtle)' : '#fff'}; border-radius: 4px; margin-bottom: 2px;">
+                <input type="checkbox" class="modal-doc-checkbox" value="${doc.id}" ${isAdded ? 'disabled' : ''} style="width: 17px; height: 17px;" />
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="badge" style="background: ${isVisita ? '#eff6ff' : '#f0fdf4'}; color: ${isVisita ? '#1e3a8a' : '#166534'}; border: 1px solid ${isVisita ? '#bfdbfe' : '#bbf7d0'}; font-weight: 700; font-size: 0.75rem;">
+                      ${doc.tipo}
+                    </span>
+                    <strong style="color: var(--text-main); font-size: 0.9rem;">Nº ${doc.numero}</strong>
+                    <span style="color: var(--text-muted); font-size: 0.82rem;">• ${doc.fecha ? doc.fecha.split('-').reverse().join('/') : '—'}</span>
+                    ${isAdded ? `<span class="badge badge-neutral" style="font-size: 0.7rem;">Xa engadida</span>` : ''}
+                  </div>
+                  ${doc.resumo ? `<div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${escapeHtml(doc.resumo)}</div>` : ''}
+                </div>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; width: 100%;">
+        <button type="button" class="btn btn-ghost" id="modal-doc-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="modal-doc-confirm">Incorporar seleccionadas</button>
+      </div>
+    `;
+
+    const { backdrop, close } = modal.open({
+      title: 'Seleccionar Visitas e Reunións da Obra',
+      contentHtml,
+      footerHtml,
+      size: 'lg'
+    });
+
+    backdrop.querySelector('#modal-doc-cancel').onclick = close;
+    backdrop.querySelector('#modal-doc-confirm').onclick = () => {
+      const checkboxes = backdrop.querySelectorAll('.modal-doc-checkbox:checked');
+      if (checkboxes.length === 0) {
+        close();
+        return;
+      }
+
+      collectFormData();
+
+      checkboxes.forEach(cb => {
+        const docId = cb.value;
+        const found = allDocs.find(d => String(d.id) === String(docId));
+        if (found) {
+          infData.relacion.push({
+            documentoId: found.id,
+            tipo: found.tipo,
+            numero: found.numero,
+            fecha: found.fecha,
+            titulo: found.titulo
+          });
+
+          // Adxuntar tamén ao apartado 4 de Anexos Documentais
+          const existingAnnex = infData.anexosPdf.find(a => String(a.documentoId) === String(found.id));
+          if (!existingAnnex) {
+            infData.anexosPdf.push({
+              documentoId: found.id,
+              nombre: `${found.tipo.toUpperCase()} Nº ${found.numero}`,
+              descripcion: `Acta oficial correspondente á ${found.tipo.toLowerCase()} celebrada o ${found.fecha ? found.fecha.split('-').reverse().join('/') : ''}.`,
+              archivo: `${found.tipo.replace(/\s+/g, '_')}_N${found.numero}.pdf`,
+              fecha: found.fecha
+            });
+          }
+        }
+      });
+
+      close();
+      render();
+      showToast(`Incorporáronse ${checkboxes.length} documento(s) á relación e anexos`, 'success');
+    };
   }
 
   function wireEvents() {
@@ -370,36 +648,10 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
       };
     }
 
-    // Add Visita
-    const btnAddVisita = container.querySelector('#btn-add-visita');
-    if (btnAddVisita) {
-      btnAddVisita.onclick = () => {
-        collectFormData();
-        const actas = db.getActas(currentObra.id) || [];
-        const latestActa = actas[0];
-        infData.relacion.push({
-          fecha: latestActa?.fecha || new Date().toISOString().split('T')[0],
-          tipo: 'Visita de obra',
-          numero: latestActa?.numero || (infData.relacion.filter(r => r.tipo.includes('Visita')).length + 1)
-        });
-        render();
-      };
-    }
-
-    // Add Reunión
-    const btnAddReunion = container.querySelector('#btn-add-reunion');
-    if (btnAddReunion) {
-      btnAddReunion.onclick = () => {
-        collectFormData();
-        const reuniones = db.getReuniones(currentObra.id) || [];
-        const latestReu = reuniones[0];
-        infData.relacion.push({
-          fecha: latestReu?.fecha || new Date().toISOString().split('T')[0],
-          tipo: 'Reunión de obra',
-          numero: latestReu?.numero || (infData.relacion.filter(r => r.tipo.includes('Reunión')).length + 1)
-        });
-        render();
-      };
+    // Select Visitas & Reunións from Obra
+    const btnSelectDocs = container.querySelector('#btn-select-docs');
+    if (btnSelectDocs) {
+      btnSelectDocs.onclick = openSelectActasReunionesModal;
     }
 
     // Add Manual Line
@@ -416,7 +668,7 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
       };
     }
 
-    // Remove item
+    // Remove Relación item
     container.querySelectorAll('.remove-rel-item').forEach(btn => {
       btn.onclick = (e) => {
         const idx = parseInt(e.currentTarget.dataset.index, 10);
@@ -425,9 +677,107 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
         render();
       };
     });
+
+    // Trigger PDF Upload
+    const btnTriggerUpload = container.querySelector('#btn-trigger-upload');
+    const pdfFileInput = container.querySelector('#pdf-file-input');
+    const pdfDropZone = container.querySelector('#pdf-drop-zone');
+
+    if (btnTriggerUpload && pdfFileInput) {
+      btnTriggerUpload.onclick = (e) => {
+        e.stopPropagation();
+        pdfFileInput.click();
+      };
+    }
+    if (pdfDropZone && pdfFileInput) {
+      pdfDropZone.onclick = () => pdfFileInput.click();
+      pdfDropZone.ondragover = (e) => {
+        e.preventDefault();
+        pdfDropZone.style.borderColor = 'var(--primary)';
+        pdfDropZone.style.background = 'var(--bg-subtle)';
+      };
+      pdfDropZone.ondragleave = () => {
+        pdfDropZone.style.borderColor = 'var(--border-color, #cbd5e1)';
+        pdfDropZone.style.background = 'transparent';
+      };
+      pdfDropZone.ondrop = (e) => {
+        e.preventDefault();
+        pdfDropZone.style.borderColor = 'var(--border-color, #cbd5e1)';
+        pdfDropZone.style.background = 'transparent';
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          handlePdfFiles(e.dataTransfer.files);
+        }
+      };
+    }
+
+    if (pdfFileInput) {
+      pdfFileInput.onchange = (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          handlePdfFiles(e.target.files);
+        }
+      };
+    }
+
+    // View PDF Annex
+    container.querySelectorAll('.btn-view-pdf').forEach(btn => {
+      btn.onclick = (e) => {
+        const idx = parseInt(e.currentTarget.dataset.index, 10);
+        const item = infData.anexosPdf[idx];
+        if (item && item.pdfData) {
+          const w = window.open();
+          if (w) {
+            w.document.write(`<iframe src="${item.pdfData}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>`);
+          }
+        }
+      };
+    });
+
+    // Delete PDF Annex
+    container.querySelectorAll('.btn-delete-pdf').forEach(btn => {
+      btn.onclick = (e) => {
+        const idx = parseInt(e.currentTarget.dataset.index, 10);
+        collectFormData();
+        infData.anexosPdf.splice(idx, 1);
+        render();
+        showToast('Anexo eliminado', 'info');
+      };
+    });
+  }
+
+  function handlePdfFiles(fileList) {
+    collectFormData();
+    Array.from(fileList).forEach(file => {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        showToast(`O arquivo ${file.name} non é un PDF`, 'warning');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        infData.anexosPdf.push({
+          id: `anx-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          nombre: file.name.replace(/\.[^/.]+$/, '').toUpperCase(),
+          descripcion: 'Documento PDF achegado ao informe semanal.',
+          archivo: file.name,
+          tamano: file.size,
+          fecha: new Date().toISOString().split('T')[0],
+          pdfData: e.target.result
+        });
+        render();
+        showToast(`Anexo ${file.name} engadido correctamente`, 'success');
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   render();
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 function escapeHtml(str) {
