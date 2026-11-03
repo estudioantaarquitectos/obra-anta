@@ -2750,3 +2750,15 @@ Las firmas siempre habrá un espacio de firma para cada persona,no como en la ca
 
 ---
 
+## Conversación #83
+
+### 👤 Usuario:
+
+No funciona el botón eliminar en el dashboard (ver captura)
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+

@@ -1508,11 +1508,13 @@ export function renderExpedienteView(container, router, params = {}) {
       btn.onclick = () => {
         const inf = db.getInformeById(btn.dataset.id);
         if (!inf) return;
-        confirmDialog({
+        const numStr = `Informe Semanal nº ${inf.numero || ''}`;
+        modal.confirmDelete({
           title: 'Eliminar Informe Semanal',
-          message: `¿Está seguro de que desexa eliminar o Informe Semanal nº ${inf.numero || ''}? Esta acción non se pode desfacer.`,
-          confirmText: 'Eliminar',
-          isDanger: true,
+          message: `¿Está seguro de que desexa eliminar o ${numStr}?`,
+          itemName: numStr,
+          confirmText: 'Eliminar definitivamente',
+          cancelText: 'Cancelar',
           onConfirm: () => {
             db.deleteInforme(inf.id);
             showToast('Informe semanal eliminado correctamente', 'success');
