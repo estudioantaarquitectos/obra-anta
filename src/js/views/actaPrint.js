@@ -80,7 +80,7 @@ export function renderActaPrint(container, router, params = {}) {
               Volver al Expediente
             </button>
             <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">
-              ${isReunion ? 'Reunión' : 'Acta'} nº ${acta.numero} • Plantilla Oficial de Obra
+              ${isReunion ? 'Reunión semanal' : 'Visita de Obra'} nº ${acta.numero} • Plantilla Oficial de Obra
             </span>
           </div>
 
@@ -89,7 +89,7 @@ export function renderActaPrint(container, router, params = {}) {
             ${canEdit ? `
               <button class="btn btn-secondary btn-sm" id="btn-edit-current">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                ${isReunion ? 'Editar Reunión' : 'Editar Acta'}
+                ${isReunion ? 'Editar Reunión semanal' : 'Editar Visita de Obra'}
               </button>
             ` : ''}
 
@@ -130,7 +130,7 @@ export function renderActaPrint(container, router, params = {}) {
 
             <div class="dt05-header-meta">
               <div class="dt05-meta-label">
-                ${isReunion ? 'REUNIÓN' : 'ACTA SEMANAL'}
+                ${isReunion ? 'REUNIÓN SEMANAL' : 'VISITA DE OBRA'}
               </div>
               <div class="dt05-meta-row">
                 <span class="dt05-meta-num">${escapeHtml(String(acta.numero || ''))}</span>

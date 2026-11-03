@@ -2620,13 +2620,20 @@ Analíza los posibles campos y /docx-pdf asegúrate que los elementos generados 
 
 Acabaste esto?:
 
-"Vale. Ahroa he vuelto a hacer cambios en las plantillas. tenemos:
-
-ejemplo_modificado_acta_reunión.docx
-ejemplo_modificado_acta_semanal.docx
-ejemplo_modificado_informe_mensual.docx
-
-Estos son válidos.
+"Vale. Ahroa he vuelto a hacer cambios en las plantillas. tenemos:
+
+
+
+ejemplo_modificado_acta_reunión.docx
+
+ejemplo_modificado_acta_semanal.docx
+
+ejemplo_modificado_informe_mensual.docx
+
+
+
+Estos son válidos.
+
 Analíza los posibles campos y /docx-pdf asegúrate que los elementos generados sean absolutamente fieles a estas plantillas: Numración, estilos, tamaños, fuentes, tablas, etc."
 
 ### 🤖 Antigravity:
@@ -2678,6 +2685,35 @@ As tres plantillas oficiais que achegaches foron analizadas forensemente e integ
 ### 👤 Usuario:
 
 Quiero que mientras esté generándose un documento docx o pdf, aparezca en el centro de la pantalla un pop-up con un mensaje flotante "Xerando arquivo docx" (o pdf), con un icono dando vueltas. Mientras la navegación estará bloqueada.
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #79
+
+### 👤 Usuario:
+
+/docx-pdf En la previsualización del PDF, si le doy a Imprimir, hay saltos de página que no quiero (sólo en la previsualización)
+He cambiado la plantilla de acta semanal, que es también para reuniones. Mantén los estilos y actualízalo todo, incluso Github
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #80
+
+### 👤 Usuario:
+
+Quiero hacer los siguientes cambios:
+- "Actas semanales" se cambia de nombre a "Visitas de Obra"
+- "Reunións" se cambia de nombre a "Reunións semanais"
+- "Informes mensuales" cambia el nombre a "Informes mensuais" (en galego), y tendrán un apartado para adjuntar tanto "Visitas de obra" como "Reunións semanais"
+Cambia también los nombres de las plantillas para que no haya confusiones
 
 ### 🤖 Antigravity:
 

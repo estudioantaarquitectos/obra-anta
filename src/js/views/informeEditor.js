@@ -40,7 +40,9 @@ export function renderInformeEditor(container, router, params = {}) {
       infData.obraId = currentObra.id;
     }
     infData.actasAnexasIds = infData.actasAnexasIds || [];
-    infData.actasPdf = infData.actasPdf || [];
+    infData.visitasPdf = infData.visitasPdf || infData.actasPdf || [];
+    infData.actasPdf = infData.visitasPdf;
+    infData.reunionsPdf = infData.reunionsPdf || infData.reunionesPdf || [];
     infData.anexosPdf = infData.anexosPdf || [];
   } else {
     infData = {
@@ -48,8 +50,10 @@ export function renderInformeEditor(container, router, params = {}) {
       obraId: currentObra ? currentObra.id : 'obra-castillo-san-felipe',
       tipo: 'mensual',
       numero: db.getNextInformeNumber(currentObra ? currentObra.id : null),
+      visitasPdf: [],
       actasPdf: [],
       actasAnexasIds: [],
+      reunionsPdf: [],
       anexosPdf: [],
       datosXerais: {
         proxecto: currentObra ? currentObra.titulo : settings.obraPrincipal,
@@ -680,51 +684,51 @@ export function renderInformeEditor(container, router, params = {}) {
                   <span>Os documentos PDF e actas semanais seleccionadas engadiranse correlativamente ao PDF oficial xerado para o informe mensual. O ficheiro editable de Word (.docx) descargable non incluirá estes ficheiros anexos.</span>
                 </div>
 
-                <!-- 10.1 Actas de Visitas Semanais en PDF (Apartado Propio) -->
+                                <!-- 10.1 Visitas de Obra en PDF (Apartado Propio) -->
                 <div style="background: var(--bg-subtle); border: 1.5px solid #bfdbfe; border-radius: var(--radius-sm); padding: 0.95rem 1rem; margin-bottom: 1.25rem;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.6rem;">
                     <div>
                       <div style="font-weight: 700; font-size: 0.92rem; color: #1e3a8a; display: flex; align-items: center; gap: 0.4rem;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                        <span>Actas de Visitas Semanais en PDF (Apartado Propio)</span>
-                        <span class="badge badge-info" id="badge-actas-pdf-count" style="font-size: 0.72rem;">
-                          ${(infData.actasPdf || []).length} adxunta(s)
+                        <span>Visitas de Obra en PDF (Apartado Propio)</span>
+                        <span class="badge badge-info" id="badge-visitas-pdf-count" style="font-size: 0.72rem;">
+                          ${((infData.visitasPdf || infData.actasPdf) || []).length} adxunta(s)
                         </span>
                       </div>
                       <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.15rem;">
-                        Adxunte as actas semanais oficiais en PDF emitidas durante o mes. Concatenaranse con separata oficial propia ao PDF do informe.
+                        Adxunte as visitas de obra oficiais en PDF emitidas durante o mes. Concatenaranse con separata oficial propia ao PDF do informe.
                       </div>
                     </div>
                   </div>
 
-                  <!-- Dropzone para Actas en PDF -->
+                  <!-- Dropzone para Visitas en PDF -->
                   <div class="photo-uploader-box" id="inf-actas-pdf-drop-zone" style="border-style: dashed; border-color: #93c5fd; background: #eff6ff; padding: 1.15rem 1rem; margin-bottom: 0.85rem;">
                     <input type="file" id="inf-actas-pdf-file-input" class="photo-upload-input" accept="application/pdf" multiple />
                     <div class="photo-upload-icon" style="color: #2563eb;">
                       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                     </div>
                     <div style="font-weight: 700; font-size: 0.9rem; color: #1e3a8a; margin-bottom: 0.2rem;">
-                      Arrastre as actas semanais en PDF aquí ou prema para seleccionar
+                      Arrastre as visitas de obra en PDF aquí ou prema para seleccionar
                     </div>
                     <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('inf-actas-pdf-file-input').click()" style="font-size: 0.82rem; font-weight: 600;">
-                      Seleccionar actas semanais en PDF
+                      Seleccionar visitas de obra en PDF
                     </button>
                   </div>
 
-                  <!-- Lista de Actas en PDF Adxuntadas -->
+                  <!-- Lista de Visitas en PDF Adxuntadas -->
                   <div id="inf-actas-pdf-list" style="display: flex; flex-direction: column; gap: 0.6rem;">
-                    ${(infData.actasPdf && infData.actasPdf.length > 0) ? infData.actasPdf.map((acta, aIdx) => `
+                    ${((infData.visitasPdf || infData.actasPdf) && (infData.visitasPdf || infData.actasPdf).length > 0) ? (infData.visitasPdf || infData.actasPdf).map((acta, aIdx) => `
                       <div class="inf-acta-pdf-item" data-index="${aIdx}" style="background: var(--bg-surface); border: 1.5px solid #bfdbfe; border-radius: var(--radius-sm); padding: 0.85rem 1rem;">
                         <div style="display: flex; gap: 0.85rem; align-items: flex-start;">
-                          <div style="width: 40px; height: 40px; border-radius: 6px; background: #dbeafe; color: #1e40af; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; flex-shrink: 0; margin-top: 4px;">
-                            <span>ACTA</span>
+                          <div style="width: 44px; height: 40px; border-radius: 6px; background: #dbeafe; color: #1e40af; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.65rem; flex-shrink: 0; margin-top: 4px;">
+                            <span>VISITA</span>
                             <span style="font-size: 0.6rem; font-weight: 600;">PDF</span>
                           </div>
                           <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.45rem;">
                             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.6rem;">
                               <div>
-                                <label class="form-hint" style="font-weight: 700; color: #1e3a8a; margin-bottom: 2px; display: block;">Título / Número da Acta (aparecerá na separata e no informe):</label>
-                                <input type="text" class="form-control inf-acta-nombre-input" value="${escapeHtml(acta.nombre || `Acta de Visita nº ${aIdx + 1}`)}" placeholder="Ex: Acta nº 1, Acta de Visita nº 2..." style="font-weight: 600; font-size: 0.88rem;" />
+                                <label class="form-hint" style="font-weight: 700; color: #1e3a8a; margin-bottom: 2px; display: block;">Título / Número da Visita (aparecerá na separata e no informe):</label>
+                                <input type="text" class="form-control inf-acta-nombre-input" value="${escapeHtml(acta.nombre || `Visita de Obra nº ${aIdx + 1}`)}" placeholder="Ex: Visita de Obra nº 1..." style="font-weight: 600; font-size: 0.88rem;" />
                               </div>
                               <div>
                                 <label class="form-hint" style="font-weight: 700; color: #1e3a8a; margin-bottom: 2px; display: block;">Data da Visita:</label>
@@ -736,7 +740,7 @@ export function renderInformeEditor(container, router, params = {}) {
                               <input type="text" class="form-control inf-acta-desc-input" value="${escapeHtml(acta.descripcion || '')}" placeholder="Ex: Visita ordinaria semanal de seguimento e control..." style="font-size: 0.82rem;" />
                             </div>
                             <div style="font-size: 0.74rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                              <span>Arquivo orixinal: <strong>${escapeHtml(acta.archivo || acta.nombre || 'acta.pdf')}</strong></span>
+                              <span>Arquivo orixinal: <strong>${escapeHtml(acta.archivo || acta.nombre || 'visita.pdf')}</strong></span>
                               <span>•</span>
                               <span>${formatFileSize(acta.tamano)}</span>
                               <span>•</span>
@@ -744,11 +748,11 @@ export function renderInformeEditor(container, router, params = {}) {
                             </div>
                           </div>
                           <div style="display: flex; flex-direction: column; gap: 0.4rem; flex-shrink: 0;">
-                            <button type="button" class="btn btn-ghost btn-sm inf-btn-view-acta-pdf" data-index="${aIdx}" title="Ver acta en PDF">
+                            <button type="button" class="btn btn-ghost btn-sm inf-btn-view-acta-pdf" data-index="${aIdx}" title="Ver visita en PDF">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                               <span>Ver</span>
                             </button>
-                            <button type="button" class="btn btn-ghost btn-sm inf-btn-delete-acta-pdf" data-index="${aIdx}" title="Eliminar acta" style="color: var(--color-danger);">
+                            <button type="button" class="btn btn-ghost btn-sm inf-btn-delete-acta-pdf" data-index="${aIdx}" title="Eliminar visita" style="color: var(--color-danger);">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                               <span>Borrar</span>
                             </button>
@@ -757,13 +761,96 @@ export function renderInformeEditor(container, router, params = {}) {
                       </div>
                     `).join('') : `
                       <div style="text-align: center; padding: 1.1rem 1rem; color: var(--text-muted); font-size: 0.82rem; background: var(--bg-surface); border: 1px dashed var(--border-light); border-radius: var(--radius-sm);">
-                        Non se achegaron actas semanais en PDF aínda.
+                        Non se achegaron visitas de obra en PDF aínda.
                       </div>
                     `}
                   </div>
                 </div>
 
-                <!-- 10.2 Outros Documentos PDF Anexos -->
+                <!-- 10.2 Reunións Semanais en PDF (Apartado Propio) -->
+                <div style="background: var(--bg-subtle); border: 1.5px solid #bae6fd; border-radius: var(--radius-sm); padding: 0.95rem 1rem; margin-bottom: 1.25rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.6rem;">
+                    <div>
+                      <div style="font-weight: 700; font-size: 0.92rem; color: #0369a1; display: flex; align-items: center; gap: 0.4rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <span>Reunións Semanais en PDF (Apartado Propio)</span>
+                        <span class="badge" id="badge-reunions-pdf-count" style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc;">
+                          ${(infData.reunionsPdf || []).length} adxunta(s)
+                        </span>
+                      </div>
+                      <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.15rem;">
+                        Adxunte as actas das reunións semanais en PDF. Concatenaranse con separata oficial propia ao PDF do informe.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Dropzone para Reunións en PDF -->
+                  <div class="photo-uploader-box" id="inf-reunions-pdf-drop-zone" style="border-style: dashed; border-color: #7dd3fc; background: #f0f9ff; padding: 1.15rem 1rem; margin-bottom: 0.85rem;">
+                    <input type="file" id="inf-reunions-pdf-file-input" class="photo-upload-input" accept="application/pdf" multiple />
+                    <div class="photo-upload-icon" style="color: #0284c7;">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.9rem; color: #0369a1; margin-bottom: 0.2rem;">
+                      Arrastre as reunións semanais en PDF aquí ou prema para seleccionar
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('inf-reunions-pdf-file-input').click()" style="font-size: 0.82rem; font-weight: 600; background: #0284c7; border-color: #0284c7;">
+                      Seleccionar reunións semanais en PDF
+                    </button>
+                  </div>
+
+                  <!-- Lista de Reunións en PDF Adxuntadas -->
+                  <div id="inf-reunions-pdf-list" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                    ${(infData.reunionsPdf && infData.reunionsPdf.length > 0) ? infData.reunionsPdf.map((reu, rIdx) => `
+                      <div class="inf-reunion-pdf-item" data-index="${rIdx}" style="background: var(--bg-surface); border: 1.5px solid #bae6fd; border-radius: var(--radius-sm); padding: 0.85rem 1rem;">
+                        <div style="display: flex; gap: 0.85rem; align-items: flex-start;">
+                          <div style="width: 44px; height: 40px; border-radius: 6px; background: #e0f2fe; color: #0369a1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.62rem; flex-shrink: 0; margin-top: 4px;">
+                            <span>REUNIÓN</span>
+                            <span style="font-size: 0.6rem; font-weight: 600;">PDF</span>
+                          </div>
+                          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+                            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.6rem;">
+                              <div>
+                                <label class="form-hint" style="font-weight: 700; color: #0369a1; margin-bottom: 2px; display: block;">Título / Número da Reunión (aparecerá na separata e no informe):</label>
+                                <input type="text" class="form-control inf-reunion-nombre-input" value="${escapeHtml(reu.nombre || `Reunión semanal nº ${rIdx + 1}`)}" placeholder="Ex: Reunión semanal nº 1..." style="font-weight: 600; font-size: 0.88rem;" />
+                              </div>
+                              <div>
+                                <label class="form-hint" style="font-weight: 700; color: #0369a1; margin-bottom: 2px; display: block;">Data da Reunión:</label>
+                                <input type="date" class="form-control inf-reunion-fecha-input" value="${reu.fecha || ''}" style="font-size: 0.85rem;" />
+                              </div>
+                            </div>
+                            <div>
+                              <label class="form-hint" style="margin-bottom: 2px; display: block;">Descrición da reunión / Observacións:</label>
+                              <input type="text" class="form-control inf-reunion-desc-input" value="${escapeHtml(reu.descripcion || '')}" placeholder="Ex: Reunión ordinaria de seguimento cos contratistas..." style="font-size: 0.82rem;" />
+                            </div>
+                            <div style="font-size: 0.74rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                              <span>Arquivo orixinal: <strong>${escapeHtml(reu.archivo || reu.nombre || 'reunion.pdf')}</strong></span>
+                              <span>•</span>
+                              <span>${formatFileSize(reu.tamano)}</span>
+                              <span>•</span>
+                              <span>Engadido o ${reu.uploadDate || reu.fecha || ''}</span>
+                            </div>
+                          </div>
+                          <div style="display: flex; flex-direction: column; gap: 0.4rem; flex-shrink: 0;">
+                            <button type="button" class="btn btn-ghost btn-sm inf-btn-view-reunion-pdf" data-index="${rIdx}" title="Ver reunión en PDF">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                              <span>Ver</span>
+                            </button>
+                            <button type="button" class="btn btn-ghost btn-sm inf-btn-delete-reunion-pdf" data-index="${rIdx}" title="Eliminar reunión" style="color: var(--color-danger);">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              <span>Borrar</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    `).join('') : `
+                      <div style="text-align: center; padding: 1.1rem 1rem; color: var(--text-muted); font-size: 0.82rem; background: var(--bg-surface); border: 1px dashed var(--border-light); border-radius: var(--radius-sm);">
+                        Non se achegaron reunións semanais en PDF aínda.
+                      </div>
+                    `}
+                  </div>
+                </div>
+
+                <!-- 10.3 Outros Documentos PDF Anexos -->
                 <div>
                   <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.25rem;">
                     Documentos e Informes PDF Anexos
@@ -946,25 +1033,42 @@ export function renderInformeEditor(container, router, params = {}) {
       certificadoTerminacionFase: getRichEditorContent(container, 'outros-certificado')
     };
 
-    infData.actasPdf = infData.actasPdf || [];
+    infData.visitasPdf = infData.visitasPdf || infData.actasPdf || [];
+    infData.actasPdf = infData.visitasPdf;
     infData.actasAnexasIds = infData.actasAnexasIds || [];
+    infData.reunionsPdf = infData.reunionsPdf || infData.reunionesPdf || [];
     infData.anexosPdf = infData.anexosPdf || [];
 
-    // Update Acta PDF inputs
+    // Update Visita PDF inputs
     container.querySelectorAll('#inf-actas-pdf-list .inf-acta-pdf-item').forEach(item => {
       const idx = parseInt(item.dataset.index, 10);
-      if (infData.actasPdf && infData.actasPdf[idx]) {
+      if (infData.visitasPdf && infData.visitasPdf[idx]) {
         const nomVal = item.querySelector('.inf-acta-nombre-input')?.value.trim();
         const fechaVal = item.querySelector('.inf-acta-fecha-input')?.value;
         const descVal = item.querySelector('.inf-acta-desc-input')?.value.trim();
-        infData.actasPdf[idx].nombre = nomVal || infData.actasPdf[idx].archivo || `Acta de Visita nº ${idx + 1}`;
-        infData.actasPdf[idx].fecha = fechaVal || infData.actasPdf[idx].fecha || '';
-        infData.actasPdf[idx].descripcion = descVal || '';
+        infData.visitasPdf[idx].nombre = nomVal || infData.visitasPdf[idx].archivo || `Visita de Obra nº ${idx + 1}`;
+        infData.visitasPdf[idx].fecha = fechaVal || infData.visitasPdf[idx].fecha || '';
+        infData.visitasPdf[idx].descripcion = descVal || '';
+      }
+    });
+    infData.actasPdf = infData.visitasPdf;
+
+    // Update Reunion PDF inputs
+    container.querySelectorAll('#inf-reunions-pdf-list .inf-reunion-pdf-item').forEach(item => {
+      const idx = parseInt(item.dataset.index, 10);
+      if (infData.reunionsPdf && infData.reunionsPdf[idx]) {
+        const nomVal = item.querySelector('.inf-reunion-nombre-input')?.value.trim();
+        const fechaVal = item.querySelector('.inf-reunion-fecha-input')?.value;
+        const descVal = item.querySelector('.inf-reunion-desc-input')?.value.trim();
+        infData.reunionsPdf[idx].nombre = nomVal || infData.reunionsPdf[idx].archivo || `Reunión semanal nº ${idx + 1}`;
+        infData.reunionsPdf[idx].fecha = fechaVal || infData.reunionsPdf[idx].fecha || '';
+        infData.reunionsPdf[idx].descripcion = descVal || '';
       }
     });
 
     infData.anexos = {
-      actasVisitas: infData.actasPdf.length > 0 || infData.actasAnexasIds.length > 0,
+      actasVisitas: (infData.visitasPdf || []).length > 0 || (infData.actasAnexasIds || []).length > 0,
+      reunionsSemanais: (infData.reunionsPdf || []).length > 0,
       planObraActualizado: true,
       informesEnsaios: true,
       outrosAnexos: container.querySelector('#anexo-outros') ? container.querySelector('#anexo-outros').value.trim() : ''
@@ -1158,6 +1262,134 @@ export function renderInformeEditor(container, router, params = {}) {
             window.__antaEditorDirty = true;
             render();
             showToast('Acta semanal en PDF eliminada', 'info');
+          }
+        });
+      };
+    });
+
+    // =========================================================================
+    // Reunións Semanais en PDF Upload and Dropzone (Apartado Propio)
+    // =========================================================================
+    const reunionsPdfFileInput = container.querySelector('#inf-reunions-pdf-file-input');
+    const reunionsPdfDropZone = container.querySelector('#inf-reunions-pdf-drop-zone');
+
+    const handleInfReunionsPdfFiles = async (files) => {
+      const pdfFiles = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+      if (!pdfFiles.length) {
+        showToast('Seleccione reunións semanais en formato PDF', 'warning');
+        return;
+      }
+
+      showToast(`Procesando ${pdfFiles.length} reunión(s) semanal(is) en PDF...`, 'info');
+      collectData();
+
+      for (const file of pdfFiles) {
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const fileId = `reunion-pdf-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+          await db.savePdfFile(fileId, dataUrl, file.name, file.size);
+
+          const matchNum = file.name.match(/reuni.*?([0-9]+)/i) || file.name.match(/([0-9]+)/);
+          const defaultTitle = matchNum ? `Reunión semanal nº ${matchNum[1]}` : file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
+
+          if (!infData.reunionsPdf) infData.reunionsPdf = [];
+          infData.reunionsPdf.push({
+            id: fileId,
+            nombre: defaultTitle || file.name,
+            fecha: infData.datosXerais?.dataInforme || new Date().toISOString().split('T')[0],
+            archivo: file.name,
+            descripcion: '',
+            tamano: file.size,
+            uploadDate: new Date().toISOString().split('T')[0],
+            url: dataUrl
+          });
+        } catch (err) {
+          console.error('Error al guardar reunión semanal en PDF:', err);
+        }
+      }
+
+      render();
+      showToast('Reunión(s) semanal(is) en PDF adxuntada(s) correctamente', 'success');
+    };
+
+    if (reunionsPdfFileInput) {
+      reunionsPdfFileInput.onchange = (e) => handleInfReunionsPdfFiles(e.target.files);
+    }
+
+    if (reunionsPdfDropZone) {
+      reunionsPdfDropZone.ondragover = (e) => {
+        e.preventDefault();
+        reunionsPdfDropZone.classList.add('drag-over');
+      };
+      reunionsPdfDropZone.ondragleave = () => {
+        reunionsPdfDropZone.classList.remove('drag-over');
+      };
+      reunionsPdfDropZone.ondrop = (e) => {
+        e.preventDefault();
+        reunionsPdfDropZone.classList.remove('drag-over');
+        handleInfReunionsPdfFiles(e.dataTransfer.files);
+      };
+    }
+
+    // View Reunion PDF
+    container.querySelectorAll('.inf-btn-view-reunion-pdf').forEach(btn => {
+      btn.onclick = async () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const item = (infData.reunionsPdf || [])[idx];
+        if (!item) return;
+
+        let dataUrl = item.url;
+        if (!dataUrl && item.id) {
+          const stored = await db.getPdfFile(item.id);
+          dataUrl = stored ? stored.dataUrl : null;
+        }
+
+        if (dataUrl) {
+          try {
+            const arr = dataUrl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+              u8arr[n] = bstr.charCodeAt(n);
+            }
+            const blob = new Blob([u8arr], { type: mime });
+            const blobUrl = URL.createObjectURL(blob);
+            window.open(blobUrl, '_blank');
+          } catch {
+            window.open(dataUrl, '_blank');
+          }
+        } else {
+          showToast('Non se puido abrir o arquivo PDF da reunión', 'error');
+        }
+      };
+    });
+
+    // Delete Reunion PDF
+    container.querySelectorAll('.inf-btn-delete-reunion-pdf').forEach(btn => {
+      btn.onclick = () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const item = (infData.reunionsPdf || [])[idx];
+        modal.confirmDelete({
+          title: 'Confirmar Eliminación de Reunión Semanal en PDF',
+          message: '¿Está seguro de que desea eliminar este archivo de reunión semanal en PDF?',
+          itemName: item?.nombre || item?.archivo || 'Reunión PDF',
+          confirmText: 'Eliminar reunión PDF',
+          onConfirm: async () => {
+            collectData();
+            if (item?.id) {
+              await db.deletePdfFile(item.id);
+            }
+            infData.reunionsPdf.splice(idx, 1);
+            window.__antaEditorDirty = true;
+            render();
+            showToast('Reunión semanal en PDF eliminada', 'info');
           }
         });
       };

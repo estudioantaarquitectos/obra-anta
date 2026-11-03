@@ -117,19 +117,19 @@ export function renderExpedienteView(container, router, params = {}) {
         <div class="expediente-nav-tabs" style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-light); margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 2px;">
           <button class="tab-btn ${activeTab === 'actas' ? 'active' : ''}" data-tab="actas">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-            <span>Actas Semanales</span>
+            <span>Visitas de Obra</span>
             <span class="tab-count-badge">${actas.length}</span>
           </button>
 
           <button class="tab-btn ${activeTab === 'reuniones' ? 'active' : ''}" data-tab="reuniones">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-            <span>Reunións</span>
+            <span>Reunións semanais</span>
             <span class="tab-count-badge">${reuniones.length}</span>
           </button>
 
           <button class="tab-btn ${activeTab === 'informes' ? 'active' : ''}" data-tab="informes">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 16.5-3.5z"></path></svg>
-            <span>Informes Mensuales</span>
+            <span>Informes mensuais</span>
             <span class="tab-count-badge">${informes.length}</span>
           </button>
 
@@ -203,7 +203,7 @@ export function renderExpedienteView(container, router, params = {}) {
             ${canCreateActa ? `
               <button class="btn btn-primary" id="btn-create-acta">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Nueva Acta de Obra
+                Nova Visita de Obra
               </button>
             ` : ''}
           </div>
@@ -214,18 +214,18 @@ export function renderExpedienteView(container, router, params = {}) {
             <div class="empty-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
             </div>
-            <div class="empty-title">Non hai actas rexistradas</div>
+            <div class="empty-title">Non hai visitas de obra rexistradas</div>
             <div class="empty-desc">
-              ${actasSearchQuery ? `Ningún acta coincide coa busca "${actasSearchQuery}".` : 'Non se atoparon actas de reunión ou visita nesta obra.'}
+              ${actasSearchQuery ? `Ningunha visita de obra coincide coa busca "${actasSearchQuery}".` : 'Non se atoparon visitas de obra nesta obra.'}
             </div>
             ${canCreateActa && !actasSearchQuery ? `
-              <button class="btn btn-primary" id="btn-empty-create-acta">Crear Acta de Obra</button>
+              <button class="btn btn-primary" id="btn-empty-create-acta">Crear Visita de Obra</button>
             ` : ''}
           </div>
         ` : `
           <!-- Header de Lista de Actas -->
           <div class="actas-list-header">
-            <div>Acta / Data</div>
+            <div>Visita de Obra / Data</div>
             <div style="padding: 0 0.75rem;">Asistentes</div>
             <div>Última Edición</div>
             <div style="text-align: center;">Estado</div>
@@ -481,7 +481,7 @@ export function renderExpedienteView(container, router, params = {}) {
             ${canCreateActa ? `
               <button class="btn btn-primary" id="btn-create-reunion">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Nova Reunión
+                Nova Reunión semanal
               </button>
             ` : ''}
           </div>
@@ -492,18 +492,18 @@ export function renderExpedienteView(container, router, params = {}) {
             <div class="empty-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             </div>
-            <div class="empty-title">Non hai reunións rexistradas</div>
+            <div class="empty-title">Non hai reunións semanais rexistradas</div>
             <div class="empty-desc">
               ${reunionesSearchQuery ? `Ningunha reunión coincide coa busca "${reunionesSearchQuery}".` : 'Non se atoparon reunións de obra específicas rexistradas neste expediente.'}
             </div>
             ${canCreateActa && !reunionesSearchQuery ? `
-              <button class="btn btn-primary" id="btn-empty-create-reunion">Crear Primeira Reunión</button>
+              <button class="btn btn-primary" id="btn-empty-create-reunion">Crear Primeira Reunión semanal</button>
             ` : ''}
           </div>
         ` : `
           <!-- Header de Lista de Reunións -->
           <div class="actas-list-header">
-            <div>Reunión / Data</div>
+            <div>Reunión semanal / Data</div>
             <div style="padding: 0 0.75rem;">Asistentes</div>
             <div>Última Edición</div>
             <div style="text-align: center;">Estado</div>
@@ -722,7 +722,7 @@ export function renderExpedienteView(container, router, params = {}) {
             ${canCreateInforme ? `
               <button class="btn btn-primary" id="btn-create-informe">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Novo Informe Mensual
+                Novo Informe mensual
               </button>
             ` : ''}
           </div>
@@ -736,7 +736,7 @@ export function renderExpedienteView(container, router, params = {}) {
             <div class="empty-title">Non hai informes mensuais nesta obra</div>
             <div class="empty-desc">Xere o primeiro informe mensual de seguimento para enviar xunto coa certificación.</div>
             ${canCreateInforme ? `
-              <button class="btn btn-primary" id="btn-empty-create-informe">Crear Primeiro Informe Mensual</button>
+              <button class="btn btn-primary" id="btn-empty-create-informe">Crear Primeiro Informe mensual</button>
             ` : ''}
           </div>
         ` : `

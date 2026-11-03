@@ -326,9 +326,9 @@ export async function exportActaToDocx(acta) {
   try {
     const { db } = await import('./db.js');
     const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
-    const numStr = String(acta.numero || (isReunion ? 'reunion' : 'acta')).padStart(2, '0');
+    const numStr = String(acta.numero || (isReunion ? 'reunion' : 'visita')).padStart(2, '0');
     const dateStr = (acta.fecha || '').replace(/-/g, '');
-    const prefix = isReunion ? 'Reunion' : 'Acta';
+    const prefix = isReunion ? 'Reunion_Semanal' : 'Visita_Obra';
     const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.docx`;
 
     const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
@@ -417,9 +417,9 @@ export async function exportActaToPdf(acta) {
   try {
     const { db } = await import('./db.js');
     const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
-    const numStr = String(acta.numero || (isReunion ? 'reunion' : 'acta')).padStart(2, '0');
+    const numStr = String(acta.numero || (isReunion ? 'reunion' : 'visita')).padStart(2, '0');
     const dateStr = (acta.fecha || '').replace(/-/g, '');
-    const prefix = isReunion ? 'Reunion' : 'Acta';
+    const prefix = isReunion ? 'Reunion_Semanal' : 'Visita_Obra';
     const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.pdf`;
 
     const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
@@ -2024,17 +2024,32 @@ export async function exportInformeToDocx(inf) {
       }
     };
 
-    if (inf.actasPdf && inf.actasPdf.length > 0) {
-      enrichedInf.actasPdf = inf.actasPdf.map(item => ({
-        nombre: item.nombre || item.archivo || 'Acta de Visita',
+    const rawVisitas = inf.visitasPdf || inf.actasPdf || [];
+    if (rawVisitas.length > 0) {
+      enrichedInf.visitasPdf = rawVisitas.map(item => ({
+        nombre: item.nombre || item.archivo || 'Visita de Obra',
         fecha: item.fecha || '',
         descripcion: item.descripcion || '',
-        archivo: item.archivo || item.nombre || 'acta.pdf',
+        archivo: item.archivo || item.nombre || 'visita.pdf',
         tamano: item.tamano || 0
       }));
+      enrichedInf.actasPdf = enrichedInf.visitasPdf;
     } else if (inf.actasAnexasIds && inf.actasAnexasIds.length > 0) {
       enrichedInf.actasAnexas = inf.actasAnexasIds.map(id => db.getActaById(id)).filter(Boolean);
     }
+
+    const rawReunions = inf.reunionsPdf || inf.reunionesPdf || [];
+    if (rawReunions.length > 0) {
+      enrichedInf.reunionsPdf = rawReunions.map(item => ({
+        nombre: item.nombre || item.archivo || 'Reunión semanal',
+        fecha: item.fecha || '',
+        descripcion: item.descripcion || '',
+        archivo: item.archivo || item.nombre || 'reunion.pdf',
+        tamano: item.tamano || 0
+      }));
+      enrichedInf.reunionesPdf = enrichedInf.reunionsPdf;
+    }
+
     if (inf.anexosPdf && inf.anexosPdf.length > 0) {
       enrichedInf.anexosPdf = inf.anexosPdf.map(item => ({
         nombre: item.nombre || item.archivo || 'Documento',
@@ -2115,28 +2130,54 @@ export async function exportInformeCompletoPdf(inf) {
       }
     };
 
-    if (inf.actasPdf && inf.actasPdf.length > 0) {
-      const actasList = [];
-      for (const item of inf.actasPdf) {
+    const rawVisitas = inf.visitasPdf || inf.actasPdf || [];
+    if (rawVisitas.length > 0) {
+      const visitasList = [];
+      for (const item of rawVisitas) {
         let b64 = item.url || item.dataUrl;
         if (!b64 && item.id) {
           const stored = await db.getPdfFile(item.id);
           b64 = stored ? stored.dataUrl : null;
         }
-        actasList.push({
-          nombre: item.nombre || item.archivo || 'Acta de Visita',
+        visitasList.push({
+          nombre: item.nombre || item.archivo || 'Visita de Obra',
           fecha: item.fecha || '',
           descripcion: item.descripcion || '',
-          archivo: item.archivo || item.nombre || 'acta.pdf',
+          archivo: item.archivo || item.nombre || 'visita.pdf',
           tamano: item.tamano || 0,
           dataUrl: b64,
           url: b64
         });
       }
-      enrichedInf.actasPdf = actasList;
+      enrichedInf.visitasPdf = visitasList;
+      enrichedInf.actasPdf = visitasList;
     } else if (inf.actasAnexasIds && inf.actasAnexasIds.length > 0) {
       enrichedInf.actasAnexas = inf.actasAnexasIds.map(id => db.getActaById(id)).filter(Boolean);
     }
+
+    const rawReunions = inf.reunionsPdf || inf.reunionesPdf || [];
+    if (rawReunions.length > 0) {
+      const reunionsList = [];
+      for (const item of rawReunions) {
+        let b64 = item.url || item.dataUrl;
+        if (!b64 && item.id) {
+          const stored = await db.getPdfFile(item.id);
+          b64 = stored ? stored.dataUrl : null;
+        }
+        reunionsList.push({
+          nombre: item.nombre || item.archivo || 'Reunión semanal',
+          fecha: item.fecha || '',
+          descripcion: item.descripcion || '',
+          archivo: item.archivo || item.nombre || 'reunion.pdf',
+          tamano: item.tamano || 0,
+          dataUrl: b64,
+          url: b64
+        });
+      }
+      enrichedInf.reunionsPdf = reunionsList;
+      enrichedInf.reunionesPdf = reunionsList;
+    }
+
     if (inf.anexosPdf && inf.anexosPdf.length > 0) {
       const list = [];
       for (const item of inf.anexosPdf) {

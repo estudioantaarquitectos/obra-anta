@@ -100,10 +100,16 @@ def generar_separata_pdf(data_or_output=None, output_pdf=None, **kwargs):
 
     # Columna 3: Tipo Documento, Número y Fecha (Derecha)
     tipo_raw = str(data.get('tipo_doc') or data.get('tipo') or 'INFORME MENSUAL').strip().upper()
-    if 'SEMANAL' in tipo_raw:
-        tipo_doc = 'ACTA SEMANAL' if 'ACTA' in tipo_raw else 'INFORME SEMANAL'
+    if 'REUNION' in tipo_raw or 'REUNIÓN' in tipo_raw:
+        tipo_doc = 'REUNIÓN SEMANAL'
+    elif 'VISITA' in tipo_raw:
+        tipo_doc = 'VISITA DE OBRA'
+    elif 'SEMANAL' in tipo_raw:
+        tipo_doc = 'VISITA DE OBRA' if 'ACTA' in tipo_raw else 'INFORME SEMANAL'
     elif 'ACTA' in tipo_raw:
-        tipo_doc = 'ACTA SEMANAL'
+        tipo_doc = 'VISITA DE OBRA'
+    elif 'MENSUAL' in tipo_raw or 'MENSUAIS' in tipo_raw:
+        tipo_doc = 'INFORME MENSUAL'
     else:
         tipo_doc = tipo_raw or 'INFORME MENSUAL'
     num_txt = str(data.get('numero') or '1')
@@ -180,9 +186,14 @@ def generar_separata_pdf(data_or_output=None, output_pdf=None, **kwargs):
     c.roundRect(card_margin_x, card_y + card_h - 11 * mm, card_w, 11 * mm, 8, fill=1, stroke=0)
     c.rect(card_margin_x, card_y + card_h - 11 * mm, card_w, 5 * mm, fill=1, stroke=0)
 
-    # Etiqueta badge dentro de la tarjeta (Sin 'SEPARATA • ', a petición del usuario)
+    # Etiqueta badge dentro de la tarjeta
     tipo = (data.get('tipo') or 'documento_anexo').lower()
-    badge_text = "ACTAS DAS VISITAS SEMANAIS" if tipo == 'actas_semanais' else "ANEXO DOCUMENTAL"
+    if tipo in ('actas_semanais', 'visitas_obra', 'visita_obra', 'acta'):
+        badge_text = "VISITAS DE OBRA"
+    elif tipo in ('reunions_semanais', 'reunion_semanal', 'reuniones', 'reunion'):
+        badge_text = "REUNIÓNS SEMANAIS"
+    else:
+        badge_text = "ANEXO DOCUMENTAL"
     c.setFont("Helvetica-Bold", 9)
     c.setFillColor(colors.white)
     c.drawString(card_margin_x + 10 * mm, card_y + card_h - 7.5 * mm, badge_text)

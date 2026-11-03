@@ -273,19 +273,19 @@ class AppRouter {
 
               <a href="javascript:void(0)" class="nav-item ${(isExpedienteActive && currentTab === 'actas') || this.currentRoute === 'acta-editor' || this.currentRoute === 'acta-print' ? 'active' : ''}" data-route="expediente" data-tab="actas" data-id="${activeObra.id}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                <span>Actas Semanales</span>
+                <span>Visitas de Obra</span>
                 <span class="nav-badge">${actasCount}</span>
               </a>
 
               <a href="javascript:void(0)" class="nav-item ${(isExpedienteActive && currentTab === 'reuniones') || this.currentRoute === 'reuniones' || this.currentRoute === 'reunion-editor' || this.currentRoute === 'reunion-print' ? 'active' : ''}" data-route="expediente" data-tab="reuniones" data-id="${activeObra.id}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                <span>Reunións</span>
+                <span>Reunións semanais</span>
                 <span class="nav-badge">${reunionesCount}</span>
               </a>
 
               <a href="javascript:void(0)" class="nav-item ${(isExpedienteActive && currentTab === 'informes') || this.currentRoute === 'informes' || this.currentRoute === 'informe-editor' || this.currentRoute === 'informe-print' ? 'active' : ''}" data-route="expediente" data-tab="informes" data-id="${activeObra.id}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 16.5-3.5z"></path></svg>
-                <span>Informes Mensuales</span>
+                <span>Informes mensuais</span>
                 <span class="nav-badge">${informesCount}</span>
               </a>
 
@@ -511,28 +511,28 @@ function getPageTitle(route, params, activeObra) {
     case 'expediente': {
       const tab = params.tab || 'actas';
       const expCode = activeObra ? `[${activeObra.expediente}]` : '';
-      if (tab === 'reuniones') return `Reunións de Obra ${expCode}`;
-      if (tab === 'informes') return `Informes Mensuais ${expCode}`;
+      if (tab === 'reuniones') return `Reunións semanais ${expCode}`;
+      if (tab === 'informes') return `Informes mensuais ${expCode}`;
       if (tab === 'notas') return `Notas ${expCode}`;
       if (tab === 'ficha') return `Ficha Oficial do Expediente ${expCode}`;
-      return `Actas Semanais da Dirección Facultativa ${expCode}`;
+      return `Visitas de Obra da Dirección Facultativa ${expCode}`;
     }
     case 'acta-editor': 
-      return params.id ? 'Edición de Acta Semanal' : 'Nova Acta Semanal';
+      return params.id ? 'Edición de Visita de Obra' : 'Nova Visita de Obra';
     case 'acta-print': 
-      return 'Acta Semanal Oficial';
+      return 'Visita de Obra Oficial';
     case 'reuniones':
-      return 'Reunións de Obra';
+      return 'Reunións semanais';
     case 'reunion-editor': 
-      return params.id ? 'Edición de Reunión de Obra' : 'Nova Reunión de Obra';
+      return params.id ? 'Edición de Reunión semanal' : 'Nova Reunión semanal';
     case 'reunion-print': 
-      return 'Reunión de Obra Oficial';
+      return 'Reunión semanal Oficial';
     case 'informes': 
-      return 'Informes Mensuais';
+      return 'Informes mensuais';
     case 'informe-editor': 
-      return params.id ? 'Edición de Informe Mensual' : 'Novo Informe Mensual';
+      return params.id ? 'Edición de Informe mensual' : 'Novo Informe mensual';
     case 'informe-print': 
-      return 'Informe Mensual Oficial';
+      return 'Informe mensual Oficial';
     case 'notas': 
       return 'Notas';
     case 'usuarios': 

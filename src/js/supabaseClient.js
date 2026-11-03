@@ -18,11 +18,11 @@ export const isSupabaseConfigured = Boolean(
 
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    })
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  })
   : null;
 
 if (isSupabaseConfigured) {
@@ -181,25 +181,25 @@ export async function fetchAllFromSupabase() {
 
     const tableUsuarios = (usrRes && Array.isArray(usrRes.data) && usrRes.data.length > 0)
       ? usrRes.data.map(u => ({
-          id: u.id,
-          username: u.username,
-          password: u.password,
-          name: u.name,
-          role: u.role,
-          cargo: u.cargo,
-          empresa: u.empresa,
-          email: u.email,
-          active: u.active
-        }))
+        id: u.id,
+        username: u.username,
+        password: u.password,
+        name: u.name,
+        role: u.role,
+        cargo: u.cargo,
+        empresa: u.empresa,
+        email: u.email,
+        active: u.active
+      }))
       : null;
 
     const tableGrupos = (grpRes && Array.isArray(grpRes.data) && grpRes.data.length > 0)
       ? grpRes.data.map(g => ({
-          id: g.id,
-          name: g.name,
-          description: g.description,
-          permissions: g.permissions || []
-        }))
+        id: g.id,
+        name: g.name,
+        description: g.description,
+        permissions: g.permissions || []
+      }))
       : null;
 
     return {
@@ -582,7 +582,7 @@ export async function syncUsuarioToSupabase(user, allLocalUsers = null, deletedI
       email: user.email || '',
       active: user.active !== undefined ? user.active : true,
       updated_at: new Date().toISOString()
-    }).then(() => {}, () => {});
+    }).then(() => { }, () => { });
   } catch (e) {
     console.warn('Agente CONECTOR: Aviso sincronizando usuario con Supabase:', e);
   }
@@ -606,7 +606,7 @@ export async function deleteUsuarioFromSupabase(id, deletedIds = null) {
       }
     });
 
-    await supabase.from('usuarios').delete().eq('id', id).then(() => {}, () => {});
+    await supabase.from('usuarios').delete().eq('id', id).then(() => { }, () => { });
   } catch (e) {
     console.warn('Agente CONECTOR: Aviso eliminando usuario de Supabase:', e);
   }
@@ -651,7 +651,7 @@ export async function syncGrupoToSupabase(group, allLocalGroups = null, deletedI
       name: group.name,
       description: group.description || '',
       permissions: group.permissions || []
-    }).then(() => {}, () => {});
+    }).then(() => { }, () => { });
   } catch (e) {
     console.warn('Agente CONECTOR: Aviso sincronizando grupo con Supabase:', e);
   }
@@ -675,7 +675,7 @@ export async function deleteGrupoFromSupabase(id, deletedIds = null) {
       }
     });
 
-    await supabase.from('grupos').delete().eq('id', id).then(() => {}, () => {});
+    await supabase.from('grupos').delete().eq('id', id).then(() => { }, () => { });
   } catch (e) {
     console.warn('Agente CONECTOR: Aviso eliminando grupo de Supabase:', e);
   }

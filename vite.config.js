@@ -145,13 +145,21 @@ function actaExportServerPlugin() {
             const isReunion = acta && (acta.tipoDocumento === 'reunion' || acta.tipo === 'reunion' || acta.esReunion === true);
             let plantillaPath;
             if (isReunion) {
-              plantillaPath = fs.existsSync(path.resolve(__dirname, 'ejemplo_modificado_acta_reunión.docx'))
-                ? path.resolve(__dirname, 'ejemplo_modificado_acta_reunión.docx')
-                : path.resolve(__dirname, 'plantilla_reunion.docx');
+              const candR = [
+                path.resolve(__dirname, 'plantilla_reunion_semanal.docx'),
+                path.resolve(__dirname, 'ejemplo_modificado_reunion_semanal.docx'),
+                path.resolve(__dirname, 'plantilla_reunion.docx'),
+                path.resolve(__dirname, 'ejemplo_modificado_acta_reunión.docx')
+              ];
+              plantillaPath = candR.find(p => fs.existsSync(p)) || candR[0];
             } else {
-              plantillaPath = fs.existsSync(path.resolve(__dirname, 'ejemplo_modificado_acta_semanal.docx'))
-                ? path.resolve(__dirname, 'ejemplo_modificado_acta_semanal.docx')
-                : path.resolve(__dirname, 'plantilla_acta.docx');
+              const candS = [
+                path.resolve(__dirname, 'plantilla_visita_obra.docx'),
+                path.resolve(__dirname, 'ejemplo_modificado_visita_obra.docx'),
+                path.resolve(__dirname, 'plantilla_acta.docx'),
+                path.resolve(__dirname, 'ejemplo_modificado_acta_semanal.docx')
+              ];
+              plantillaPath = candS.find(p => fs.existsSync(p)) || candS[0];
             }
 
             const pyArgs = [
@@ -191,11 +199,12 @@ function actaExportServerPlugin() {
                 return;
               }
 
-              const numStr = String(acta.numero || 'acta').padStart(2, '0');
+              const numStr = String(acta.numero || (isReunion ? 'reunion' : 'visita')).padStart(2, '0');
               const dateStr = (acta.fecha || '').replace(/-/g, '');
+              const prefix = isReunion ? 'Reunion_Semanal' : 'Visita_Obra';
               const defaultFilename = format === 'pdf'
-                ? `Acta_N${numStr}_${dateStr || 'reunion'}.pdf`
-                : `Acta_N${numStr}_${dateStr || 'reunion'}.docx`;
+                ? `${prefix}_N${numStr}_${dateStr || 'doc'}.pdf`
+                : `${prefix}_N${numStr}_${dateStr || 'doc'}.docx`;
               const filename = data.filename || defaultFilename;
 
               const contentType = format === 'pdf'
@@ -282,9 +291,12 @@ function actaExportServerPlugin() {
             fs.writeFileSync(tmpJson, JSON.stringify(informe, null, 2), 'utf-8');
 
             const scriptPath = path.resolve(__dirname, 'src/py/generar_informe.py');
-            const plantillaPath = fs.existsSync(path.resolve(__dirname, 'ejemplo_modificado_informe_mensual.docx'))
-              ? path.resolve(__dirname, 'ejemplo_modificado_informe_mensual.docx')
-              : path.resolve(__dirname, 'plantilla_informe.docx');
+            const candInf = [
+              path.resolve(__dirname, 'plantilla_informe_mensual.docx'),
+              path.resolve(__dirname, 'ejemplo_modificado_informe_mensual.docx'),
+              path.resolve(__dirname, 'plantilla_informe.docx')
+            ];
+            const plantillaPath = candInf.find(p => fs.existsSync(p)) || candInf[0];
 
             const pyArgs = [
               scriptPath,

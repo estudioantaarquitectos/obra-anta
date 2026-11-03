@@ -163,9 +163,9 @@ export function renderActaEditor(container, router, params = {}) {
           <!-- Sticky Top Action Bar -->
           <div class="editor-sticky-header">
             <div class="editor-meta-info">
-              <span class="editor-type-badge">${isReunion ? 'Reunión de Obra' : 'Acta de Obra'}</span>
+              <span class="editor-type-badge">${isReunion ? 'Reunión semanal' : 'Visita de Obra'}</span>
               <div class="editor-doc-title">
-                ${isReunion ? 'Reunión' : 'Acta'} nº ${actaData.numero} • ${actaData.fecha ? formatDate(actaData.fecha) : 'Sin fecha'}
+                ${isReunion ? 'Reunión semanal' : 'Visita de Obra'} nº ${actaData.numero} • ${actaData.fecha ? formatDate(actaData.fecha) : 'Sin fecha'}
               </div>
             </div>
 
@@ -233,7 +233,7 @@ export function renderActaEditor(container, router, params = {}) {
                   <div>
                     <div class="editor-section-title">
                       <span class="section-number-tag">2</span>
-                      Datos Xerais da Reunión
+                      Datos Xerais da Reunión semanal
                     </div>
                     <div class="editor-section-desc">Identificación da convocatoria, data, hora e modalidade</div>
                   </div>
@@ -241,11 +241,11 @@ export function renderActaEditor(container, router, params = {}) {
                 <div class="editor-section-body">
                   <div class="form-grid-3">
                     <div class="form-group">
-                      <label class="form-label required">Nº de Reunión</label>
+                      <label class="form-label required">Nº de Reunión semanal</label>
                       <input type="number" id="input-numero" class="form-control" value="${actaData.numero}" required min="1" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label required">Data da Reunión</label>
+                      <label class="form-label required">Data da Reunión semanal</label>
                       <input type="date" id="input-fecha" class="form-control" value="${actaData.fecha}" required />
                     </div>
                     <div class="form-group">
@@ -256,7 +256,7 @@ export function renderActaEditor(container, router, params = {}) {
 
                   <div class="form-grid-3" style="margin-top: 0.75rem;">
                     <div class="form-group">
-                      <label class="form-label required">Tipo de Reunión</label>
+                      <label class="form-label required">Tipo de Reunión semanal</label>
                       <select id="input-tipo-reunion" class="form-control form-select">
                         <option value="Presencial" ${(actaData.tipoModalidad || 'Presencial') === 'Presencial' ? 'selected' : ''}>Presencial</option>
                         <option value="Virtual" ${actaData.tipoModalidad === 'Virtual' ? 'selected' : ''}>Virtual (Videoconferencia)</option>
@@ -284,7 +284,7 @@ export function renderActaEditor(container, router, params = {}) {
                   <div>
                     <div class="editor-section-title">
                       <span class="section-number-tag">0</span>
-                      Datos de Identificación del Acta
+                      Datos de Identificación da Visita de Obra
                     </div>
                     <div class="editor-section-desc">Identificación de la sesión de obra</div>
                   </div>
@@ -292,11 +292,11 @@ export function renderActaEditor(container, router, params = {}) {
                 <div class="editor-section-body">
                   <div class="form-grid-3">
                     <div class="form-group">
-                      <label class="form-label required">Nº de Acta</label>
+                      <label class="form-label required">Nº de Visita de Obra</label>
                       <input type="number" id="input-numero" class="form-control" value="${actaData.numero}" required min="1" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label required">Fecha de la Reunión</label>
+                      <label class="form-label required">Data da Visita de Obra</label>
                       <input type="date" id="input-fecha" class="form-control" value="${actaData.fecha}" required />
                     </div>
                     <div class="form-group">
@@ -1734,16 +1734,16 @@ export function renderActaEditor(container, router, params = {}) {
       const data = collectFormData();
 
       if (!data.numero || isNaN(data.numero)) {
-        showToast(isReunion ? 'Debe indicar un número de reunión válido' : 'Debe indicar un número de acta válido', 'error');
+        showToast(isReunion ? 'Debe indicar un número de reunión semanal válido' : 'Debe indicar un número de visita de obra válido', 'error');
         return;
       }
       if (!data.fecha) {
-        showToast('Debe indicar la fecha de la reunión', 'error');
+        showToast(isReunion ? 'Debe indicar a data da reunión semanal' : 'Debe indicar a data da visita de obra', 'error');
         return;
       }
 
       modal.confirmSave({
-        title: isReunion ? 'Confirmar Guardado de Reunión' : 'Confirmar Guardado de Acta',
+        title: isReunion ? 'Confirmar Guardado de Reunión Semanal' : 'Confirmar Guardado de Visita de Obra',
         message: `¿Desea guardar los cambios en ${isReunion ? 'la Reunión' : 'el Acta'} nº ${data.numero} (${formatDate(data.fecha)})?`,
         details: `Se actualizarán ${data.asistentes.length} asistentes, ${data.apartados ? data.apartados.length : 0} apartados con ${(data.apartados || []).reduce((acc, a) => acc + (a.secciones || []).length, 0)} sección(es), y ${(data.fotos || []).length} fotografías.`,
         confirmText: returnToList ? 'Confirmar, Guardar y Volver' : 'Confirmar y Guardar',
@@ -1754,7 +1754,7 @@ export function renderActaEditor(container, router, params = {}) {
             return;
           }
           window.__antaEditorDirty = false;
-          showToast(`${isReunion ? 'Reunión' : 'Acta'} nº ${data.numero} guardada con éxito`, 'success');
+          showToast(`${isReunion ? 'Reunión semanal' : 'Visita de Obra'} nº ${data.numero} guardada con éxito`, 'success');
 
           if (returnToList) {
             router.navigate('expediente', { id: data.obraId, tab: isReunion ? 'reuniones' : 'actas' });

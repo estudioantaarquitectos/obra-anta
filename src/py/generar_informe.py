@@ -259,7 +259,7 @@ def check_symbol(is_checked):
     return "☒" if is_checked else "☐"
 
 
-def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, plantilla_path='ejemplo_modificado_informe_mensual.docx'):
+def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, plantilla_path='plantilla_informe_mensual.docx'):
     """
     Genera el informe mensual rellenando las 13 tablas nativas y párrafos
     de la plantilla oficial sin romper bordes ni alturas de fila.
@@ -269,6 +269,8 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
         cand = os.path.join(base_dir, plantilla_path)
         if os.path.exists(cand):
             plantilla_path = cand
+        elif os.path.exists(os.path.join(base_dir, 'plantilla_informe_mensual.docx')):
+            plantilla_path = os.path.join(base_dir, 'plantilla_informe_mensual.docx')
         elif os.path.exists(os.path.join(base_dir, 'ejemplo_modificado_informe_mensual.docx')):
             plantilla_path = os.path.join(base_dir, 'ejemplo_modificado_informe_mensual.docx')
         elif os.path.exists(os.path.join(base_dir, 'plantilla_informe.docx')):
@@ -874,17 +876,39 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
             p_anx._element.addprevious(tables[9]._element)
 
     # 6. SECCIÓN 11: ANEXOS DOCUMENTAIS DO INFORME
-    # Extraer actas semanales adjuntadas en PDF (apartado propio) y otros documentos anexos
-    actas_pdf_raw = informe_data.get('actasPdf') or informe_data.get('actas_pdf') or informe_data.get('actasAnexas') or []
-    if not isinstance(actas_pdf_raw, list):
-        actas_pdf_raw = []
+    # Extraer visitas de obra, reunións semanais e outros anexos en PDF
+    visitas_pdf_raw = (
+        informe_data.get('visitasPdf') or
+        informe_data.get('actasPdf') or
+        informe_data.get('visitas_pdf') or
+        informe_data.get('actas_pdf') or
+        informe_data.get('actasAnexas') or []
+    )
+    if not isinstance(visitas_pdf_raw, list):
+        visitas_pdf_raw = []
 
-    actas_pdf = []
-    for a in actas_pdf_raw:
+    visitas_pdf = []
+    for a in visitas_pdf_raw:
         if isinstance(a, dict):
-            actas_pdf.append(a)
+            visitas_pdf.append(a)
         elif isinstance(a, str):
-            actas_pdf.append({'nombre': f"Acta de Visita {a}", 'numero': a, 'fecha': ''})
+            visitas_pdf.append({'nombre': f"Visita de Obra {a}", 'numero': a, 'fecha': ''})
+
+    reunions_pdf_raw = (
+        informe_data.get('reunionsPdf') or
+        informe_data.get('reunionesPdf') or
+        informe_data.get('reunions_pdf') or
+        informe_data.get('reuniones_pdf') or []
+    )
+    if not isinstance(reunions_pdf_raw, list):
+        reunions_pdf_raw = []
+
+    reunions_pdf = []
+    for r in reunions_pdf_raw:
+        if isinstance(r, dict):
+            reunions_pdf.append(r)
+        elif isinstance(r, str):
+            reunions_pdf.append({'nombre': f"Reunión semanal {r}", 'numero': r, 'fecha': ''})
 
     anexos_raw = []
     if isinstance(informe_data.get('anexosPdf'), list):
@@ -913,48 +937,89 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
             break
 
     if p_anx_header:
-        # Apartado 11.1: Actas de visitas semanais achegadas en PDF
-        if actas_pdf:
-            p_actas_title = doc.add_paragraph()
-            p_actas_title.paragraph_format.space_before = Pt(6)
-            p_actas_title.paragraph_format.space_after = Pt(2)
-            r_at = p_actas_title.add_run(f"Actas de visitas semanais achegadas en PDF ({len(actas_pdf)}):")
-            r_at.bold = True
-            r_at.font.size = Pt(9.5)
-            r_at.font.color.rgb = RGBColor(15, 71, 97)
+        # Apartado 11.1: Visitas de obra achegadas en PDF
+        if visitas_pdf:
+            p_vis_title = doc.add_paragraph()
+            p_vis_title.paragraph_format.space_before = Pt(6)
+            p_vis_title.paragraph_format.space_after = Pt(2)
+            r_vt = p_vis_title.add_run(f"Visitas de obra achegadas en PDF ({len(visitas_pdf)}):")
+            r_vt.bold = True
+            r_vt.font.size = Pt(9.5)
+            r_vt.font.color.rgb = RGBColor(15, 71, 97)
 
-            for a_idx, a_item in enumerate(actas_pdf):
+            for v_idx, v_item in enumerate(visitas_pdf):
                 p_item = doc.add_paragraph()
                 p_item.paragraph_format.space_after = Pt(1)
                 p_item.paragraph_format.left_indent = Inches(0.25)
-                a_nom = a_item.get('nombre') or (f"Acta nº {a_item.get('numero')}" if a_item.get('numero') else f"Acta de Visita {a_idx + 1}")
-                a_data = format_date_es(a_item.get('fecha')) if a_item.get('fecha') else ''
-                data_str = f" (data da visita: {a_data})" if a_data else ""
-                r_it = p_item.add_run(f"• {a_nom}{data_str}")
+                v_nom = v_item.get('nombre') or (f"Visita de Obra nº {v_item.get('numero')}" if v_item.get('numero') else f"Visita de Obra {v_idx + 1}")
+                v_data = format_date_es(v_item.get('fecha')) if v_item.get('fecha') else ''
+                data_str = f" (data da visita: {v_data})" if v_data else ""
+                r_it = p_item.add_run(f"• {v_nom}{data_str}")
                 r_it.bold = True
                 r_it.font.size = Pt(9)
                 r_it.font.color.rgb = RGBColor(15, 71, 97)
 
-                a_desc = (a_item.get('descripcion') or '').strip()
-                if a_desc:
-                    p_adesc = doc.add_paragraph()
-                    p_adesc.paragraph_format.space_after = Pt(1)
-                    p_adesc.paragraph_format.left_indent = Inches(0.4)
-                    r_desc = p_adesc.add_run(f"Descrición: {a_desc}")
+                v_desc = (v_item.get('descripcion') or '').strip()
+                if v_desc:
+                    p_vdesc = doc.add_paragraph()
+                    p_vdesc.paragraph_format.space_after = Pt(1)
+                    p_vdesc.paragraph_format.left_indent = Inches(0.4)
+                    r_desc = p_vdesc.add_run(f"Descrición: {v_desc}")
                     r_desc.font.size = Pt(8.5)
                     r_desc.font.italic = True
                     r_desc.font.color.rgb = RGBColor(71, 85, 105)
 
-                a_arch = a_item.get('archivo') or ''
-                if a_arch and a_arch != a_nom:
-                    p_aarch = doc.add_paragraph()
-                    p_aarch.paragraph_format.space_after = Pt(2)
-                    p_aarch.paragraph_format.left_indent = Inches(0.4)
-                    r_arch = p_aarch.add_run(f"Arquivo orixinal: {a_arch}")
+                v_arch = v_item.get('archivo') or ''
+                if v_arch and v_arch != v_nom:
+                    p_varch = doc.add_paragraph()
+                    p_varch.paragraph_format.space_after = Pt(2)
+                    p_varch.paragraph_format.left_indent = Inches(0.4)
+                    r_arch = p_varch.add_run(f"Arquivo orixinal: {v_arch}")
                     r_arch.font.size = Pt(8)
                     r_arch.font.color.rgb = RGBColor(100, 116, 139)
 
-        # Apartado 11.2: Outros documentos e informes PDF anexos
+        # Apartado 11.2: Reunións semanais achegadas en PDF
+        if reunions_pdf:
+            p_reu_title = doc.add_paragraph()
+            p_reu_title.paragraph_format.space_before = Pt(6)
+            p_reu_title.paragraph_format.space_after = Pt(2)
+            r_rt = p_reu_title.add_run(f"Reunións semanais achegadas en PDF ({len(reunions_pdf)}):")
+            r_rt.bold = True
+            r_rt.font.size = Pt(9.5)
+            r_rt.font.color.rgb = RGBColor(15, 71, 97)
+
+            for r_idx, r_item in enumerate(reunions_pdf):
+                p_item = doc.add_paragraph()
+                p_item.paragraph_format.space_after = Pt(1)
+                p_item.paragraph_format.left_indent = Inches(0.25)
+                r_nom = r_item.get('nombre') or (f"Reunión semanal nº {r_item.get('numero')}" if r_item.get('numero') else f"Reunión semanal {r_idx + 1}")
+                r_data = format_date_es(r_item.get('fecha')) if r_item.get('fecha') else ''
+                data_str = f" (data da reunión: {r_data})" if r_data else ""
+                r_it = p_item.add_run(f"• {r_nom}{data_str}")
+                r_it.bold = True
+                r_it.font.size = Pt(9)
+                r_it.font.color.rgb = RGBColor(15, 71, 97)
+
+                r_desc = (r_item.get('descripcion') or '').strip()
+                if r_desc:
+                    p_rdesc = doc.add_paragraph()
+                    p_rdesc.paragraph_format.space_after = Pt(1)
+                    p_rdesc.paragraph_format.left_indent = Inches(0.4)
+                    r_desc_run = p_rdesc.add_run(f"Descrición: {r_desc}")
+                    r_desc_run.font.size = Pt(8.5)
+                    r_desc_run.font.italic = True
+                    r_desc_run.font.color.rgb = RGBColor(71, 85, 105)
+
+                r_arch = r_item.get('archivo') or ''
+                if r_arch and r_arch != r_nom:
+                    p_rarch = doc.add_paragraph()
+                    p_rarch.paragraph_format.space_after = Pt(2)
+                    p_rarch.paragraph_format.left_indent = Inches(0.4)
+                    r_arch_run = p_rarch.add_run(f"Arquivo orixinal: {r_arch}")
+                    r_arch_run.font.size = Pt(8)
+                    r_arch_run.font.color.rgb = RGBColor(100, 116, 139)
+
+        # Apartado 11.3: Outros documentos e informes PDF anexos
         if anexos:
             p_doc_title = doc.add_paragraph()
             p_doc_title.paragraph_format.space_before = Pt(6)
@@ -1003,7 +1068,7 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
             r_ot.font.size = Pt(8.5)
             r_ot.font.italic = True
 
-        if not actas_pdf and not anexos and not outros_anexos_txt:
+        if not visitas_pdf and not reunions_pdf and not anexos and not outros_anexos_txt:
             p_no = doc.add_paragraph('Non se incorporan documentos anexos adicionais neste período.')
             p_no.paragraph_format.space_before = Pt(4)
 
@@ -1067,8 +1132,8 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                 except Exception as lo_err:
                     sys.stderr.write(f"LibreOffice headless fallo: {lo_err}\n")
 
-        # FUSIÓN CON SEPARATAS PARA ACTAS Y ANEXOS PDF
-        if (anexos or actas_pdf) and pdf_result and os.path.exists(pdf_result):
+        # FUSIÓN CON SEPARATAS PARA VISITAS DE OBRA, REUNIÓNS SEMANAIS Y ANEXOS PDF
+        if (anexos or visitas_pdf or reunions_pdf) and pdf_result and os.path.exists(pdf_result):
             try:
                 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
                 sys.path.insert(0, os.path.dirname(__file__))
@@ -1081,23 +1146,23 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                 writer.append(pdf_result)
                 temp_pdf_files = []
 
-                # Fusión de actas semanales adjuntadas en PDF (con separata propia de actas)
-                for a_idx, a_item in enumerate(actas_pdf):
-                    if not isinstance(a_item, dict):
+                # 1. Fusión de Visitas de Obra adjuntadas en PDF (con separata de Visita de Obra)
+                for v_idx, v_item in enumerate(visitas_pdf):
+                    if not isinstance(v_item, dict):
                         continue
 
-                    a_nom = a_item.get('nombre') or (f"ACTA DE VISITA Nº {a_item.get('numero')}" if a_item.get('numero') else f"ACTA DE VISITA {a_idx + 1}")
-                    a_fecha = a_item.get('fecha', '')
-                    a_desc = (a_item.get('descripcion') or '').strip()
-                    subtitulo = f"Acta semanal da dirección facultativa correspondente á visita do {format_date_es(a_fecha)}." if a_fecha else (a_desc or "Acta de visita semanal da dirección facultativa.")
+                    v_nom = v_item.get('nombre') or (f"VISITA DE OBRA Nº {v_item.get('numero')}" if v_item.get('numero') else f"VISITA DE OBRA {v_idx + 1}")
+                    v_fecha = v_item.get('fecha', '')
+                    v_desc = (v_item.get('descripcion') or '').strip()
+                    subtitulo = f"Visita de obra da dirección facultativa correspondente á data do {format_date_es(v_fecha)}." if v_fecha else (v_desc or "Visita ordinaria de obra da dirección facultativa.")
 
                     sep_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
                     temp_pdf_files.append(sep_path)
 
                     generar_separata_pdf(
                         sep_path,
-                        tipo="actas_semanais",
-                        titulo=a_nom.upper(),
+                        tipo="visitas_obra",
+                        titulo=v_nom.upper(),
                         subtitulo=subtitulo,
                         obra=obra_titulo,
                         expediente=expte,
@@ -1107,21 +1172,61 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                     )
                     writer.append(sep_path)
 
-                    # Obtener PDF del acta adjuntado
-                    a_pdf = a_item.get('pdfData') or a_item.get('url') or a_item.get('dataUrl') or a_item.get('data')
-                    if a_pdf:
-                        tmp_a = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
-                        if isinstance(a_pdf, str) and ';base64,' in a_pdf:
-                            _, b64 = a_pdf.split(';base64,', 1)
-                            tmp_a.write(base64.b64decode(b64))
-                        elif isinstance(a_pdf, str) and os.path.exists(a_pdf):
-                            with open(a_pdf, 'rb') as f_in:
-                                tmp_a.write(f_in.read())
-                        tmp_a.close()
-                        temp_pdf_files.append(tmp_a.name)
-                        writer.append(tmp_a.name)
+                    # Obtener PDF de la visita adjuntado
+                    v_pdf = v_item.get('pdfData') or v_item.get('url') or v_item.get('dataUrl') or v_item.get('data')
+                    if v_pdf:
+                        tmp_v = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+                        if isinstance(v_pdf, str) and ';base64,' in v_pdf:
+                            _, b64 = v_pdf.split(';base64,', 1)
+                            tmp_v.write(base64.b64decode(b64))
+                        elif isinstance(v_pdf, str) and os.path.exists(v_pdf):
+                            with open(v_pdf, 'rb') as f_in:
+                                tmp_v.write(f_in.read())
+                        tmp_v.close()
+                        temp_pdf_files.append(tmp_v.name)
+                        writer.append(tmp_v.name)
 
-                # Fusión de documentos anexos en PDF
+                # 2. Fusión de Reunións Semanais adjuntadas en PDF (con separata de Reunión Semanal)
+                for r_idx, r_item in enumerate(reunions_pdf):
+                    if not isinstance(r_item, dict):
+                        continue
+
+                    r_nom = r_item.get('nombre') or (f"REUNIÓN SEMANAL Nº {r_item.get('numero')}" if r_item.get('numero') else f"REUNIÓN SEMANAL {r_idx + 1}")
+                    r_fecha = r_item.get('fecha', '')
+                    r_desc = (r_item.get('descripcion') or '').strip()
+                    subtitulo = f"Reunión semanal da dirección facultativa correspondente á data do {format_date_es(r_fecha)}." if r_fecha else (r_desc or "Reunión semanal da dirección facultativa.")
+
+                    sep_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
+                    temp_pdf_files.append(sep_path)
+
+                    generar_separata_pdf(
+                        sep_path,
+                        tipo="reunions_semanais",
+                        titulo=r_nom.upper(),
+                        subtitulo=subtitulo,
+                        obra=obra_titulo,
+                        expediente=expte,
+                        tipo_doc=tipo_label,
+                        numero=report_num,
+                        fecha=format_date_es(data_inf)
+                    )
+                    writer.append(sep_path)
+
+                    # Obtener PDF de la reunión adjuntado
+                    r_pdf = r_item.get('pdfData') or r_item.get('url') or r_item.get('dataUrl') or r_item.get('data')
+                    if r_pdf:
+                        tmp_r = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+                        if isinstance(r_pdf, str) and ';base64,' in r_pdf:
+                            _, b64 = r_pdf.split(';base64,', 1)
+                            tmp_r.write(base64.b64decode(b64))
+                        elif isinstance(r_pdf, str) and os.path.exists(r_pdf):
+                            with open(r_pdf, 'rb') as f_in:
+                                tmp_r.write(f_in.read())
+                        tmp_r.close()
+                        temp_pdf_files.append(tmp_r.name)
+                        writer.append(tmp_r.name)
+
+                # 3. Fusión de outros documentos anexos en PDF
                 for anexo in anexos:
                     if not isinstance(anexo, dict):
                         continue

@@ -491,21 +491,21 @@ export function renderInformePrint(container, router, params = {}) {
           <div class="dt05-section">
             <div class="dt05-sec-header">11.- ANEXOS DOCUMENTAIS DO INFORME:</div>
             <div style="font-size: 8.5pt;">
-              <!-- 11.1 Actas de Visitas Semanais achegadas en PDF (Apartado Propio) -->
-              ${(inf.actasPdf && inf.actasPdf.length > 0) ? `
+              <!-- 11.1 Visitas de Obra achegadas en PDF -->
+              ${((inf.visitasPdf && inf.visitasPdf.length > 0) || (inf.actasPdf && inf.actasPdf.length > 0)) ? `
                 <div style="margin-top: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; margin-bottom: 8px;">
                   <div style="font-weight: bold; color: #1e3a8a; font-size: 8.5pt; margin-bottom: 5px; text-transform: uppercase;">
-                    Actas de visitas semanais achegadas en PDF (${inf.actasPdf.length}):
+                    Visitas de obra achegadas en PDF (${(inf.visitasPdf || inf.actasPdf).length}):
                   </div>
                   <div style="display: flex; flex-direction: column; gap: 4px; font-size: 8pt;">
-                    ${inf.actasPdf.map((acta, aIdx) => `
+                    ${(inf.visitasPdf || inf.actasPdf).map((visita, vIdx) => `
                       <div style="padding: 4px 6px; border-bottom: 1px dashed #e2e8f0;">
                         <div style="display: flex; align-items: center; justify-content: space-between;">
-                          <span style="font-weight: 700; color: #1e3a8a;">📄 ${escapeHtml(acta.nombre || `Acta de Visita nº ${aIdx + 1}`)} ${acta.fecha ? `[${formatDate(acta.fecha)}]` : ''}</span>
-                          <span style="color: #64748b; font-size: 7.5pt;">${formatFileSize(acta.tamano)} • Engadido o ${acta.fecha || ''}</span>
+                          <span style="font-weight: 700; color: #1e3a8a;">📄 ${escapeHtml(visita.nombre || `Visita de Obra nº ${vIdx + 1}`)} ${visita.fecha ? `[${formatDate(visita.fecha)}]` : ''}</span>
+                          <span style="color: #64748b; font-size: 7.5pt;">${formatFileSize(visita.tamano)} • Engadido o ${visita.fecha || ''}</span>
                         </div>
-                        ${acta.descripcion ? `<div style="font-size: 7.8pt; color: #475569; font-style: italic; margin-top: 1px;">${escapeHtml(acta.descripcion)}</div>` : ''}
-                        ${acta.archivo && acta.archivo !== acta.nombre ? `<div style="font-size: 7.2pt; color: #94a3b8; margin-top: 1px;">Arquivo orixinal: ${escapeHtml(acta.archivo)}</div>` : ''}
+                        ${visita.descripcion ? `<div style="font-size: 7.8pt; color: #475569; font-style: italic; margin-top: 1px;">${escapeHtml(visita.descripcion)}</div>` : ''}
+                        ${visita.archivo && visita.archivo !== visita.nombre ? `<div style="font-size: 7.2pt; color: #94a3b8; margin-top: 1px;">Arquivo orixinal: ${escapeHtml(visita.archivo)}</div>` : ''}
                       </div>
                     `).join('')}
                   </div>
@@ -513,7 +513,7 @@ export function renderInformePrint(container, router, params = {}) {
               ` : ((inf.actasAnexasIds && inf.actasAnexasIds.length > 0) ? `
                 <div style="margin-top: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; margin-bottom: 8px;">
                   <div style="font-weight: bold; color: #1e3a8a; font-size: 8.5pt; margin-bottom: 5px; text-transform: uppercase;">
-                    Actas semanais incorporadas correlativamente (${inf.actasAnexasIds.length}):
+                    Visitas de obra incorporadas correlativamente (${inf.actasAnexasIds.length}):
                   </div>
                   <table style="width: 100%; border-collapse: collapse; font-size: 8pt;">
                     <tbody>
@@ -522,7 +522,7 @@ export function renderInformePrint(container, router, params = {}) {
                         if (!a) return '';
                         return `
                           <tr style="border-bottom: 1px dashed #e2e8f0;">
-                            <td style="padding: 3px 4px; font-weight: bold; color: #1e293b;">Acta nº ${a.numero}</td>
+                            <td style="padding: 3px 4px; font-weight: bold; color: #1e293b;">Visita nº ${a.numero}</td>
                             <td style="padding: 3px 4px; color: #475569;">${formatDate(a.fecha)}</td>
                             <td style="padding: 3px 4px; color: #334155;">${escapeHtml(a.obra || '')}</td>
                           </tr>
@@ -533,7 +533,28 @@ export function renderInformePrint(container, router, params = {}) {
                 </div>
               ` : '')}
 
-              <!-- 11.2 Outros Documentos e Informes PDF Anexos -->
+              <!-- 11.2 Reunións Semanais achegadas en PDF -->
+              ${((inf.reunionsPdf && inf.reunionsPdf.length > 0) || (inf.reunionesPdf && inf.reunionesPdf.length > 0)) ? `
+                <div style="margin-top: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; margin-bottom: 8px;">
+                  <div style="font-weight: bold; color: #0284c7; font-size: 8.5pt; margin-bottom: 5px; text-transform: uppercase;">
+                    Reunións semanais achegadas en PDF (${(inf.reunionsPdf || inf.reunionesPdf).length}):
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 4px; font-size: 8pt;">
+                    ${(inf.reunionsPdf || inf.reunionesPdf).map((reu, rIdx) => `
+                      <div style="padding: 4px 6px; border-bottom: 1px dashed #e2e8f0;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                          <span style="font-weight: 700; color: #0284c7;">👥 ${escapeHtml(reu.nombre || `Reunión semanal nº ${rIdx + 1}`)} ${reu.fecha ? `[${formatDate(reu.fecha)}]` : ''}</span>
+                          <span style="color: #64748b; font-size: 7.5pt;">${formatFileSize(reu.tamano)} • Engadido o ${reu.fecha || ''}</span>
+                        </div>
+                        ${reu.descripcion ? `<div style="font-size: 7.8pt; color: #475569; font-style: italic; margin-top: 1px;">${escapeHtml(reu.descripcion)}</div>` : ''}
+                        ${reu.archivo && reu.archivo !== reu.nombre ? `<div style="font-size: 7.2pt; color: #94a3b8; margin-top: 1px;">Arquivo orixinal: ${escapeHtml(reu.archivo)}</div>` : ''}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- 11.3 Outros Documentos e Informes PDF Anexos -->
               ${(inf.anexosPdf && inf.anexosPdf.length > 0) ? `
                 <div style="margin-top: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px;">
                   <div style="font-weight: bold; color: #b91c1c; font-size: 8.5pt; margin-bottom: 5px; text-transform: uppercase;">
@@ -554,7 +575,7 @@ export function renderInformePrint(container, router, params = {}) {
                 </div>
               ` : ''}
 
-              ${(!inf.actasPdf?.length && !inf.actasAnexasIds?.length && !inf.anexosPdf?.length) ? `
+              ${(!inf.visitasPdf?.length && !inf.actasPdf?.length && !inf.reunionsPdf?.length && !inf.reunionesPdf?.length && !inf.actasAnexasIds?.length && !inf.anexosPdf?.length) ? `
                 <div style="color: #94a3b8; font-style: italic;">Non se incorporan documentos anexos adicionais neste período.</div>
               ` : ''}
             </div>
