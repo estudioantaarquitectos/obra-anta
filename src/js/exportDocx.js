@@ -328,7 +328,7 @@ export async function exportActaToDocx(acta) {
     const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
     const numStr = String(acta.numero || (isReunion ? 'reunion' : 'visita')).padStart(2, '0');
     const dateStr = (acta.fecha || '').replace(/-/g, '');
-    const prefix = isReunion ? 'Reunion_Semanal' : 'Visita_Obra';
+    const prefix = isReunion ? 'Reunion_Obra' : 'Visita_Obra';
     const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.docx`;
 
     const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
@@ -419,7 +419,7 @@ export async function exportActaToPdf(acta) {
     const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
     const numStr = String(acta.numero || (isReunion ? 'reunion' : 'visita')).padStart(2, '0');
     const dateStr = (acta.fecha || '').replace(/-/g, '');
-    const prefix = isReunion ? 'Reunion_Semanal' : 'Visita_Obra';
+    const prefix = isReunion ? 'Reunion_Obra' : 'Visita_Obra';
     const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.pdf`;
 
     const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);

@@ -2721,3 +2721,18 @@ Cambia también los nombres de las plantillas para que no haya confusiones
 
 ---
 
+## Conversación #81
+
+### 👤 Usuario:
+
+Me he confundido.
+En lugar de "Reunións semanais", se llamrán "Reunións de obra"
+Es necesario crear también un nuevo tipo de documento que se llame "Informe semanal" que contendrá un relación de visitas a obra y de reuniones de obra.
+Seguirán la plantilla: plantilla_informe_semanal.docx
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+

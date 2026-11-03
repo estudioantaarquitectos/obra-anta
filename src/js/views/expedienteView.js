@@ -25,7 +25,7 @@ export function renderExpedienteView(container, router, params = {}) {
   // Ensure active in storage
   db.setActiveObraId(obra.id);
 
-  let activeTab = params.tab || 'actas'; // 'actas' | 'reuniones' | 'informes' | 'notas' | 'ficha'
+  let activeTab = params.tab || 'actas'; // 'actas' | 'reuniones' | 'informes-semanais' | 'informes' | 'notas' | 'ficha'
   let actasSearchQuery = '';
   let selectedActas = new Set();
   let expandedActas = new Set();
@@ -38,7 +38,9 @@ export function renderExpedienteView(container, router, params = {}) {
     obra = db.getObraById(obraId) || db.getActiveObra();
     const actas = db.getActas(obra.id);
     const reuniones = db.getReuniones(obra.id);
-    const informes = db.getInformes(obra.id);
+    const allInformesList = db.getInformes(obra.id);
+    const informesSemanais = allInformesList.filter(i => i.tipo === 'semanal');
+    const informes = allInformesList.filter(i => i.tipo !== 'semanal');
     const notas = db.getNotas(obra.id);
     const allAgentes = db.getAgentes();
 
@@ -123,8 +125,14 @@ export function renderExpedienteView(container, router, params = {}) {
 
           <button class="tab-btn ${activeTab === 'reuniones' ? 'active' : ''}" data-tab="reuniones">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-            <span>Reunións semanais</span>
+            <span>Reunións de obra</span>
             <span class="tab-count-badge">${reuniones.length}</span>
+          </button>
+
+          <button class="tab-btn ${activeTab === 'informes-semanais' ? 'active' : ''}" data-tab="informes-semanais">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L19 7.5V19a2 2 0 0 1-2 2z"/></svg>
+            <span>Informes semanais</span>
+            <span class="tab-count-badge">${informesSemanais.length}</span>
           </button>
 
           <button class="tab-btn ${activeTab === 'informes' ? 'active' : ''}" data-tab="informes">
@@ -142,7 +150,7 @@ export function renderExpedienteView(container, router, params = {}) {
 
         <!-- Tab Body Content -->
         <div id="tab-content-area">
-          ${renderTabContent({ activeTab, obra, actas, reuniones, informes, notas, allAgentes, canCreateActa, canCreateInforme, canCreateNota })}
+          ${renderTabContent({ activeTab, obra, actas, reuniones, informes, informesSemanais, notas, allAgentes, canCreateActa, canCreateInforme, canCreateNota })}
         </div>
 
       </div>
@@ -151,12 +159,14 @@ export function renderExpedienteView(container, router, params = {}) {
     wireEvents();
   }
 
-  function renderTabContent({ activeTab, obra, actas, reuniones, informes, notas, allAgentes, canCreateActa, canCreateInforme, canCreateNota }) {
+  function renderTabContent({ activeTab, obra, actas, reuniones, informes, informesSemanais = [], notas, allAgentes, canCreateActa, canCreateInforme, canCreateNota }) {
     switch (activeTab) {
       case 'actas':
         return renderActasSection({ obra, actas, allAgentes, canCreateActa });
       case 'reuniones':
         return renderReunionesSection({ obra, reuniones, allAgentes, canCreateActa });
+      case 'informes-semanais':
+        return renderInformesSemanaisSection({ obra, informesSemanais, canCreateInforme });
       case 'informes':
         return renderInformesSection({ obra, informes, canCreateInforme });
       case 'notas':
@@ -704,7 +714,122 @@ export function renderExpedienteView(container, router, params = {}) {
     `;
   }
 
-  /* ----------------- TAB 2: INFORMES MENSUALES DT-05 ----------------- */
+    /* ----------------- TAB: INFORMES SEMANAIS ----------------- */
+  function renderInformesSemanaisSection({ obra, informesSemanais, canCreateInforme }) {
+    return `
+      <div>
+        <div class="dashboard-toolbar" style="margin-bottom: 1.25rem;">
+          <div>
+            <span style="font-weight: 700; color: var(--text-main); font-size: 1.05rem;">
+              Informes Semanais de Obra
+            </span>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">
+              Relación semanal de visitas e reunións de obra segundo plantilla oficial institucional.
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            ${canCreateInforme ? `
+              <button class="btn btn-primary" id="btn-create-informe-semanal">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Novo Informe semanal
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        ${informesSemanais.length === 0 ? `
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L19 7.5V19a2 2 0 0 1-2 2z"/></svg>
+            </div>
+            <div class="empty-title">Non hai informes semanais nesta obra</div>
+            <div class="empty-desc">Cree o primeiro informe semanal para relacionar as visitas e reunións celebradas na semana.</div>
+            ${canCreateInforme ? `
+              <button class="btn btn-primary" id="btn-empty-create-informe-semanal">Crear Primeiro Informe semanal</button>
+            ` : ''}
+          </div>
+        ` : `
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 140px;">Nº Informe</th>
+                  <th style="width: 130px;">Data Emisión</th>
+                  <th>Relación de Visitas e Reunións</th>
+                  <th style="width: 120px;">Estado</th>
+                  <th class="col-actions">Accións</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${informesSemanais.map(inf => {
+                  const est = inf.estado || 'borrador';
+                  let statusBadge = `<span class="badge badge-neutral">Borrador</span>`;
+                  if (est === 'emitido') {
+                    statusBadge = `<span class="badge badge-success"><span class="status-dot status-dot-green"></span> Emitido</span>`;
+                  } else if (est === 'pechado') {
+                    statusBadge = `<span class="badge badge-neutral">Pechado</span>`;
+                  }
+
+                  const rel = Array.isArray(inf.relacion) ? inf.relacion : [];
+                  const countVisitas = rel.filter(r => (r.tipo || '').toLowerCase().includes('visita')).length;
+                  const countReunions = rel.filter(r => (r.tipo || '').toLowerCase().includes('reuni')).length;
+
+                  return `
+                    <tr>
+                      <td>
+                        <span style="font-weight: 700; color: var(--primary);">Informe Semanal nº ${inf.numero || 1}</span>
+                      </td>
+                      <td>${inf.fecha ? formatDate(inf.fecha) : '—'}</td>
+                      <td>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                          <span class="badge" style="background: #eff6ff; color: #1e3a8a; border: 1px solid #bfdbfe; font-size: 0.78rem;">
+                            ${countVisitas} ${countVisitas === 1 ? 'visita' : 'visitas'}
+                          </span>
+                          <span class="badge" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 0.78rem;">
+                            ${countReunions} ${countReunions === 1 ? 'reunión' : 'reunións'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>${statusBadge}</td>
+                      <td class="col-actions">
+                        <div class="action-buttons-group">
+                          <button class="btn btn-ghost btn-sm btn-view-informe-semanal" data-id="${inf.id}" title="Ver Oficial">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <span>Ver</span>
+                          </button>
+                          <button class="btn btn-ghost btn-sm btn-docx-informe-semanal" data-id="${inf.id}" title="Descargar DOCX Oficial">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                            <span>DOCX</span>
+                          </button>
+                          <button class="btn btn-ghost btn-sm btn-pdf-informe-semanal" data-id="${inf.id}" title="Descargar PDF Oficial 1:1">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            <span>PDF</span>
+                          </button>
+                          ${canCreateInforme ? `
+                            <button class="btn btn-ghost btn-sm btn-edit-informe-semanal" data-id="${inf.id}" title="Editar">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>
+                              <span>Editar</span>
+                            </button>
+                            <button class="btn btn-ghost btn-sm btn-delete-informe-semanal" data-id="${inf.id}" title="Eliminar" style="color: var(--color-danger);">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              <span>Borrar</span>
+                            </button>
+                          ` : ''}
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+/* ----------------- TAB 2: INFORMES MENSUALES DT-05 ----------------- */
   function renderInformesSection({ obra, informes, canCreateInforme }) {
     return `
       <div>
@@ -1349,6 +1474,49 @@ export function renderExpedienteView(container, router, params = {}) {
             db.saveActa(newActa);
             showToast(`Acta nº ${nextNum} creada con éxito`, 'success');
             router.navigate('acta-editor', { id: newActa.id, obraId: obra.id });
+          }
+        });
+      };
+    });
+
+    // --- Wire Informes Semanais ---
+    const btnCreateSemanal = container.querySelector('#btn-create-informe-semanal') || container.querySelector('#btn-empty-create-informe-semanal');
+    if (btnCreateSemanal) {
+      btnCreateSemanal.onclick = () => {
+        router.navigate('informe-semanal-editor');
+      };
+    }
+    container.querySelectorAll('.btn-view-informe-semanal').forEach(btn => {
+      btn.onclick = () => router.navigate('informe-semanal-print', { id: btn.dataset.id });
+    });
+    container.querySelectorAll('.btn-edit-informe-semanal').forEach(btn => {
+      btn.onclick = () => router.navigate('informe-semanal-editor', { id: btn.dataset.id });
+    });
+    container.querySelectorAll('.btn-docx-informe-semanal').forEach(btn => {
+      btn.onclick = async () => {
+        const inf = db.getInformeById(btn.dataset.id);
+        if (inf) await exportInformeToDocx(inf);
+      };
+    });
+    container.querySelectorAll('.btn-pdf-informe-semanal').forEach(btn => {
+      btn.onclick = async () => {
+        const inf = db.getInformeById(btn.dataset.id);
+        if (inf) await exportInformeCompletoPdf(inf);
+      };
+    });
+    container.querySelectorAll('.btn-delete-informe-semanal').forEach(btn => {
+      btn.onclick = () => {
+        const inf = db.getInformeById(btn.dataset.id);
+        if (!inf) return;
+        confirmDialog({
+          title: 'Eliminar Informe Semanal',
+          message: `¿Está seguro de que desexa eliminar o Informe Semanal nº ${inf.numero || ''}? Esta acción non se pode desfacer.`,
+          confirmText: 'Eliminar',
+          isDanger: true,
+          onConfirm: () => {
+            db.deleteInforme(inf.id);
+            showToast('Informe semanal eliminado correctamente', 'success');
+            render();
           }
         });
       };

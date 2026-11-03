@@ -58,9 +58,17 @@ export function renderActaEditor(container, router, params = {}) {
       }
       if (!match && asist.nombre) {
         const normName = asist.nombre.trim().toLowerCase();
-        const oaMatch = obraAgentesForSync.find(oa => (oa.nombre || '').trim().toLowerCase() === normName);
-        if (oaMatch && oaMatch.agenteId) {
-          match = allDbAgentesForSync.find(a => String(a.id) === String(oaMatch.agenteId));
+        const oaMatch = obraAgentesForSync.find(oa => {
+          const oaName = (oa.nombre || '').trim().toLowerCase();
+          return oaName === normName || oaName.includes(normName) || normName.includes(oaName);
+        });
+        if (oaMatch) {
+          if (oaMatch.agenteId) {
+            match = allDbAgentesForSync.find(a => String(a.id) === String(oaMatch.agenteId));
+          }
+          if (!match) {
+            match = oaMatch;
+          }
         }
       }
       return match || null;
@@ -70,14 +78,16 @@ export function renderActaEditor(container, router, params = {}) {
       asist.asistio = true;
       const dbMatch = findMatchingAgente(asist);
       if (dbMatch) {
-        asist.agenteId = dbMatch.id;
+        asist.agenteId = dbMatch.id || dbMatch.agenteId || asist.agenteId;
         const curCargo = (asist.cargo || '').trim();
-        if (!curCargo || roleCodesSet.has(curCargo.toLowerCase())) {
-          asist.cargo = dbMatch.cargoHabitual || curCargo;
+        const targetCargo = dbMatch.cargoHabitual || dbMatch.cargo_habitual || dbMatch.cargo;
+        if (targetCargo && (!curCargo || roleCodesSet.has(curCargo.toLowerCase()) || curCargo.toLowerCase() === 'agente de obra')) {
+          asist.cargo = targetCargo;
         }
         const curEntidad = (asist.entidad || '').trim();
-        if (!curEntidad || curEntidad === 'Dirección Facultativa' || dbMatch.entidad) {
-          asist.entidad = dbMatch.entidad || curEntidad;
+        const targetEntidad = dbMatch.entidad || dbMatch.empresa;
+        if (targetEntidad && (!curEntidad || curEntidad === 'Dirección Facultativa' || roleCodesSet.has(curCargo.toLowerCase()))) {
+          asist.entidad = targetEntidad;
         }
       }
       if (asist.firma === undefined) {
@@ -707,6 +717,17 @@ export function renderActaEditor(container, router, params = {}) {
                 </div>
 
               </div>
+            </div>
+
+            <div class="editor-bottom-bar" style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; padding: 1.5rem 0; margin-top: 2rem; border-top: 1px solid var(--border-light);">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-acta-bottom" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-save-back-acta-bottom">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar y volver
+              </button>
             </div>
 
           </form>
@@ -1777,6 +1798,22 @@ export function renderActaEditor(container, router, params = {}) {
         }
       });
     };
+
+    // Botón Guardar inferior
+    const btnSaveOnlyBottom = container.querySelector('#btn-save-acta-bottom');
+    if (btnSaveOnlyBottom) {
+      btnSaveOnlyBottom.addEventListener('click', (e) => {
+        e.preventDefault();
+        saveDocument(false);
+      });
+    }
+    const btnSaveAndBackBottom = container.querySelector('#btn-save-back-acta-bottom');
+    if (btnSaveAndBackBottom) {
+      btnSaveAndBackBottom.addEventListener('click', (e) => {
+        e.preventDefault();
+        saveDocument(true);
+      });
+    }
 
     // Botón Guardar (permanece abierto)
     const btnSaveOnly = container.querySelector('#btn-save-acta');

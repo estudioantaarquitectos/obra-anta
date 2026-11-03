@@ -12,6 +12,8 @@ import { renderActaPrint } from './views/actaPrint.js';
 import { renderInformes } from './views/informes.js';
 import { renderInformeEditor } from './views/informeEditor.js';
 import { renderInformePrint } from './views/informePrint.js';
+import { renderInformeSemanalEditor } from './views/informeSemanalEditor.js';
+import { renderInformeSemanalPrint } from './views/informeSemanalPrint.js';
 import { renderNotas } from './views/notas.js';
 import { renderUsuarios } from './views/usuarios.js';
 import { renderAgentes } from './views/agentes.js';
@@ -197,7 +199,9 @@ class AppRouter {
 
     const actasCount = activeObra ? db.getActas(activeObra.id).length : db.getActas().length;
     const reunionesCount = activeObra ? db.getReuniones(activeObra.id).length : db.getReuniones().length;
-    const informesCount = activeObra ? db.getInformes(activeObra.id).length : db.getInformes().length;
+    const allInfList = activeObra ? db.getInformes(activeObra.id) : db.getInformes();
+    const informesSemanaisCount = allInfList.filter(i => i.tipo === 'semanal').length;
+    const informesCount = allInfList.filter(i => i.tipo !== 'semanal').length;
     const notasCount = activeObra ? db.getNotas(activeObra.id).length : db.getNotas().length;
     const canManageUsers = auth.can('users:manage') || auth.isAdmin();
     const canViewAgentes = auth.can('agentes:view') || auth.isAdmin();
@@ -279,8 +283,14 @@ class AppRouter {
 
               <a href="javascript:void(0)" class="nav-item ${(isExpedienteActive && currentTab === 'reuniones') || this.currentRoute === 'reuniones' || this.currentRoute === 'reunion-editor' || this.currentRoute === 'reunion-print' ? 'active' : ''}" data-route="expediente" data-tab="reuniones" data-id="${activeObra.id}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                <span>Reunións semanais</span>
+                <span>Reunións de obra</span>
                 <span class="nav-badge">${reunionesCount}</span>
+              </a>
+
+              <a href="javascript:void(0)" class="nav-item ${(isExpedienteActive && currentTab === 'informes-semanais') || this.currentRoute === 'informes-semanais' || this.currentRoute === 'informe-semanal-editor' || this.currentRoute === 'informe-semanal-print' ? 'active' : ''}" data-route="expediente" data-tab="informes-semanais" data-id="${activeObra.id}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L19 7.5V19a2 2 0 0 1-2 2z"/></svg>
+                <span>Informes semanais</span>
+                <span class="nav-badge">${informesSemanaisCount}</span>
               </a>
 
               <a href="javascript:void(0)" class="nav-item ${(isExpedienteActive && currentTab === 'informes') || this.currentRoute === 'informes' || this.currentRoute === 'informe-editor' || this.currentRoute === 'informe-print' ? 'active' : ''}" data-route="expediente" data-tab="informes" data-id="${activeObra.id}">
@@ -401,6 +411,15 @@ class AppRouter {
         break;
       case 'informe-print':
         renderInformePrint(viewContainer, this, this.currentParams);
+        break;
+      case 'informes-semanais':
+        renderExpedienteView(viewContainer, this, { ...this.currentParams, tab: 'informes-semanais' });
+        break;
+      case 'informe-semanal-editor':
+        renderInformeSemanalEditor(viewContainer, this, this.currentParams);
+        break;
+      case 'informe-semanal-print':
+        renderInformeSemanalPrint(viewContainer, this, this.currentParams);
         break;
       case 'notas':
         renderExpedienteView(viewContainer, this, { ...this.currentParams, tab: 'notas' });

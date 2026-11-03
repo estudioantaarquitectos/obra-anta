@@ -186,6 +186,8 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
     ):
         if es_reunion:
             cand_reunion = [
+                os.path.join(base_dir, 'plantilla_reunion_obra.docx'),
+                os.path.join(base_dir, 'ejemplo_modificado_reunion_obra.docx'),
                 os.path.join(base_dir, 'plantilla_reunion_semanal.docx'),
                 os.path.join(base_dir, 'ejemplo_modificado_reunion_semanal.docx'),
                 os.path.join(base_dir, 'plantilla_reunion.docx'),
@@ -266,7 +268,7 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                     p = c_title.paragraphs[0]
                     p.paragraph_format.space_before = Pt(0)
                     p.paragraph_format.left_indent = Pt(0)
-                    p.text = "REUNIÓN SEMANAL" if es_reunion else "VISITA DE OBRA"
+                    p.text = "REUNIÓN DE OBRA" if es_reunion else "VISITA DE OBRA"
                     if p.runs:
                         p.runs[0].bold = True
                         p.runs[0].font.size = Pt(11)
@@ -435,7 +437,7 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
 
         lugar_str = acta_data.get('lugar') or ('Ferrol' if 'ferrol' in situacion.lower() else situacion.split(',')[-1].strip() or 'Ferrol')
         fecha_longa = format_date_long_es(acta_data.get('fecha'))
-        tipo_doc_nom = "reunión semanal" if es_reunion else "visita de obra"
+        tipo_doc_nom = "reunión de obra" if es_reunion else "visita de obra"
         intro_text = f"En {lugar_str} a {fecha_longa}. Para que así conste e aos efectos oportunos, asinan a presente {tipo_doc_nom}:"
 
         if intro_p:
@@ -638,7 +640,7 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                         'numero': f"{idx + 1:02d}",
                         'obraTitulo': obra_titulo,
                         'expediente': expte,
-                        'tipo_doc': "REUNIÓN SEMANAL" if es_reunion else "VISITA DE OBRA",
+                        'tipo_doc': "REUNIÓN DE OBRA" if es_reunion else "VISITA DE OBRA",
                         'fecha': format_date_es(anx.get('fecha') or acta_data.get('fecha'))
                     }
                     sep_pdf = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name

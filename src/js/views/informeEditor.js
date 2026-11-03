@@ -924,6 +924,17 @@ export function renderInformeEditor(container, router, params = {}) {
               </div>
             </div>
 
+            <div class="editor-bottom-bar" style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; padding: 1.5rem 0; margin-top: 2rem; border-top: 1px solid var(--border-light);">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-informe-bottom" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-save-back-informe-bottom">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar y volver
+              </button>
+            </div>
+
           </form>
 
         </div>
@@ -1678,6 +1689,22 @@ export function renderInformeEditor(container, router, params = {}) {
         }
       });
     };
+
+    // Botones Guardar inferior
+    const btnSaveOnlyBottom = container.querySelector('#btn-save-informe-bottom');
+    if (btnSaveOnlyBottom) {
+      btnSaveOnlyBottom.addEventListener('click', (e) => {
+        e.preventDefault();
+        saveDocument(false);
+      });
+    }
+    const btnSaveAndBackBottom = container.querySelector('#btn-save-back-informe-bottom');
+    if (btnSaveAndBackBottom) {
+      btnSaveAndBackBottom.addEventListener('click', (e) => {
+        e.preventDefault();
+        saveDocument(true);
+      });
+    }
 
     // Botón Guardar (permanece abierto)
     const btnSaveOnly = container.querySelector('#btn-save-informe');

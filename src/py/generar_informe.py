@@ -978,12 +978,12 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                     r_arch.font.size = Pt(8)
                     r_arch.font.color.rgb = RGBColor(100, 116, 139)
 
-        # Apartado 11.2: Reunións semanais achegadas en PDF
+        # Apartado 11.2: Reunións de obra achegadas en PDF
         if reunions_pdf:
             p_reu_title = doc.add_paragraph()
             p_reu_title.paragraph_format.space_before = Pt(6)
             p_reu_title.paragraph_format.space_after = Pt(2)
-            r_rt = p_reu_title.add_run(f"Reunións semanais achegadas en PDF ({len(reunions_pdf)}):")
+            r_rt = p_reu_title.add_run(f"Reunións de obra achegadas en PDF ({len(reunions_pdf)}):")
             r_rt.bold = True
             r_rt.font.size = Pt(9.5)
             r_rt.font.color.rgb = RGBColor(15, 71, 97)
@@ -992,7 +992,7 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                 p_item = doc.add_paragraph()
                 p_item.paragraph_format.space_after = Pt(1)
                 p_item.paragraph_format.left_indent = Inches(0.25)
-                r_nom = r_item.get('nombre') or (f"Reunión semanal nº {r_item.get('numero')}" if r_item.get('numero') else f"Reunión semanal {r_idx + 1}")
+                r_nom = r_item.get('nombre') or (f"Reunión de obra nº {r_item.get('numero')}" if r_item.get('numero') else f"Reunión de obra {r_idx + 1}")
                 r_data = format_date_es(r_item.get('fecha')) if r_item.get('fecha') else ''
                 data_str = f" (data da reunión: {r_data})" if r_data else ""
                 r_it = p_item.add_run(f"• {r_nom}{data_str}")
@@ -1186,22 +1186,22 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                         temp_pdf_files.append(tmp_v.name)
                         writer.append(tmp_v.name)
 
-                # 2. Fusión de Reunións Semanais adjuntadas en PDF (con separata de Reunión Semanal)
+                # 2. Fusión de Reunións de Obra adjuntadas en PDF (con separata de Reunión de Obra)
                 for r_idx, r_item in enumerate(reunions_pdf):
                     if not isinstance(r_item, dict):
                         continue
 
-                    r_nom = r_item.get('nombre') or (f"REUNIÓN SEMANAL Nº {r_item.get('numero')}" if r_item.get('numero') else f"REUNIÓN SEMANAL {r_idx + 1}")
+                    r_nom = r_item.get('nombre') or (f"REUNIÓN DE OBRA Nº {r_item.get('numero')}" if r_item.get('numero') else f"REUNIÓN DE OBRA {r_idx + 1}")
                     r_fecha = r_item.get('fecha', '')
                     r_desc = (r_item.get('descripcion') or '').strip()
-                    subtitulo = f"Reunión semanal da dirección facultativa correspondente á data do {format_date_es(r_fecha)}." if r_fecha else (r_desc or "Reunión semanal da dirección facultativa.")
+                    subtitulo = f"Reunión de obra da dirección facultativa correspondente á data do {format_date_es(r_fecha)}." if r_fecha else (r_desc or "Reunión de obra da dirección facultativa.")
 
                     sep_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
                     temp_pdf_files.append(sep_path)
 
                     generar_separata_pdf(
                         sep_path,
-                        tipo="reunions_semanais",
+                        tipo="reunions_obra",
                         titulo=r_nom.upper(),
                         subtitulo=subtitulo,
                         obra=obra_titulo,

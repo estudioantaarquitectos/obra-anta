@@ -146,6 +146,8 @@ function actaExportServerPlugin() {
             let plantillaPath;
             if (isReunion) {
               const candR = [
+                path.resolve(__dirname, 'plantilla_reunion_obra.docx'),
+                path.resolve(__dirname, 'ejemplo_modificado_reunion_obra.docx'),
                 path.resolve(__dirname, 'plantilla_reunion_semanal.docx'),
                 path.resolve(__dirname, 'ejemplo_modificado_reunion_semanal.docx'),
                 path.resolve(__dirname, 'plantilla_reunion.docx'),
@@ -201,7 +203,7 @@ function actaExportServerPlugin() {
 
               const numStr = String(acta.numero || (isReunion ? 'reunion' : 'visita')).padStart(2, '0');
               const dateStr = (acta.fecha || '').replace(/-/g, '');
-              const prefix = isReunion ? 'Reunion_Semanal' : 'Visita_Obra';
+              const prefix = isReunion ? 'Reunion_Obra' : 'Visita_Obra';
               const defaultFilename = format === 'pdf'
                 ? `${prefix}_N${numStr}_${dateStr || 'doc'}.pdf`
                 : `${prefix}_N${numStr}_${dateStr || 'doc'}.docx`;
@@ -290,12 +292,21 @@ function actaExportServerPlugin() {
 
             fs.writeFileSync(tmpJson, JSON.stringify(informe, null, 2), 'utf-8');
 
-            const scriptPath = path.resolve(__dirname, 'src/py/generar_informe.py');
-            const candInf = [
-              path.resolve(__dirname, 'plantilla_informe_mensual.docx'),
-              path.resolve(__dirname, 'ejemplo_modificado_informe_mensual.docx'),
-              path.resolve(__dirname, 'plantilla_informe.docx')
-            ];
+            const isSemanal = informe && (informe.tipo === 'semanal' || informe.tipoDocumento === 'informe_semanal' || data.tipo === 'semanal');
+            const scriptPath = isSemanal
+              ? path.resolve(__dirname, 'src/py/generar_informe_semanal.py')
+              : path.resolve(__dirname, 'src/py/generar_informe.py');
+
+            const candInf = isSemanal
+              ? [
+                  path.resolve(__dirname, 'plantilla_informe_semanal.docx'),
+                  path.resolve(__dirname, 'ejemplo_modificado_informe_semanal.docx')
+                ]
+              : [
+                  path.resolve(__dirname, 'plantilla_informe_mensual.docx'),
+                  path.resolve(__dirname, 'ejemplo_modificado_informe_mensual.docx'),
+                  path.resolve(__dirname, 'plantilla_informe.docx')
+                ];
             const plantillaPath = candInf.find(p => fs.existsSync(p)) || candInf[0];
 
             const pyArgs = [
@@ -337,14 +348,14 @@ function actaExportServerPlugin() {
 
               const dx = informe.datosXerais || {};
               const numStr = informe.numero ? `N${informe.numero}_` : '';
-              const rawName = dx.mesInformado || informe.numero || 'seguimento';
+              const prefix = isSemanal ? 'Informe_Semanal' : 'Informe_Mensual';
+              const rawName = isSemanal ? (informe.fecha || 'semanal') : (dx.mesInformado || informe.numero || 'seguimento');
               const cleanName = String(rawName)
                 .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 .replace(/[^a-zA-Z0-9_-]/g, '_')
                 .replace(/_+/g, '_')
                 .slice(0, 30);
-              const isSemanal = informe.tipo === 'semanal' || informe.tipo === 'informe_semanal';
-              const tipoPrefix = isSemanal ? 'Informe_Semanal' : 'Informe_Mensual';
+              const tipoPrefix = prefix;
               const defaultFilename = format === 'pdf'
                 ? `${tipoPrefix}_Completo_${numStr}${cleanName || 'DT05'}.pdf`
                 : `${tipoPrefix}_${numStr}${cleanName || 'DT05'}.docx`;

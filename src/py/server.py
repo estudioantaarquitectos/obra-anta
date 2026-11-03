@@ -114,7 +114,7 @@ async def export_acta(request: Request):
             or acta_payload.get("esReunion") is True
         ) if isinstance(acta_payload, dict) else False
 
-        doc_prefix = "Reunion_Semanal" if es_reunion else "Visita_Obra"
+        doc_prefix = "Reunion_Obra" if es_reunion else "Visita_Obra"
         num = acta_payload.get("numero", "S_N") if isinstance(acta_payload, dict) else "S_N"
         default_name = f"{doc_prefix}_N{num}.{fmt}"
         req_filename = (data.get("filename") if isinstance(data, dict) else None) or default_name
@@ -123,6 +123,8 @@ async def export_acta(request: Request):
         
         if es_reunion:
             cand_r = [
+                os.path.join(BASE_DIR, "plantilla_reunion_obra.docx"),
+                os.path.join(BASE_DIR, "ejemplo_modificado_reunion_obra.docx"),
                 os.path.join(BASE_DIR, "plantilla_reunion_semanal.docx"),
                 os.path.join(BASE_DIR, "ejemplo_modificado_reunion_semanal.docx"),
                 os.path.join(BASE_DIR, "plantilla_reunion.docx"),
@@ -187,17 +189,34 @@ async def export_informe(request: Request):
         with open(in_json, "w", encoding="utf-8") as f:
             json.dump(informe_payload, f, ensure_ascii=False)
 
-        default_name = f"Informe_Mensual_{int(time.time()*1000)}.{fmt}"
+        is_semanal = False
+        if isinstance(informe_payload, dict):
+            t = str(informe_payload.get("tipo", "")).lower()
+            td = str(informe_payload.get("tipoDocumento", "")).lower()
+            if t == "semanal" or td in ["informe_semanal", "semanal"]:
+                is_semanal = True
+
+        prefix = "Informe_Semanal" if is_semanal else "Informe_Mensual"
+        default_name = f"{prefix}_{int(time.time()*1000)}.{fmt}"
         req_filename = (data.get("filename") if isinstance(data, dict) else None) or default_name
-        out_docx = os.path.join(tmp_dir, f"Informe_Mensual_{int(time.time()*1000)}.docx")
-        out_pdf = os.path.join(tmp_dir, f"Informe_Mensual_{int(time.time()*1000)}.pdf")
-        cand_inf = [
-            os.path.join(BASE_DIR, "plantilla_informe_mensual.docx"),
-            os.path.join(BASE_DIR, "ejemplo_modificado_informe_mensual.docx"),
-            os.path.join(BASE_DIR, "plantilla_informe.docx")
-        ]
-        plantilla = next((p for p in cand_inf if os.path.exists(p)), cand_inf[0])
-        script = os.path.join(PY_DIR, "generar_informe.py")
+        out_docx = os.path.join(tmp_dir, f"{prefix}_{int(time.time()*1000)}.docx")
+        out_pdf = os.path.join(tmp_dir, f"{prefix}_{int(time.time()*1000)}.pdf")
+
+        if is_semanal:
+            cand_inf = [
+                os.path.join(BASE_DIR, "plantilla_informe_semanal.docx"),
+                os.path.join(BASE_DIR, "ejemplo_modificado_informe_semanal.docx")
+            ]
+            plantilla = next((p for p in cand_inf if os.path.exists(p)), cand_inf[0])
+            script = os.path.join(PY_DIR, "generar_informe_semanal.py")
+        else:
+            cand_inf = [
+                os.path.join(BASE_DIR, "plantilla_informe_mensual.docx"),
+                os.path.join(BASE_DIR, "ejemplo_modificado_informe_mensual.docx"),
+                os.path.join(BASE_DIR, "plantilla_informe.docx")
+            ]
+            plantilla = next((p for p in cand_inf if os.path.exists(p)), cand_inf[0])
+            script = os.path.join(PY_DIR, "generar_informe.py")
 
         cmd = ["python", script, "--data", in_json, "--output-docx", out_docx, "--plantilla", plantilla]
         if fmt == "pdf":

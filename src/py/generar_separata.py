@@ -101,7 +101,7 @@ def generar_separata_pdf(data_or_output=None, output_pdf=None, **kwargs):
     # Columna 3: Tipo Documento, Número y Fecha (Derecha)
     tipo_raw = str(data.get('tipo_doc') or data.get('tipo') or 'INFORME MENSUAL').strip().upper()
     if 'REUNION' in tipo_raw or 'REUNIÓN' in tipo_raw:
-        tipo_doc = 'REUNIÓN SEMANAL'
+        tipo_doc = 'REUNIÓN DE OBRA'
     elif 'VISITA' in tipo_raw:
         tipo_doc = 'VISITA DE OBRA'
     elif 'SEMANAL' in tipo_raw:
@@ -190,8 +190,8 @@ def generar_separata_pdf(data_or_output=None, output_pdf=None, **kwargs):
     tipo = (data.get('tipo') or 'documento_anexo').lower()
     if tipo in ('actas_semanais', 'visitas_obra', 'visita_obra', 'acta'):
         badge_text = "VISITAS DE OBRA"
-    elif tipo in ('reunions_semanais', 'reunion_semanal', 'reuniones', 'reunion'):
-        badge_text = "REUNIÓNS SEMANAIS"
+    elif tipo in ('reunions_semanais', 'reunion_semanal', 'reunions_obra', 'reunion_obra', 'reuniones', 'reunion'):
+        badge_text = "REUNIÓNS DE OBRA"
     else:
         badge_text = "ANEXO DOCUMENTAL"
     c.setFont("Helvetica-Bold", 9)
