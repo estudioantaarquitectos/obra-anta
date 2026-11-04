@@ -1270,9 +1270,16 @@ class Database {
   getSettings() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      return data ? JSON.parse(data) : INITIAL_SETTINGS;
+      const parsed = data ? JSON.parse(data) : { ...INITIAL_SETTINGS };
+      if (!parsed.geminiApiKey && INITIAL_SETTINGS.geminiApiKey) {
+        parsed.geminiApiKey = INITIAL_SETTINGS.geminiApiKey;
+      }
+      if (parsed.aiAssistantEnabled === undefined) {
+        parsed.aiAssistantEnabled = true;
+      }
+      return parsed;
     } catch {
-      return INITIAL_SETTINGS;
+      return { ...INITIAL_SETTINGS };
     }
   }
 

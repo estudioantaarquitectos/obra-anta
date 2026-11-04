@@ -26,6 +26,7 @@ export function renderSettings(container, router) {
   }
 
   function render() {
+    const settings = db.getSettings();
     let backupSizeBytes = 0;
     try {
       const backupJson = JSON.stringify(db.exportBackup());
@@ -142,6 +143,60 @@ export function renderSettings(container, router) {
             </div>
           </div>
 
+          <!-- Asistente IA e Entrada Multimodal Card -->
+          <div class="card">
+            <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+              <div class="card-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                Asistente IA e Entrada Multimodal (Google Gemini API)
+              </div>
+              <span id="ai-status-badge" class="badge ${settings.geminiApiKey ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.75rem;">
+                ${settings.geminiApiKey ? '🟢 Conectado' : '⚪ Sen configurar'}
+              </span>
+            </div>
+            <div class="card-body">
+              <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
+                Permite ditar actas, notas e informes mediante voz en tempo real, ou importar documentos <strong>PDF, DOCX e fotografías</strong>. O modelo multimodal de Google Gemini analiza o contido e extrae automaticamente os campos oficiais do documento.
+              </p>
+
+              <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 0.75rem;">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                  <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Chave API de Google Gemini</span>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="font-size: 0.78rem; color: var(--primary); text-decoration: underline;">
+                      Google AI Studio ↗
+                    </a>
+                  </label>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <input type="password" id="input-gemini-key" class="form-control" value="${settings.geminiApiKey || ''}" placeholder="AQ.Ab8RN..." style="font-family: monospace; font-size: 0.88rem;" />
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-key-visibility" title="Amosar / Ocultar">
+                      👁️
+                    </button>
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                    Chave confidencial configurada no sistema. Só os administradores poden consultala e modificala.
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.75rem; border-top: 1px dashed var(--border-light); flex-wrap: wrap; gap: 0.75rem;">
+                  <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="check-ai-enabled" ${settings.aiAssistantEnabled !== false ? 'checked' : ''} style="width: 17px; height: 17px;" />
+                    <span style="font-size: 0.88rem; font-weight: 600; color: var(--text-main);">Habilitar botóns de Asistente IA nos editores de documentos</span>
+                  </label>
+
+                  <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-test-ai">
+                      Probar Conexión
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-save-ai">
+                      Gardar Configuración IA
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Quota & Cost Control Monitoring Card (0 € / mes) -->
           <div class="card">
             <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
@@ -232,6 +287,62 @@ export function renderSettings(container, router) {
   }
 
   function wireEvents() {
+    // Toggle Gemini Key Visibility
+    const btnToggleVis = container.querySelector('#btn-toggle-key-visibility');
+    const inputKey = container.querySelector('#input-gemini-key');
+    if (btnToggleVis && inputKey) {
+      btnToggleVis.onclick = () => {
+        inputKey.type = inputKey.type === 'password' ? 'text' : 'password';
+      };
+    }
+
+    // Save AI Settings
+    const btnSaveAi = container.querySelector('#btn-save-ai');
+    if (btnSaveAi && inputKey) {
+      btnSaveAi.onclick = () => {
+        const cur = db.getSettings();
+        const geminiApiKey = inputKey.value.trim();
+        const aiAssistantEnabled = container.querySelector('#check-ai-enabled')?.checked ?? true;
+        db.saveSettings({ ...cur, geminiApiKey, aiAssistantEnabled });
+        showToast('Configuración de Asistente IA gardada correctamente', 'success');
+        render();
+      };
+    }
+
+    // Test AI Connection
+    const btnTestAi = container.querySelector('#btn-test-ai');
+    if (btnTestAi && inputKey) {
+      btnTestAi.onclick = async () => {
+        const key = inputKey.value.trim();
+        if (!key) {
+          showToast('Introduza unha chave API primeiro', 'warning');
+          return;
+        }
+        btnTestAi.disabled = true;
+        btnTestAi.innerHTML = '<span>Probando...</span>';
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: "Responde: OK" }] }]
+            })
+          });
+          if (res.ok) {
+            showToast('Conexión con Gemini API exitosa! O Asistente IA está listo.', 'success');
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(`Erro de conexión (${res.status}): ${err.error?.message || 'Chave non válida'}`, 'error');
+          }
+        } catch (e) {
+          showToast(`Erro conectando con Gemini API: ${e.message}`, 'error');
+        } finally {
+          btnTestAi.disabled = false;
+          btnTestAi.innerHTML = 'Probar Conexión';
+        }
+      };
+    }
+
     // Export Backup
     container.querySelector('#btn-export-backup').onclick = () => {
       const data = db.exportBackup();

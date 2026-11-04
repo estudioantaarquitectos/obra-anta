@@ -349,7 +349,9 @@ export const INITIAL_SETTINGS = {
   equipoTecnico: 'Rosa Vilas Romalde e Sergio Beceiro Lodeiro e Baltasar Otero Gómez (DO) / Rafael Vázquez Barros (DEM)',
   coordinadorCSS: 'Raúl Pérez Garrote (CSS)',
   entidadPromotora: 'Sociedade de Vivenda Pública de Galicia (VIPUGAL)',
-  logosHeader: 'default'
+  logosHeader: 'default',
+  geminiApiKey: '',
+  aiAssistantEnabled: true
 };
 
 export const INITIAL_ACTAS = [];

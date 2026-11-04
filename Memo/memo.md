@@ -2789,3 +2789,119 @@ corregiste estas últimas cuestiones?
 
 ---
 
+## Conversación #86
+
+### 👤 Usuario:
+
+Una pregunta (no hagas nada, sólo respóndeme):
+Puedo implementar en la WEB (a través de una API, entiedo), maneras adicionales de introducción de documentos de estas maneras:
+- Dictado con voz
+- IMportando otros documentos, como PDF, docx, etc
+
+Se trata de adaptar la información (voz o doc) al modelo de documento que esté editando
+
+### 🤖 Antigravity:
+
+**Sí, se puede implementar perfectamente** y, además, es una de las mayores ventajas operativas que se le pueden añadir a la aplicación, especialmente para trabajar a pie de obra con tablet o móvil.
+
+La clave técnica de ambas opciones no es solo «transcribir» o «leer texto», sino **adaptar y estructurar la información automáticamente al esquema JSON exacto** del documento que tengas abierto en ese momento (Visita de Obra, Reunión, Informe Semanal, Informe Mensual o Nota).
+
+A continuación te explico cómo funcionaría cada vía a través de una API:
+
+---
+
+### 1. Entrada por Dictado de Voz 🎙️
+
+Existen dos maneras de implementarlo en la web:
+
+* **Vía Rápida / Directa (Web Speech API nativa del navegador)**:
+  * Funciona directamente en navegadores modernos (Chrome, Edge, Safari móvil) sin coste de API.
+  * Mientras hablas en la obra, va rellenando el campo de texto en el que estés situado en tiempo real.
+* **Vía Inteligente (Audio + API con salida estructurada - Recomendada)**:
+  * Pulsas un botón de grabación, grabas un audio continuo (incluso con notas sueltas, interrupciones o ruido de obra) y lo envías a la API (por ejemplo, **Gemini 1.5 Flash / Whisper**).
+  * La IA procesa el audio completo y le aplica una plantilla de extracción estricta:
+    * *«De este audio, detecta: fecha, personas citadas, temas tratados clasificados por apartados, acuerdos adoptados y nivel de urgencia»*.
+  * La API devuelve el objeto con la estructura nativa de tu documento y rellena automáticamente los bloques correspondientes.
+
+---
+
+### 2. Importación de Documentos (PDF, DOCX, imágenes escaneadas) 📄
+
+Puedes subir documentos externos (un acta antigua de una constructora, un correo, un informe técnico o un PDF escaneado):
+
+1. **Subida**: Arrastras el archivo `.docx` o `.pdf` al editor mediante un botón **`[📥 Importar Contido]`**.
+2. **Extracción y Mapeo mediante API**:
+   * En el backend se lee el documento (con `python-docx` o `pdfplumber`, o enviando el PDF directamente al modelo multimodal).
+   * La IA compara el contenido del archivo con el formulario abierto:
+     * Si estás en una **Visita de Obra**: extrae los puntos al Bloque 4 (*Cuestións Tratadas*).
+     * Si estás en un **Informe Mensual**: reparte el texto entre *Resumo Executivo*, *Control de Calidade*, *Prazos*, etc.
+     * Si estás en una **Nota**: extrae el título, la instrucción resumida y sugiere la categoría (*Chamada*, *Incidencia*, *Orde de Dirección*).
+3. **Revisión previa**: Antes de volcar los datos, se muestra un modal de confirmación con los campos detectados para que el técnico valide o ajuste lo que considere necesario con un clic.
+
+---
+
+### ¿Qué se necesita para tenerlo listo?
+
+1. **Una clave de API**: Con la API de **Google Gemini** (a través de Google Cloud / Google AI Studio), el coste es prácticamente nulo o gratuito para este volumen de peticiones y permite procesar texto, PDF completo y audio nativo directamente.
+2. **Un endpoint seguro en backend**: Por ejemplo en Vercel (`/api/ai-extract`) para no exponer tu clave API en el navegador del usuario.
+3. **Botón en la interfaz**: Incorporar en la barra superior de cada editor los botones de **`Dictar`** e **`Importar arquivo`**.
+
+Cuando decidas que lo implementemos, lo integramos paso a paso manteniendo la paridad absoluta con los formatos oficiales.
+
+---
+
+## Conversación #87
+
+### 👤 Usuario:
+
+Quiero que lo implementes, pero quiero que sea 100% reversible y que la web siga funcionando complemante operativa
+dime qué necesitas
+
+### 🤖 Antigravity:
+
+Para implementarlo con **seguridad total, 100% reversible y sin alterar el funcionamiento actual de la web**, la arquitectura se diseñará con un sistema modular desacoplado (*Feature Flag / Degradación Elegante*): si la API no está configurada o falla, la aplicación sigue funcionando exactamente igual que ahora sin ninguna alteración.
+
+---
+
+### Lo que necesito de ti
+
+1. **Una clave de API de Gemini (`GEMINI_API_KEY`)**:
+   * Es gratuita para uso estándar y se obtiene en 1 minuto en [Google AI Studio](https://aistudio.google.com/app/apikey) con cualquier cuenta de Google.
+   * *¿Cómo la guardamos?*
+     * La configuramos como variable de entorno secreta en **Vercel** (`GEMINI_API_KEY`) para que nadie en la web pueda verla.
+     * Adicionalmente, podemos permitir introducirla en la pantalla de **Configuración / Axustes** de la app para que puedas probarla o cambiarla cuando quieras.
+
+2. **Tu visto bueno al diseño de interfaz**:
+   * En la barra superior de los editores (Visitas, Reunións, Informes y Notas), añadiremos un botón discreto:
+     $$\mathbf{[✨\text{ Asistente IA}]}$$
+   * Al pulsarlo, se abrirá un modal flotante con dos opciones:
+     * **Pestaña 🎙️ Voz**: botón de inicio/fin de grabación de audio con contador de tiempo.
+     * **Pestaña 📄 Archivo**: zona para arrastrar o seleccionar archivos **PDF**, **DOCX** o **imágenes**.
+   * **Revisión previa obligatoria antes de volcar nada**:
+     * La IA no sobreescribirá tus datos a ciegas: te mostrará en pantalla una lista de lo que ha entendido y estructurado (ej.: *«Detectados 3 apartados y 4 acuerdos»*).
+     * Pulsas **`Incorporar ao documento`** y se añaden a los campos correspondientes.
+
+---
+
+### Garantías de Reversibilidad y Estabilidad
+* **Cero interferencias**: El motor de persistencia en Supabase, el guardado local, las plantillas oficiales DOCX y la exportación PDF 1:1 seguirán intactos.
+* **Control on/off**: Si en cualquier momento no deseas usarlo, bastará con desactivar el botón en los ajustes o vaciar la clave, volviendo al estado anterior de inmediato.
+
+En cuanto me facilites la clave de API (o me indiques si prefieres generarla tú en Google AI Studio), preparo el módulo y te lo dejo listo para probar.
+
+---
+
+## Conversación #88
+
+### 👤 Usuario:
+
+VAle.
+API KEY: AQ.Ab8RN6Kw...[CONFIGURABLE_EN_AXUSTES_ADMIN]
+VAmos a poder configurarla en Configuración / Axustes pero desde el acceso de Admin
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
