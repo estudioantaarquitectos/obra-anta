@@ -1,3 +1,4 @@
+import { isAiEnabled, renderAiButtonHtml, openAiAssistantModal } from '../utils/aiAssistant.js';
 /* ==========================================================================
    ANTA OBRA - DT-05 Informe Editor View
    Strictly follows: DT05_INFORMES DE OBRA.pdf (10 official sections)
@@ -168,6 +169,7 @@ export function renderInformeEditor(container, router, params = {}) {
                   Ver Oficial
                 </button>
               ` : ''}
+              ${isAiEnabled() ? renderAiButtonHtml("Asistente IA (Voz / Doc)", "btn-ai-mensual-top") : ""}
               <button type="button" class="btn btn-secondary btn-sm" id="btn-save-informe" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 Guardar
@@ -1707,6 +1709,35 @@ export function renderInformeEditor(container, router, params = {}) {
     }
 
     // Botón Guardar (permanece abierto)
+    // Asistente IA (Voz e Documentos)
+    const btnAiMensual = container.querySelector('#btn-ai-mensual-top');
+    if (btnAiMensual) {
+      btnAiMensual.onclick = () => {
+        openAiAssistantModal({
+          documentType: 'informe_mensual',
+          currentData: informe,
+          onApply: (extracted) => {
+            if (extracted.resumo) {
+              // Populate in datos xerais or summary section
+              if (!informe.observacionsXerais) informe.observacionsXerais = '';
+              informe.observacionsXerais = informe.observacionsXerais ? `${informe.observacionsXerais}\n\n${extracted.resumo}` : extracted.resumo;
+            }
+            if (Array.isArray(extracted.apartados) && extracted.apartados.length > 0) {
+              if (!informe.apartadosTexto) informe.apartadosTexto = [];
+              extracted.apartados.forEach(ap => {
+                informe.apartadosTexto.push({
+                  titulo: ap.titulo,
+                  texto: (ap.puntos || []).join('\n')
+                });
+              });
+            }
+            db.saveInforme(informe);
+            render();
+          }
+        });
+      };
+    }
+
     const btnSaveOnly = container.querySelector('#btn-save-informe');
     if (btnSaveOnly) {
       btnSaveOnly.onclick = () => handleSaveInforme(false);

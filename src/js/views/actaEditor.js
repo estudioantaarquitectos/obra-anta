@@ -1,3 +1,4 @@
+import { isAiEnabled, renderAiButtonHtml, openAiAssistantModal } from '../utils/aiAssistant.js';
 /* ==========================================================================
    ANTA OBRA - Acta Editor View
    Follows institutional guidelines with:
@@ -197,6 +198,7 @@ export function renderActaEditor(container, router, params = {}) {
                   Ver Oficial
                 </button>
               ` : ''}
+              ${isAiEnabled() ? renderAiButtonHtml("Asistente IA (Voz / Doc)", "btn-ai-acta-top") : ""}
               <button type="button" class="btn btn-secondary btn-sm" id="btn-save-acta" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 Guardar

@@ -1,3 +1,4 @@
+import { isAiEnabled, renderAiButtonHtml, openAiAssistantModal } from '../utils/aiAssistant.js';
 /* ==========================================================================
    ANTA OBRA - Expediente Workspace View
    Dedicated view once the user enters a specific Obra/Expediente:
@@ -1869,7 +1870,10 @@ export function renderExpedienteView(container, router, params = {}) {
       const contentHtml = `
         <form id="nota-form">
           <div class="form-group">
-            <label class="form-label required">Título do Aviso / Incidencia</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <label class="form-label required" style="margin: 0;">Título do Aviso / Incidencia</label>
+              ${isAiEnabled() ? renderAiButtonHtml('Asistente IA (Voz / Doc)', 'modal-btn-ai-nota', 'btn btn-secondary btn-sm') : ''}
+            </div>
             <input type="text" id="modal-nota-titulo" class="form-control" value="${escapeHtml(existing?.titulo || '')}" placeholder="Ex: Aviso urxente retirada fibrocemento..." required />
           </div>
 

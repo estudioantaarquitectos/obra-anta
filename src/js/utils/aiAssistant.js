@@ -18,7 +18,7 @@ const CANDIDATE_MODELS = [
  */
 export function isAiEnabled() {
   const settings = db.getSettings();
-  return Boolean(settings.geminiApiKey) && settings.aiAssistantEnabled !== false;
+  return settings.aiAssistantEnabled !== false;
 }
 
 /**
@@ -723,3 +723,4 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+

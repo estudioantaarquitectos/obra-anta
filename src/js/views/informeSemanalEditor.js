@@ -1,3 +1,4 @@
+import { isAiEnabled, renderAiButtonHtml, openAiAssistantModal } from '../utils/aiAssistant.js';
 /* ==========================================================================
    ANTA OBRA - Editor de Informes Semanais (Visitas e Reunións)
    Integración estrita 1:1 coa plantilla oficial: plantilla_informe_semanal.docx
@@ -137,6 +138,7 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 Ver Oficial
               </button>
+              ${isAiEnabled() ? renderAiButtonHtml("Asistente IA (Voz / Doc)", "btn-ai-semanal-top") : ""}
               <button type="button" class="btn btn-secondary btn-sm" id="btn-save-informe" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 Guardar

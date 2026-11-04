@@ -2905,3 +2905,29 @@ VAmos a poder configurarla en Configuración / Axustes pero desde el acceso de A
 
 ---
 
+## Conversación #89
+
+### 👤 Usuario:
+
+VAle.
+API KEY: AQ.Ab8RN6Kw...[CONFIGURABLE_EN_AXUSTES_ADMIN]
+VAmos a poder configurarla en Configuración / Axustes pero desde el acceso de Admin
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #90
+
+### 👤 Usuario:
+
+has implementado la IA?
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
