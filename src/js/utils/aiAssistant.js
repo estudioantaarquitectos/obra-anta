@@ -261,7 +261,7 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
           <span>✨ Analizar con IA</span>
         </button>
         <button type="button" class="btn btn-success" id="modal-ai-apply-btn" style="display: none; font-weight: 700;">
-          <span>✓ Incorporar ao Documento</span>
+          <span>${documentType === 'nota' ? '✓ Crear e Gardar Nota' : '✓ Incorporar ao Documento'}</span>
         </button>
       </div>
     </div>

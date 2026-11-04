@@ -1021,10 +1021,13 @@ export function renderExpedienteView(container, router, params = {}) {
             </div>
 
             ${canCreateNota ? `
-              <button class="btn btn-primary" id="btn-create-nota">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                ${isAiEnabled() ? renderAiButtonHtml('Nova Nota con IA (Voz / Doc)', 'btn-ai-create-nota-tab', 'btn btn-secondary') : ''}
+                <button class="btn btn-primary" id="btn-create-nota">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 Nova Nota de Obra
               </button>
+            </div>
             ` : ''}
           </div>
         </div>
@@ -1985,33 +1988,35 @@ export function renderExpedienteView(container, router, params = {}) {
             documentType: 'nota',
             currentData: existing || {},
             onApply: (extracted) => {
-              if (extracted.titulo) {
-                const titleInput = modalInstance.backdrop.querySelector('#modal-nota-titulo');
-                if (titleInput) titleInput.value = extracted.titulo;
-              } else if (extracted.resumo) {
-                const titleInput = modalInstance.backdrop.querySelector('#modal-nota-titulo');
-                if (titleInput && !titleInput.value) titleInput.value = extracted.resumo.slice(0, 50);
-              }
-              if (extracted.resumo) {
-                const contentInput = modalInstance.backdrop.querySelector('#modal-nota-contenido');
-                if (contentInput) {
-                  const cur = contentInput.value.trim();
-                  contentInput.value = cur ? `${cur}\n\n${extracted.resumo}` : extracted.resumo;
-                }
-              }
-              if (extracted.categoria) {
-                const catSelect = modalInstance.backdrop.querySelector('#modal-nota-cat');
-                if (catSelect) catSelect.value = extracted.categoria;
-              }
-              if (extracted.urgencia) {
-                const urgSelect = modalInstance.backdrop.querySelector('#modal-nota-urg');
-                if (urgSelect) urgSelect.value = extracted.urgencia;
-              }
-              if (extracted.estado) {
-                const estSelect = modalInstance.backdrop.querySelector('#modal-nota-estado');
-                if (estSelect) estSelect.value = extracted.estado;
-              }
-              showToast('✨ Datos da nota incorporados con éxito!', 'success');
+              const titulo = extracted.titulo || (extracted.resumo ? extracted.resumo.slice(0, 50) : (existing?.titulo || 'Nota de obra'));
+              const contenido = extracted.resumo || (Array.isArray(extracted.acuerdos) ? extracted.acuerdos.join('\n') : '') || existing?.contenido || '';
+              const categoria = extracted.categoria || existing?.categoria || 'incidencia';
+              const urgencia = extracted.urgencia || existing?.urgencia || 'media';
+              const estado = extracted.estado || existing?.estado || 'Pendiente';
+              const fecha = existing?.fecha || new Date().toISOString().split('T')[0];
+              const vinculadoA = modalInstance.backdrop.querySelector('#modal-nota-vinculo')?.value || '';
+
+              const nextNum = (db.getNotas(obra.id) || []).length + 1;
+              const savedNota = {
+                id: existing ? existing.id : `not-${Date.now()}`,
+                numero: existing?.numero || nextNum,
+                obraId: obra.id,
+                titulo,
+                fecha,
+                estado,
+                categoria,
+                urgencia,
+                contenido,
+                autor: auth.getUser()?.name || existing?.autor || 'Dirección de Obra',
+                vinculadoA,
+                modificadoPor: auth.getUser()?.name || 'DO',
+                fechaModificacion: new Date().toISOString()
+              };
+
+              db.saveNota(savedNota);
+              modalInstance.close();
+              showToast(existing ? 'Nota actualizada con éxito!' : `✨ Nota nº ${savedNota.numero} creada e gardada no caderno de bitácora!`, 'success');
+              render();
             }
           });
         };
@@ -2058,6 +2063,43 @@ export function renderExpedienteView(container, router, params = {}) {
         });
       };
     };
+
+    const btnAiCreateNotaTab = container.querySelector('#btn-ai-create-nota-tab');
+    if (btnAiCreateNotaTab) {
+      btnAiCreateNotaTab.onclick = () => {
+        openAiAssistantModal({
+          documentType: 'nota',
+          currentData: {},
+          onApply: (extracted) => {
+            const titulo = extracted.titulo || (extracted.resumo ? extracted.resumo.slice(0, 50) : 'Nota de obra');
+            const contenido = extracted.resumo || (Array.isArray(extracted.acuerdos) ? extracted.acuerdos.join('\n') : '') || '';
+            const categoria = extracted.categoria || 'incidencia';
+            const urgencia = extracted.urgencia || 'media';
+            const estado = extracted.estado || 'Pendiente';
+            const fecha = new Date().toISOString().split('T')[0];
+
+            const nextNum = (db.getNotas(obra.id) || []).length + 1;
+            const newNota = {
+              id: `not-${Date.now()}`,
+              numero: nextNum,
+              obraId: obra.id,
+              titulo,
+              fecha,
+              estado,
+              categoria,
+              urgencia,
+              contenido,
+              autor: auth.getUser()?.name || 'Dirección de Obra',
+              modificadoPor: auth.getUser()?.name || 'DO',
+              fechaModificacion: new Date().toISOString()
+            };
+            db.saveNota(newNota);
+            showToast(`✨ Nota nº ${newNota.numero} creada e gardada no caderno de bitácora!`, 'success');
+            render();
+          }
+        });
+      };
+    }
 
     const createNotaBtn = container.querySelector('#btn-create-nota');
     if (createNotaBtn) createNotaBtn.onclick = () => openNotaModal();

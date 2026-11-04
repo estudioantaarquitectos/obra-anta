@@ -1,3 +1,4 @@
+import { isAiEnabled, renderAiButtonHtml, openAiAssistantModal } from '../utils/aiAssistant.js';
 /* ==========================================================================
    ANTA OBRA - Notas de Obra / Bitácora View
    Quick site notes, call records, urgency notices, and reminders
@@ -38,10 +39,13 @@ export function renderNotas(container, router) {
 
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             ${canCreate ? `
-              <button class="btn btn-primary" id="btn-create-nota">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                ${isAiEnabled() ? renderAiButtonHtml('Nova Nota con IA (Voz / Doc)', 'btn-ai-create-nota-global', 'btn btn-secondary') : ''}
+                <button class="btn btn-primary" id="btn-create-nota">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 Nova Nota de Obra
               </button>
+            </div>
             ` : ''}
           </div>
         </div>
@@ -164,7 +168,10 @@ export function renderNotas(container, router) {
     const contentHtml = `
       <form id="nota-modal-form">
         <div class="form-group">
-          <label class="form-label required">Título da Nota / Incidencia</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <label class="form-label required" style="margin: 0;">Título da Nota / Incidencia</label>
+            ${isAiEnabled() ? renderAiButtonHtml('Asistente IA (Voz / Doc)', 'modal-btn-ai-nota-global', 'btn btn-secondary btn-sm') : ''}
+          </div>
           <input type="text" id="nota-titulo" class="form-control" value="${escapeHtml(existing?.titulo || '')}" placeholder="Ex: Chamada con arqueólogo sobre pozo..." required />
         </div>
 
@@ -237,6 +244,50 @@ export function renderNotas(container, router) {
     });
 
     document.getElementById('modal-nota-cancel').onclick = close;
+
+    const btnAiNotaModal = document.getElementById('modal-btn-ai-nota-global');
+    if (btnAiNotaModal) {
+      btnAiNotaModal.onclick = () => {
+        openAiAssistantModal({
+          documentType: 'nota',
+          currentData: existing || {},
+          onApply: (extracted) => {
+            const titulo = extracted.titulo || (extracted.resumo ? extracted.resumo.slice(0, 50) : (existing?.titulo || 'Nota de obra'));
+            const contenido = extracted.resumo || (Array.isArray(extracted.acuerdos) ? extracted.acuerdos.join('\n') : '') || existing?.contenido || '';
+            const categoria = extracted.categoria || existing?.categoria || 'incidencia';
+            const urgencia = extracted.urgencia || existing?.urgencia || 'media';
+            const estado = extracted.estado || existing?.estado || 'Pendiente';
+            const fecha = existing?.fecha || new Date().toISOString().split('T')[0];
+            const vinculadoA = document.getElementById('nota-vinculo')?.value || '';
+            const allObras = db.getObras() || [];
+            const obraId = existing?.obraId || (db.getCurrentObraId ? db.getCurrentObraId() : null) || (allObras[0]?.id) || 'obr-1';
+
+            const nextNum = (db.getNotas() || []).length + 1;
+            const savedNota = {
+              id: existing ? existing.id : ('not-' + Date.now()),
+              numero: existing?.numero || nextNum,
+              obraId,
+              titulo,
+              fecha,
+              estado,
+              categoria,
+              urgencia,
+              contenido,
+              autor: currentUser?.name || existing?.autor || 'Dirección de Obra',
+              vinculadoA,
+              modificadoPor: currentUser?.name || 'DO',
+              fechaModificacion: new Date().toISOString()
+            };
+
+            db.saveNota(savedNota);
+            close();
+            notas = db.getNotas();
+            render();
+            showToast(existing ? 'Nota actualizada con éxito!' : ('✨ Nota nº ' + savedNota.numero + ' creada e gardada no caderno de bitácora!'), 'success');
+          }
+        });
+      };
+    }
     document.getElementById('modal-nota-save').onclick = () => {
       const titulo = document.getElementById('nota-titulo').value.trim();
       const fecha = document.getElementById('nota-fecha').value;
@@ -287,6 +338,46 @@ export function renderNotas(container, router) {
         if (nota) printNota(nota);
       };
     });
+
+    const btnAiGlobal = container.querySelector('#btn-ai-create-nota-global');
+    if (btnAiGlobal) {
+      btnAiGlobal.onclick = () => {
+        openAiAssistantModal({
+          documentType: 'nota',
+          currentData: {},
+          onApply: (extracted) => {
+            const titulo = extracted.titulo || (extracted.resumo ? extracted.resumo.slice(0, 50) : 'Nota de obra');
+            const contenido = extracted.resumo || (Array.isArray(extracted.acuerdos) ? extracted.acuerdos.join('\n') : '') || '';
+            const categoria = extracted.categoria || 'incidencia';
+            const urgencia = extracted.urgencia || 'media';
+            const estado = extracted.estado || 'Pendiente';
+            const fecha = new Date().toISOString().split('T')[0];
+            const allObras = db.getObras() || [];
+            const obraId = (db.getCurrentObraId ? db.getCurrentObraId() : null) || (allObras[0]?.id) || 'obr-1';
+
+            const nextNum = (db.getNotas() || []).length + 1;
+            const newNota = {
+              id: ('not-' + Date.now()),
+              numero: nextNum,
+              obraId,
+              titulo,
+              fecha,
+              estado,
+              categoria,
+              urgencia,
+              contenido,
+              autor: auth.getUser()?.name || 'Dirección de Obra',
+              modificadoPor: auth.getUser()?.name || 'DO',
+              fechaModificacion: new Date().toISOString()
+            };
+            db.saveNota(newNota);
+            notas = db.getNotas();
+            render();
+            showToast(('✨ Nota nº ' + newNota.numero + ' creada e gardada no caderno de bitácora!'), 'success');
+          }
+        });
+      };
+    }
 
     const createBtn = container.querySelector('#btn-create-nota');
     if (createBtn) createBtn.onclick = () => openNotaModal();
