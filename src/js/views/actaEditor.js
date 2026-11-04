@@ -722,6 +722,7 @@ export function renderActaEditor(container, router, params = {}) {
             </div>
 
             <div class="editor-bottom-bar" style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; padding: 1.5rem 0; margin-top: 2rem; border-top: 1px solid var(--border-light);">
+              ${isAiEnabled() ? renderAiButtonHtml("Asistente IA (Voz / Doc)", "btn-ai-acta-bot") : ""}
               <button type="button" class="btn btn-secondary btn-sm" id="btn-save-acta-bottom" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 Guardar
@@ -1800,6 +1801,89 @@ export function renderActaEditor(container, router, params = {}) {
         }
       });
     };
+
+    // Asistente IA (Voz e Documentos)
+    const handleAiActa = () => {
+      openAiAssistantModal({
+        documentType: isReunion ? 'reunion' : 'acta',
+        currentData: actaData,
+        onApply: (extracted) => {
+          if (!Array.isArray(actaData.apartados)) actaData.apartados = [];
+
+          // 1. Apartados e puntos tratados
+          if (Array.isArray(extracted.apartados) && extracted.apartados.length > 0) {
+            extracted.apartados.forEach((ap, idx) => {
+              const secciones = (Array.isArray(ap.puntos) ? ap.puntos : [ap.puntos || '']).map((pt, pIdx) => ({
+                id: `sec-${Date.now()}-${idx}-${pIdx}`,
+                titulo: (typeof pt === 'string' && pt.length > 60) ? pt.slice(0, 60) + '...' : (typeof pt === 'string' ? pt : 'Punto tratado'),
+                contenido: typeof pt === 'string' ? `<p>${pt}</p>` : ''
+              }));
+              actaData.apartados.push({
+                id: `ap-${Date.now()}-${idx}`,
+                titulo: ap.titulo || (isReunion ? 'CUESTIÓNS TRATADAS NA REUNIÓN' : 'CUESTIÓNS TRATADAS NA VISITA'),
+                secciones
+              });
+            });
+          } else if (extracted.resumo) {
+            actaData.apartados.push({
+              id: `ap-${Date.now()}-resumo`,
+              titulo: isReunion ? 'RESUMO DA REUNIÓN E TEMAS TRATADOS' : 'RESUMO DA VISITA DE OBRA',
+              secciones: [{
+                id: `sec-${Date.now()}-resumo-1`,
+                titulo: 'Resumo dos traballos e incidencias',
+                contenido: `<p>${extracted.resumo}</p>`
+              }]
+            });
+          }
+
+          // 2. Acordos e compromisos adoptados
+          if (Array.isArray(extracted.acuerdos) && extracted.acuerdos.length > 0) {
+            actaData.apartados.push({
+              id: `ap-${Date.now()}-acuerdos`,
+              titulo: isReunion ? 'ACORDOS ADOPTADOS NA REUNIÓN' : 'ORDE E INSTRUCIÓNS DA DIRECCIÓN',
+              secciones: extracted.acuerdos.map((ac, aIdx) => ({
+                id: `sec-${Date.now()}-ac-${aIdx}`,
+                titulo: (typeof ac === 'string' && ac.length > 60) ? ac.slice(0, 60) + '...' : (typeof ac === 'string' ? ac : 'Acordo adoptado'),
+                contenido: typeof ac === 'string' ? `<p>${ac}</p>` : ''
+              }))
+            });
+          }
+
+          // 3. Asistentes mencionados
+          if (Array.isArray(extracted.asistentes) && extracted.asistentes.length > 0) {
+            if (!Array.isArray(actaData.asistentes)) actaData.asistentes = [];
+            extracted.asistentes.forEach(asistName => {
+              const cleanName = typeof asistName === 'string' ? asistName.trim() : '';
+              if (!cleanName) return;
+              const already = actaData.asistentes.some(a => (a.nombre || '').toLowerCase() === cleanName.toLowerCase());
+              if (!already) {
+                actaData.asistentes.push({
+                  id: `asist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                  nombre: cleanName,
+                  cargo: 'Asistente',
+                  entidad: '',
+                  asistio: true,
+                  firma: false
+                });
+              }
+            });
+          }
+
+          if (isReunion) {
+            db.saveReunion(actaData);
+          } else {
+            db.saveActa(actaData);
+          }
+          showToast('✨ Contido incorporado con éxito polo Asistente IA!', 'success');
+          render();
+        }
+      });
+    };
+
+    const btnAiTop = container.querySelector('#btn-ai-acta-top');
+    if (btnAiTop) btnAiTop.onclick = handleAiActa;
+    const btnAiBot = container.querySelector('#btn-ai-acta-bot');
+    if (btnAiBot) btnAiBot.onclick = handleAiActa;
 
     // Botón Guardar inferior
     const btnSaveOnlyBottom = container.querySelector('#btn-save-acta-bottom');

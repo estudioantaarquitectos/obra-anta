@@ -927,6 +927,7 @@ export function renderInformeEditor(container, router, params = {}) {
             </div>
 
             <div class="editor-bottom-bar" style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; padding: 1.5rem 0; margin-top: 2rem; border-top: 1px solid var(--border-light);">
+              ${isAiEnabled() ? renderAiButtonHtml("Asistente IA (Voz / Doc)", "btn-ai-mensual-bot") : ""}
               <button type="button" class="btn btn-secondary btn-sm" id="btn-save-informe-bottom" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 Guardar
@@ -1710,33 +1711,38 @@ export function renderInformeEditor(container, router, params = {}) {
 
     // Botón Guardar (permanece abierto)
     // Asistente IA (Voz e Documentos)
-    const btnAiMensual = container.querySelector('#btn-ai-mensual-top');
-    if (btnAiMensual) {
-      btnAiMensual.onclick = () => {
-        openAiAssistantModal({
-          documentType: 'informe_mensual',
-          currentData: informe,
-          onApply: (extracted) => {
-            if (extracted.resumo) {
-              // Populate in datos xerais or summary section
-              if (!informe.observacionsXerais) informe.observacionsXerais = '';
-              informe.observacionsXerais = informe.observacionsXerais ? `${informe.observacionsXerais}\n\n${extracted.resumo}` : extracted.resumo;
-            }
-            if (Array.isArray(extracted.apartados) && extracted.apartados.length > 0) {
-              if (!informe.apartadosTexto) informe.apartadosTexto = [];
-              extracted.apartados.forEach(ap => {
-                informe.apartadosTexto.push({
-                  titulo: ap.titulo,
-                  texto: (ap.puntos || []).join('\n')
-                });
-              });
-            }
-            db.saveInforme(informe);
-            render();
+    const handleAiMensual = () => {
+      openAiAssistantModal({
+        documentType: 'informe_mensual',
+        currentData: infData,
+        onApply: (extracted) => {
+          if (!infData.resumoExecutivo) infData.resumoExecutivo = {};
+          if (extracted.resumo) {
+            const curFitos = infData.resumoExecutivo.principaisFitos || '';
+            infData.resumoExecutivo.principaisFitos = curFitos ? `${curFitos}<p>${extracted.resumo}</p>` : `<p>${extracted.resumo}</p>`;
           }
-        });
-      };
-    }
+          if (Array.isArray(extracted.acuerdos) && extracted.acuerdos.length > 0) {
+            const curInc = infData.resumoExecutivo.principaisIncidencias || '';
+            const listItems = extracted.acuerdos.map(a => `<li>${a}</li>`).join('');
+            infData.resumoExecutivo.principaisIncidencias = curInc ? `${curInc}<ul>${listItems}</ul>` : `<ul>${listItems}</ul>`;
+          }
+          if (Array.isArray(extracted.apartados) && extracted.apartados.length > 0) {
+            if (!infData.controlCalidade) infData.controlCalidade = {};
+            const curEnsaios = infData.controlCalidade.resumoEnsaios || '';
+            const apartadosHtml = extracted.apartados.map(ap => `<p><strong>${ap.titulo}:</strong> ${(Array.isArray(ap.puntos) ? ap.puntos : [ap.puntos]).join('; ')}</p>`).join('');
+            infData.controlCalidade.resumoEnsaios = curEnsaios ? `${curEnsaios}${apartadosHtml}` : apartadosHtml;
+          }
+          db.saveInforme(infData);
+          showToast('✨ Contido incorporado con éxito polo Asistente IA!', 'success');
+          render();
+        }
+      });
+    };
+
+    const btnAiMensualTop = container.querySelector('#btn-ai-mensual-top');
+    if (btnAiMensualTop) btnAiMensualTop.onclick = handleAiMensual;
+    const btnAiMensualBot = container.querySelector('#btn-ai-mensual-bot');
+    if (btnAiMensualBot) btnAiMensualBot.onclick = handleAiMensual;
 
     const btnSaveOnly = container.querySelector('#btn-save-informe');
     if (btnSaveOnly) {

@@ -1977,6 +1977,46 @@ export function renderExpedienteView(container, router, params = {}) {
         };
       }
 
+      // Asistente IA (Voz e Documentos para Notas)
+      const btnAiNota = modalInstance.backdrop.querySelector('#modal-btn-ai-nota');
+      if (btnAiNota) {
+        btnAiNota.onclick = () => {
+          openAiAssistantModal({
+            documentType: 'nota',
+            currentData: existing || {},
+            onApply: (extracted) => {
+              if (extracted.titulo) {
+                const titleInput = modalInstance.backdrop.querySelector('#modal-nota-titulo');
+                if (titleInput) titleInput.value = extracted.titulo;
+              } else if (extracted.resumo) {
+                const titleInput = modalInstance.backdrop.querySelector('#modal-nota-titulo');
+                if (titleInput && !titleInput.value) titleInput.value = extracted.resumo.slice(0, 50);
+              }
+              if (extracted.resumo) {
+                const contentInput = modalInstance.backdrop.querySelector('#modal-nota-contenido');
+                if (contentInput) {
+                  const cur = contentInput.value.trim();
+                  contentInput.value = cur ? `${cur}\n\n${extracted.resumo}` : extracted.resumo;
+                }
+              }
+              if (extracted.categoria) {
+                const catSelect = modalInstance.backdrop.querySelector('#modal-nota-cat');
+                if (catSelect) catSelect.value = extracted.categoria;
+              }
+              if (extracted.urgencia) {
+                const urgSelect = modalInstance.backdrop.querySelector('#modal-nota-urg');
+                if (urgSelect) urgSelect.value = extracted.urgencia;
+              }
+              if (extracted.estado) {
+                const estSelect = modalInstance.backdrop.querySelector('#modal-nota-estado');
+                if (estSelect) estSelect.value = extracted.estado;
+              }
+              showToast('✨ Datos da nota incorporados con éxito!', 'success');
+            }
+          });
+        };
+      }
+
       modalInstance.backdrop.querySelector('#modal-nota-cancel-btn').onclick = () => modalInstance.close();
       modalInstance.backdrop.querySelector('#modal-nota-save-btn').onclick = () => {
         const form = modalInstance.backdrop.querySelector('#nota-form');

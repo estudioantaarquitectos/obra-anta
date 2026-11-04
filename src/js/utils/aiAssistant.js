@@ -9,9 +9,78 @@ import { modal, showToast } from '../modal.js';
 
 const CANDIDATE_MODELS = [
   'gemini-3-flash-preview',
+  'gemini-flash-latest',
   'gemini-3.8-flash',
-  'gemini-flash-latest'
+  'gemini-flash-lite-latest'
 ];
+
+export function getGeminiApiKey() {
+  const settings = db.getSettings();
+  if (settings && settings.geminiApiKey && settings.geminiApiKey.trim()) {
+    return settings.geminiApiKey.trim();
+  }
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) {
+    return import.meta.env.VITE_GEMINI_API_KEY.trim();
+  }
+  return '';
+}
+
+function promptForApiKey({ onSuccess }) {
+  const contentHtml = `
+    <div style="padding: 0.5rem 0;">
+      <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.55;">
+        Para empregar o <strong>Asistente IA</strong> (dictado por voz, lectura de fotos e importación de actas), introduza a súa chave API de Google Gemini. É gratuíta e obtense en 1 minuto en <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Google AI Studio ↗</a>.
+      </p>
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label required" style="font-weight: 700;">Chave API de Google Gemini</label>
+        <input type="password" id="prompt-gemini-key" class="form-control" placeholder="Pegue aquí a chave API..." style="font-family: monospace; font-size: 0.9rem;" autofocus />
+      </div>
+    </div>
+  `;
+  const footerHtml = `
+    <div style="display: flex; justify-content: flex-end; gap: 0.5rem; width: 100%;">
+      <button type="button" class="btn btn-secondary" id="prompt-key-cancel">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="prompt-key-save" style="background: #7c3aed; border-color: #6d28d9; font-weight: 700;">
+        Gardar e Abrir Asistente ✨
+      </button>
+    </div>
+  `;
+  const { backdrop, close } = modal.open({
+    title: '✨ Configuración da Chave API de Gemini',
+    contentHtml,
+    footerHtml,
+    size: 'md'
+  });
+
+  const cancelBtn = backdrop.querySelector('#prompt-key-cancel');
+  if (cancelBtn) cancelBtn.onclick = () => close();
+
+  const saveBtn = backdrop.querySelector('#prompt-key-save');
+  const inputEl = backdrop.querySelector('#prompt-gemini-key');
+
+  const handleSave = () => {
+    const key = inputEl?.value.trim();
+    if (!key) {
+      showToast('Por favor, pegue ou introduza a chave API', 'warning');
+      return;
+    }
+    const cur = db.getSettings();
+    db.saveSettings({ ...cur, geminiApiKey: key, aiAssistantEnabled: true });
+    showToast('Chave API gardada con éxito!', 'success');
+    close();
+    if (typeof onSuccess === 'function') onSuccess();
+  };
+
+  if (saveBtn) saveBtn.onclick = handleSave;
+  if (inputEl) {
+    inputEl.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+  }
+}
 
 /**
  * Retorna true se a IA está habilitada nas opcións do sistema
@@ -39,11 +108,14 @@ export function renderAiButtonHtml(label = 'Asistente IA', id = 'btn-ai-assistan
  * Abre o modal do Asistente IA adaptado ao tipo de documento en edición
  */
 export function openAiAssistantModal({ documentType = 'acta', currentData = {}, onApply }) {
-  const settings = db.getSettings();
-  const apiKey = settings.geminiApiKey;
+  const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
-    showToast('Configure a chave API de Gemini en Configuración / Axustes primeiro', 'warning');
+    promptForApiKey({
+      onSuccess: () => {
+        openAiAssistantModal({ documentType, currentData, onApply });
+      }
+    });
     return;
   }
 
@@ -633,9 +705,13 @@ async function callGeminiStructured({ apiKey, parts, documentType }) {
 
       if (response.ok) {
         const resJson = await response.json();
-        const text = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+        let text = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) throw new Error('A resposta de Gemini non contén texto.');
-        return JSON.parse(text);
+        text = text.trim();
+        if (text.startsWith('```json')) text = text.slice(7);
+        else if (text.startsWith('```')) text = text.slice(3);
+        if (text.endsWith('```')) text = text.slice(0, -3);
+        return JSON.parse(text.trim());
       }
 
       const errData = await response.json().catch(() => ({}));

@@ -395,6 +395,7 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
 
             <!-- Bottom Action Bar -->
             <div class="editor-bottom-bar" style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; padding: 1.5rem 0; margin-top: 2rem; border-top: 1px solid var(--border-light);">
+              ${isAiEnabled() ? renderAiButtonHtml("Asistente IA (Voz / Doc)", "btn-ai-semanal-bot") : ""}
               <button type="button" class="btn btn-secondary btn-sm" id="btn-save-informe-bottom" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 Guardar
@@ -599,6 +600,56 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
         router.navigate('expediente', { id: currentObra.id, tab: 'informes-semanais' });
       };
     }
+
+    // Asistente IA (Voz e Documentos)
+    const handleAiSemanal = () => {
+      openAiAssistantModal({
+        documentType: 'informe_semanal',
+        currentData: infData,
+        onApply: (extracted) => {
+          collectFormData();
+          if (extracted.resumo) {
+            const currentResumo = (infData.resumo || '').trim();
+            infData.resumo = currentResumo ? `${currentResumo}\n\n${extracted.resumo}` : extracted.resumo;
+            const resumoInput = container.querySelector('#input-resumo');
+            if (resumoInput) resumoInput.value = infData.resumo;
+          }
+          if (Array.isArray(extracted.apartados) && extracted.apartados.length > 0) {
+            if (!Array.isArray(infData.relacion)) infData.relacion = [];
+            extracted.apartados.forEach(ap => {
+              const textPuntos = Array.isArray(ap.puntos) ? ap.puntos.join(' • ') : (ap.puntos || '');
+              infData.relacion.push({
+                numero: infData.relacion.length + 1,
+                tipo: 'Visita / Control',
+                data: infData.fecha || new Date().toISOString().split('T')[0],
+                descricion: `${ap.titulo ? ap.titulo + ': ' : ''}${textPuntos}`,
+                asinada: true
+              });
+            });
+          }
+          if (Array.isArray(extracted.acuerdos) && extracted.acuerdos.length > 0) {
+            if (!Array.isArray(infData.relacion)) infData.relacion = [];
+            extracted.acuerdos.forEach(ac => {
+              infData.relacion.push({
+                numero: infData.relacion.length + 1,
+                tipo: 'Orde de Dirección',
+                data: infData.fecha || new Date().toISOString().split('T')[0],
+                descricion: ac,
+                asinada: true
+              });
+            });
+          }
+          db.saveInforme(infData);
+          showToast('✨ Contido incorporado con éxito polo Asistente IA!', 'success');
+          render();
+        }
+      });
+    };
+
+    const btnAiSemTop = container.querySelector('#btn-ai-semanal-top');
+    if (btnAiSemTop) btnAiSemTop.onclick = handleAiSemanal;
+    const btnAiSemBot = container.querySelector('#btn-ai-semanal-bot');
+    if (btnAiSemBot) btnAiSemBot.onclick = handleAiSemanal;
 
     // Top Save buttons
     const btnSave = container.querySelector('#btn-save-informe');
