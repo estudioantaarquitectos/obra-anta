@@ -978,9 +978,16 @@ export function renderExpedienteView(container, router, params = {}) {
   /* ----------------- TAB 3: NOTAS DE BITÁCORA ----------------- */
   function renderNotasSection({ obra, notas, canCreateNota }) {
     let filteredNotas = notas;
-    if (notasCategoryFilter !== 'todas') {
+    if (notasCategoryFilter === 'pendiente') {
+      filteredNotas = notas.filter(n => (n.estado || 'Pendiente').toLowerCase() === 'pendiente');
+    } else if (notasCategoryFilter === 'resolta') {
+      filteredNotas = notas.filter(n => (n.estado || '').toLowerCase() === 'resolta');
+    } else if (notasCategoryFilter !== 'todas') {
       filteredNotas = notas.filter(n => n.categoria === notasCategoryFilter);
     }
+
+    const countPendientes = notas.filter(n => (n.estado || 'Pendiente').toLowerCase() === 'pendiente').length;
+    const countResoltes = notas.filter(n => (n.estado || '').toLowerCase() === 'resolta').length;
 
     return `
       <div>
@@ -988,6 +995,12 @@ export function renderExpedienteView(container, router, params = {}) {
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Filtrar:</span>
             <button class="btn ${notasCategoryFilter === 'todas' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="todas">Todas (${notas.length})</button>
+            <button class="btn ${notasCategoryFilter === 'pendiente' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="pendiente">
+              <span class="status-dot status-dot-yellow" style="margin-right: 2px;"></span> Pendientes (${countPendientes})
+            </button>
+            <button class="btn ${notasCategoryFilter === 'resolta' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="resolta">
+              <span class="status-dot status-dot-green" style="margin-right: 2px;"></span> Resolte (${countResoltes})
+            </button>
             <button class="btn ${notasCategoryFilter === 'llamada' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="llamada">Chamadas</button>
             <button class="btn ${notasCategoryFilter === 'incidencia' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="incidencia">Incidencias</button>
             <button class="btn ${notasCategoryFilter === 'recordatorio' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="recordatorio">Recordatorios</button>
@@ -1030,13 +1043,14 @@ export function renderExpedienteView(container, router, params = {}) {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 105px;">Data</th>
-                  <th style="width: 140px;">Categoría</th>
-                  <th style="width: 100px;">Urxencia</th>
+                  <th style="width: 130px;">Nota / Data</th>
+                  <th style="width: 130px;">Categoría</th>
+                  <th style="width: 95px;">Urxencia</th>
                   <th>Título e Contido</th>
                   <th style="width: 130px;">Autor</th>
-                  <th style="width: 160px;">Última Edición</th>
-                  <th class="col-actions" style="width: 250px; text-align: right;">Accións</th>
+                  <th style="width: 150px;">Última Edición</th>
+                  <th style="width: 110px; text-align: center;">Estado</th>
+                  <th class="col-actions" style="width: 290px; text-align: right;">Accións</th>
                 </tr>
               </thead>
               <tbody>
@@ -1053,8 +1067,13 @@ export function renderExpedienteView(container, router, params = {}) {
 
                   return `
                     <tr>
-                      <td style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">
-                        ${formatDate(nota.fecha)}
+                      <td style="font-size: 0.85rem;">
+                        <span style="font-family: var(--font-heading); font-weight: 700; color: var(--primary); font-size: 0.95rem; display: block;">
+                          Nota nº ${nota.numero || 1}
+                        </span>
+                        <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem;">
+                          ${formatDate(nota.fecha)}
+                        </div>
                       </td>
                       <td>
                         <span class="badge badge-info" style="font-size: 0.72rem;">${catName}</span>
@@ -1076,21 +1095,28 @@ export function renderExpedienteView(container, router, params = {}) {
                       <td>
                         ${renderUserModifierHtml(nota.modificadoPor || nota.autor, nota.fechaModificacion || nota.fecha)}
                       </td>
+                      <td style="text-align: center;">
+                        ${(nota.estado || 'Pendiente').toLowerCase() === 'resolta' ? `
+                          <span class="badge badge-success" style="font-size: 0.78rem; white-space: nowrap;"><span class="status-dot status-dot-green"></span> Resolta</span>
+                        ` : `
+                          <span class="badge badge-warning" style="font-size: 0.78rem; white-space: nowrap;"><span class="status-dot status-dot-yellow"></span> Pendiente</span>
+                        `}
+                      </td>
                       <td class="col-actions">
                         <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.35rem;">
-                          <button class="btn btn-secondary btn-sm btn-print-nota" data-id="${nota.id}" title="Imprimir nota en formato oficial">
+                          <button class="btn btn-secondary btn-sm btn-print-nota" data-id="${nota.id}" title="Ver documento oficial de nota para imprimir ou exportar a PDF">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                            <span>Imprimir</span>
+                            <span>Ver / PDF</span>
                           </button>
-                          <button class="btn btn-secondary btn-sm btn-edit-nota" data-id="${nota.id}" title="Editar nota">
+                          <button class="btn btn-secondary btn-sm btn-edit-nota" data-id="${nota.id}" title="Editar contido da nota">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             <span>Editar</span>
                           </button>
-                          <button class="btn btn-secondary btn-sm btn-duplicate-nota" data-id="${nota.id}" title="Copiar nota">
+                          <button class="btn btn-secondary btn-sm btn-duplicate-nota" data-id="${nota.id}" title="Copiar e crear nova nota a partir desta">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             <span>Copiar</span>
                           </button>
-                          <button class="btn btn-secondary btn-sm btn-delete-nota" data-id="${nota.id}" title="Eliminar nota" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35);">
+                          <button class="btn btn-secondary btn-sm btn-delete-nota" data-id="${nota.id}" data-num="Nota nº ${nota.numero || nota.id}" title="Eliminar nota" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35);">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             <span>Eliminar</span>
                           </button>
@@ -1120,9 +1146,17 @@ export function renderExpedienteView(container, router, params = {}) {
                 <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
                   <div class="card-header" style="padding: 1rem 1.25rem;">
                     <div>
-                      <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
+                      <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
                         <span class="badge badge-info" style="font-size: 0.72rem;">${catName}</span>
                         ${urgBadge}
+                        ${(nota.estado || 'Pendiente').toLowerCase() === 'resolta' ? `
+                          <span class="badge badge-success" style="font-size: 0.72rem;"><span class="status-dot status-dot-green"></span> Resolta</span>
+                        ` : `
+                          <span class="badge badge-warning" style="font-size: 0.72rem;"><span class="status-dot status-dot-yellow"></span> Pendiente</span>
+                        `}
+                      </div>
+                      <div style="font-family: var(--font-heading); font-weight: 700; color: var(--primary); font-size: 0.95rem;">
+                        Nota nº ${nota.numero || 1}
                       </div>
                       <div class="card-title" style="font-size: 0.95rem; margin-top: 0.2rem;">${escapeHtml(nota.titulo)}</div>
                     </div>
@@ -1143,17 +1177,18 @@ export function renderExpedienteView(container, router, params = {}) {
                     </div>
 
                     <div style="display: flex; gap: 0.35rem; flex-shrink: 0;">
-                      <button class="btn btn-ghost btn-sm btn-print-nota" data-id="${nota.id}" title="Imprimir nota">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                      <button class="btn btn-secondary btn-sm btn-print-nota" data-id="${nota.id}" title="Ver documento oficial de nota para imprimir ou exportar a PDF">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        <span>Ver / PDF</span>
                       </button>
-                      <button class="btn btn-ghost btn-sm btn-duplicate-nota" data-id="${nota.id}" title="Copiar nota">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <button class="btn btn-secondary btn-sm btn-edit-nota" data-id="${nota.id}" title="Editar nota">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                       </button>
-                      <button class="btn btn-ghost btn-sm btn-edit-nota" data-id="${nota.id}" title="Editar nota">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                      <button class="btn btn-secondary btn-sm btn-duplicate-nota" data-id="${nota.id}" title="Copiar nota">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                       </button>
-                      <button class="btn btn-ghost btn-sm btn-delete-nota" data-id="${nota.id}" style="color: var(--color-danger);" title="Eliminar nota">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      <button class="btn btn-secondary btn-sm btn-delete-nota" data-id="${nota.id}" data-num="Nota nº ${nota.numero || nota.id}" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35);" title="Eliminar nota">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                       </button>
                     </div>
                   </div>
@@ -1837,14 +1872,21 @@ export function renderExpedienteView(container, router, params = {}) {
             <input type="text" id="modal-nota-titulo" class="form-control" value="${escapeHtml(existing?.titulo || '')}" placeholder="Ex: Aviso urxente retirada fibrocemento..." required />
           </div>
 
-          <div class="form-grid-3">
+          <div class="form-grid-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem;">
             <div class="form-group">
               <label class="form-label required">Data</label>
               <input type="date" id="modal-nota-fecha" class="form-control" value="${existing?.fecha || new Date().toISOString().split('T')[0]}" required />
             </div>
             <div class="form-group">
+              <label class="form-label required">Estado</label>
+              <select id="modal-nota-estado" class="form-control form-select">
+                <option value="Pendiente" ${(existing?.estado || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>🟡 Pendiente</option>
+                <option value="Resolta" ${(existing?.estado) === 'Resolta' ? 'selected' : ''}>🟢 Resolta</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label required">Categoría</label>
-              <select id="modal-nota-cat" class="form-control">
+              <select id="modal-nota-cat" class="form-control form-select">
                 <option value="llamada" ${existing?.categoria === 'llamada' ? 'selected' : ''}>Chamada Telefónica</option>
                 <option value="incidencia" ${existing?.categoria === 'incidencia' ? 'selected' : ''}>Incidencia / Seguridade</option>
                 <option value="orden_direccion" ${existing?.categoria === 'orden_direccion' ? 'selected' : ''}>Orde de Dirección</option>
@@ -1853,7 +1895,7 @@ export function renderExpedienteView(container, router, params = {}) {
             </div>
             <div class="form-group">
               <label class="form-label required">Urxencia</label>
-              <select id="modal-nota-urg" class="form-control">
+              <select id="modal-nota-urg" class="form-control form-select">
                 <option value="baja" ${existing?.urgencia === 'baja' ? 'selected' : ''}>Baixa</option>
                 <option value="media" ${existing?.urgencia === 'media' || !existing ? 'selected' : ''}>Media</option>
                 <option value="alta" ${existing?.urgencia === 'alta' ? 'selected' : ''}>Alta / Urxente</option>
@@ -1940,6 +1982,7 @@ export function renderExpedienteView(container, router, params = {}) {
 
         const titulo = modalInstance.backdrop.querySelector('#modal-nota-titulo').value.trim();
         const fecha = modalInstance.backdrop.querySelector('#modal-nota-fecha').value;
+        const estado = modalInstance.backdrop.querySelector('#modal-nota-estado')?.value || 'Pendiente';
         const categoria = modalInstance.backdrop.querySelector('#modal-nota-cat').value;
         const urgencia = modalInstance.backdrop.querySelector('#modal-nota-urg').value;
         const contenido = modalInstance.backdrop.querySelector('#modal-nota-contenido').value.trim();
@@ -1953,9 +1996,11 @@ export function renderExpedienteView(container, router, params = {}) {
             modalInstance.close();
             db.saveNota({
               id: existing ? existing.id : `not-${Date.now()}`,
+              numero: existing?.numero,
               obraId: obra.id,
               titulo,
               fecha,
+              estado,
               categoria,
               urgencia,
               contenido,

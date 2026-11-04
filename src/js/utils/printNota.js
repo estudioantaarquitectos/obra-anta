@@ -211,9 +211,12 @@ export function printNota(nota, obra = null) {
             <div class="proj-title">${escapeHtml(obraTitulo)}</div>
             <div class="exp-num">EXPEDIENTE: ${escapeHtml(expediente)} • ${escapeHtml(situacion)}</div>
           </td>
-          <td class="header-meta-box">
-            <div class="meta-badge">CADERNO DE BITÁCORA</div>
-            <div class="meta-date">Data: ${escapeHtml(nota.fecha || '—')}</div>
+          <td class="header-meta-box" style="width: 140px; text-align: right;">
+            <div style="background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 4px; padding: 0.4rem 0.6rem; text-align: center; display: inline-block; min-width: 110px;">
+              <div style="font-size: 8pt; font-weight: 800; color: #0F4761; text-transform: uppercase; letter-spacing: 0.5px;">NOTA</div>
+              <div style="font-size: 15pt; font-weight: 800; color: #0F4761; line-height: 1.1; margin: 2px 0;">Nº ${nota.numero || 1}</div>
+              <div style="font-size: 7.5pt; color: #475569;">${escapeHtml(nota.fecha || '—')}</div>
+            </div>
           </td>
         </tr>
       </table>
@@ -224,14 +227,28 @@ export function printNota(nota, obra = null) {
         <tr>
           <td class="lbl">Tipo / Categoría:</td>
           <td class="val"><strong>${escapeHtml(catLabel)}</strong></td>
-          <td class="lbl">Nivel de Urxencia:</td>
-          <td class="val"><span style="color: ${urgColor}; font-weight: 800;">${escapeHtml(urgLabel)}</span></td>
+          <td class="lbl">Estado:</td>
+          <td class="val">
+            ${(nota.estado || 'Pendiente').toLowerCase() === 'resolta' ? `
+              <span style="display: inline-flex; align-items: center; gap: 4px; color: #166534; font-weight: 700; background: #dcfce7; padding: 2px 8px; border-radius: 4px; border: 1px solid #bbf7d0; font-size: 8pt;">
+                ● Resolta
+              </span>
+            ` : `
+              <span style="display: inline-flex; align-items: center; gap: 4px; color: #854d0e; font-weight: 700; background: #fef9c3; padding: 2px 8px; border-radius: 4px; border: 1px solid #fef08a; font-size: 8pt;">
+                ● Pendiente
+              </span>
+            `}
+          </td>
         </tr>
         <tr>
+          <td class="lbl">Nivel de Urxencia:</td>
+          <td class="val"><span style="color: ${urgColor}; font-weight: 800;">${escapeHtml(urgLabel)}</span></td>
           <td class="lbl">Autor da Nota:</td>
           <td class="val">${escapeHtml(nota.autor || 'Dirección de Obra')}</td>
+        </tr>
+        <tr>
           <td class="lbl">Última Modificación:</td>
-          <td class="val">${escapeHtml(nota.modificadoPor || nota.autor || '—')} (${escapeHtml(nota.fechaModificacion ? nota.fechaModificacion.split('T')[0] : (nota.fecha || '—'))})</td>
+          <td class="val" colspan="3">${escapeHtml(nota.modificadoPor || nota.autor || '—')} (${escapeHtml(nota.fechaModificacion ? nota.fechaModificacion.split('T')[0] : (nota.fecha || '—'))})</td>
         </tr>
         ${nota.vinculadoA ? `
           <tr>
@@ -245,17 +262,6 @@ export function printNota(nota, obra = null) {
         Contido do Rexistro / Indicación:
       </div>
       <div class="note-content-box">${escapeHtml(nota.contenido)}</div>
-
-      <div class="footer-signatures">
-        <div class="sig-box">
-          <div class="sig-title">Dirección de Obra / Autor do Rexistro</div>
-          <div class="sig-line">Asdo.: ${escapeHtml(nota.autor || 'Dirección de Obra')}</div>
-        </div>
-        <div class="sig-box">
-          <div class="sig-title">Recepción / Constancia de Obra</div>
-          <div class="sig-line">Asdo.: ____________________________________</div>
-        </div>
-      </div>
 
       <script>
         window.onload = function() {

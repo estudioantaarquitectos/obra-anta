@@ -1066,11 +1066,36 @@ class Database {
 
   /* ----------------- NOTAS DE OBRA / BITÁCORA ----------------- */
   getNotas(obraId = null) {
-    const notas = this.getCollection(STORAGE_KEYS.NOTAS).filter(n => n && !this.isDeleted('notas', n.id));
+    let notas = this.getCollection(STORAGE_KEYS.NOTAS).filter(n => n && !this.isDeleted('notas', n.id));
     if (obraId) {
-      return notas.filter(n => String(n.obraId) === String(obraId));
+      notas = notas.filter(n => String(n.obraId) === String(obraId));
+    }
+    // Ensure all notas have a number and default estado
+    let needsUpdate = false;
+    notas.forEach((n, idx) => {
+      if (!n.numero) {
+        n.numero = idx + 1;
+        needsUpdate = true;
+      }
+      if (!n.estado) {
+        n.estado = 'Pendiente';
+        needsUpdate = true;
+      }
+    });
+    if (needsUpdate && !obraId) {
+      this.setCollection(STORAGE_KEYS.NOTAS, notas);
     }
     return notas;
+  }
+
+  getNextNotaNumber(obraId = null) {
+    const notas = this.getNotas(obraId);
+    if (!notas.length) return 1;
+    const maxNum = notas.reduce((max, n) => {
+      const num = parseInt(n.numero, 10);
+      return !isNaN(num) && num > max ? num : max;
+    }, 0);
+    return maxNum + 1;
   }
 
   getNotaById(id) {
@@ -1089,15 +1114,22 @@ class Database {
       saved = {
         ...notas[existingIndex],
         ...nota,
+        estado: nota.estado || notas[existingIndex].estado || 'Pendiente',
         modificadoPor: currentUser,
         fechaModificacion: now
       };
+      if (!saved.numero) {
+        saved.numero = notas[existingIndex].numero || this.getNextNotaNumber(saved.obraId);
+      }
       notas[existingIndex] = saved;
     } else {
+      const targetObraId = nota.obraId || this.getActiveObraId();
       saved = {
         ...nota,
         id: nota.id || `not-${Date.now()}`,
-        obraId: nota.obraId || this.getActiveObraId(),
+        numero: nota.numero || this.getNextNotaNumber(targetObraId),
+        estado: nota.estado || 'Pendiente',
+        obraId: targetObraId,
         fecha: nota.fecha || now.split('T')[0],
         autor: nota.autor || currentUser,
         creadoPor: currentUser,

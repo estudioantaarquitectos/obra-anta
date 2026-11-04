@@ -2762,3 +2762,30 @@ No funciona el botón eliminar en el dashboard (ver captura)
 
 ---
 
+## Conversación #84
+
+### 👤 Usuario:
+
+Varios cambios:
+- En la captura1 se muestra el dsahboard con las notas. Hay unos botones estandar, quiero que aparezcan como en la captura2
+- Quiero que haya estado de notas: "Pendiente" y "Resolta"
+- En la captura3 se muestra la impresión de esas notas. QUiero que no aparezcan firmas y que arriba aparezca "NOTA", y que estén numeradas como el resto de documentos.
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+
+## Conversación #85
+
+### 👤 Usuario:
+
+corregiste estas últimas cuestiones?
+
+### 🤖 Antigravity:
+
+*(Instrucción agrupada / procesada en la siguiente respuesta)*
+
+---
+

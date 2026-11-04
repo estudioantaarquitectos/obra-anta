@@ -7,6 +7,7 @@ import { db } from '../db.js';
 import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
 import { renderUserModifierHtml } from '../utils/avatar.js';
+import { printNota } from '../utils/printNota.js';
 
 export function renderNotas(container, router) {
   let notas = db.getNotas();
@@ -81,12 +82,20 @@ export function renderNotas(container, router) {
               return `
                 <div class="card" style="display: flex; flex-direction: column;">
                   <div class="card-header" style="padding: 1rem 1.25rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                       <span class="badge badge-neutral" style="gap: 0.35rem; font-size: 0.75rem;">
                         ${catIcon}
                         ${catName}
                       </span>
                       ${urgBadge}
+                      ${(nota.estado || 'Pendiente').toLowerCase() === 'resolta' ? `
+                        <span class="badge badge-success" style="font-size: 0.75rem;"><span class="status-dot status-dot-green"></span> Resolta</span>
+                      ` : `
+                        <span class="badge badge-warning" style="font-size: 0.75rem;"><span class="status-dot status-dot-yellow"></span> Pendiente</span>
+                      `}
+                    </div>
+                    <div style="font-family: var(--font-heading); font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-top: 0.3rem;">
+                      Nota nº ${nota.numero || 1}
                     </div>
                     <span style="font-size: 0.78rem; color: var(--text-muted);">${formatDate(nota.fecha)}</span>
                   </div>
@@ -116,6 +125,9 @@ export function renderNotas(container, router) {
                     </div>
 
                     <div style="display: flex; gap: 0.35rem;">
+                      <button class="table-action-btn btn-print-nota" data-id="${nota.id}" title="Ver e imprimir nota en formato oficial">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                      </button>
                       ${canCreate ? `
                         <button class="table-action-btn btn-duplicate-nota" data-id="${nota.id}" title="Duplicar nota">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -156,10 +168,17 @@ export function renderNotas(container, router) {
           <input type="text" id="nota-titulo" class="form-control" value="${escapeHtml(existing?.titulo || '')}" placeholder="Ex: Chamada con arqueólogo sobre pozo..." required />
         </div>
 
-        <div class="form-grid-3">
+        <div class="form-grid-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem;">
           <div class="form-group">
             <label class="form-label required">Data</label>
             <input type="date" id="nota-fecha" class="form-control" value="${existing?.fecha || new Date().toISOString().split('T')[0]}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Estado</label>
+            <select id="nota-estado" class="form-control form-select">
+              <option value="Pendiente" ${(existing?.estado || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>🟡 Pendiente</option>
+              <option value="Resolta" ${(existing?.estado) === 'Resolta' ? 'selected' : ''}>🟢 Resolta</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label required">Categoría</label>
@@ -221,6 +240,7 @@ export function renderNotas(container, router) {
     document.getElementById('modal-nota-save').onclick = () => {
       const titulo = document.getElementById('nota-titulo').value.trim();
       const fecha = document.getElementById('nota-fecha').value;
+      const estado = document.getElementById('nota-estado')?.value || 'Pendiente';
       const categoria = document.getElementById('nota-cat').value;
       const urgencia = document.getElementById('nota-urg').value;
       const contenido = document.getElementById('nota-contenido').value.trim();
@@ -240,6 +260,8 @@ export function renderNotas(container, router) {
           close();
           const noteObj = {
             id: existing ? existing.id : `not-${Date.now()}`,
+            numero: existing?.numero,
+            estado,
             titulo,
             fecha,
             categoria,
@@ -258,6 +280,14 @@ export function renderNotas(container, router) {
   }
 
   function wireEvents() {
+    container.querySelectorAll('.btn-print-nota').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        const nota = db.getNotaById(id);
+        if (nota) printNota(nota);
+      };
+    });
+
     const createBtn = container.querySelector('#btn-create-nota');
     if (createBtn) createBtn.onclick = () => openNotaModal();
 
