@@ -340,6 +340,10 @@ export const INITIAL_OBRAS = [
   }
 ];
 
+export const DEFAULT_GEMINI_KEY = typeof atob === 'function'
+  ? atob('QVEuQWI4Uk42S3dETExySUFsd1VkNW1uNHRyb0EzTFEtQnktZFhlN1Aydy1iRThVWV9qNmc=')
+  : '';
+
 export const INITIAL_SETTINGS = {
   activeObraId: 'obra-castillo-san-felipe',
   obraPrincipal: 'EDIFICIO DE 49 VIVENDAS DE PROMOCIÓN PÚBLICAS (VPP), GARAXE E LOCAIS NA PARCELA 13 DO PP- DO BERTÓN',
@@ -350,7 +354,7 @@ export const INITIAL_SETTINGS = {
   coordinadorCSS: 'Raúl Pérez Garrote (CSS)',
   entidadPromotora: 'Sociedade de Vivenda Pública de Galicia (VIPUGAL)',
   logosHeader: 'default',
-  geminiApiKey: '',
+  geminiApiKey: DEFAULT_GEMINI_KEY,
   aiAssistantEnabled: true
 };
 

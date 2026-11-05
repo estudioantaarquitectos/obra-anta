@@ -4,7 +4,7 @@
    full CRUD, backup export/import, and client-side photo optimization.
    ========================================================================== */
 
-import { INITIAL_USERS, INITIAL_GROUPS, INITIAL_SETTINGS, INITIAL_AGENTES, INITIAL_OBRAS, INITIAL_ACTAS, INITIAL_REUNIONES, INITIAL_INFORMES, INITIAL_NOTAS } from './seed.js';
+import { INITIAL_USERS, INITIAL_GROUPS, INITIAL_SETTINGS, DEFAULT_GEMINI_KEY, INITIAL_AGENTES, INITIAL_OBRAS, INITIAL_ACTAS, INITIAL_REUNIONES, INITIAL_INFORMES, INITIAL_NOTAS } from './seed.js';
 import {
   isSupabaseConfigured,
   fetchAllFromSupabase,
@@ -297,7 +297,14 @@ class Database {
         mergedGroupsMap.set(key, existing ? { ...existing, ...remoteG } : remoteG);
       });
       const mergedGroups = Array.from(mergedGroupsMap.values());
-      if (mergedGroups.length > 0) {
+            // Sincronización de Axustes do Sistema e Chave IA (local <-> Supabase)
+      if (data.settings && typeof data.settings === 'object') {
+        const curSettings = this.getSettings();
+        const mergedSettings = { ...curSettings, ...data.settings };
+        this.saveSettings(mergedSettings);
+      }
+
+if (mergedGroups.length > 0) {
         this.setCollection(STORAGE_KEYS.GROUPS, mergedGroups);
         updated = true;
       }
@@ -1271,8 +1278,9 @@ class Database {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
       const parsed = data ? JSON.parse(data) : { ...INITIAL_SETTINGS };
-      if (!parsed.geminiApiKey && INITIAL_SETTINGS.geminiApiKey) {
-        parsed.geminiApiKey = INITIAL_SETTINGS.geminiApiKey;
+      const dedicatedKey = typeof localStorage !== 'undefined' ? localStorage.getItem('anta_obra_gemini_api_key') : null;
+      if (!parsed.geminiApiKey) {
+        parsed.geminiApiKey = dedicatedKey || INITIAL_SETTINGS.geminiApiKey || DEFAULT_GEMINI_KEY || '';
       }
       if (parsed.aiAssistantEnabled === undefined) {
         parsed.aiAssistantEnabled = true;
@@ -1284,6 +1292,9 @@ class Database {
   }
 
   saveSettings(settings) {
+    if (settings && settings.geminiApiKey && typeof localStorage !== 'undefined') {
+      localStorage.setItem('anta_obra_gemini_api_key', settings.geminiApiKey);
+    }
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     return settings;
   }

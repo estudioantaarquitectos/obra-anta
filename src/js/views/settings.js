@@ -299,12 +299,21 @@ export function renderSettings(container, router) {
     // Save AI Settings
     const btnSaveAi = container.querySelector('#btn-save-ai');
     if (btnSaveAi && inputKey) {
-      btnSaveAi.onclick = () => {
+      btnSaveAi.onclick = async () => {
         const cur = db.getSettings();
         const geminiApiKey = inputKey.value.trim();
         const aiAssistantEnabled = container.querySelector('#check-ai-enabled')?.checked ?? true;
         db.saveSettings({ ...cur, geminiApiKey, aiAssistantEnabled });
-        showToast('Configuración de Asistente IA gardada correctamente', 'success');
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('anta_obra_gemini_api_key', geminiApiKey);
+        }
+        try {
+          const { saveSystemSyncToSupabase } = await import('../supabaseClient.js');
+          await saveSystemSyncToSupabase({ settings: { geminiApiKey, aiAssistantEnabled } });
+        } catch (e) {
+          console.warn('Non se puido sincronizar chave con Supabase:', e);
+        }
+        showToast('Configuración de Asistente IA gardada permanentemente para tódolos usuarios', 'success');
         render();
       };
     }

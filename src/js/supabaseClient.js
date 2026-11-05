@@ -52,6 +52,7 @@ export async function fetchSystemSyncFromSupabase() {
     return {
       usuarios: Array.isArray(parsed.usuarios) ? parsed.usuarios : null,
       grupos: Array.isArray(parsed.grupos) ? parsed.grupos : null,
+      settings: (parsed.settings && typeof parsed.settings === 'object') ? parsed.settings : null,
       deletedIds: parsed.deletedIds && typeof parsed.deletedIds === 'object' ? parsed.deletedIds : null,
       updatedAt: parsed.updatedAt || null
     };
@@ -84,6 +85,7 @@ export async function saveSystemSyncToSupabase(partial = {}) {
     const payload = {
       usuarios: Array.isArray(partial.usuarios) ? partial.usuarios : (Array.isArray(current.usuarios) ? current.usuarios : []),
       grupos: Array.isArray(partial.grupos) ? partial.grupos : (Array.isArray(current.grupos) ? current.grupos : []),
+      settings: (partial.settings && typeof partial.settings === 'object') ? partial.settings : (current.settings || null),
       deletedIds: mergedDeleted,
       updatedAt: new Date().toISOString()
     };
@@ -278,6 +280,7 @@ export async function fetchAllFromSupabase() {
 
       usuarios: tableUsuarios || (Array.isArray(systemSync?.usuarios) ? systemSync.usuarios : null),
       grupos: tableGrupos || (Array.isArray(systemSync?.grupos) ? systemSync.grupos : null),
+      settings: (systemSync?.settings && typeof systemSync.settings === 'object') ? systemSync.settings : null,
       deletedIds: (systemSync?.deletedIds && typeof systemSync.deletedIds === 'object') ? systemSync.deletedIds : null
     };
   } catch (err) {
