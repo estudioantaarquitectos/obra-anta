@@ -17,6 +17,12 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
     return;
   }
 
+  if (!auth.canAccessObra(currentObra)) {
+    showToast('Non ten permisos para acceder a este expediente', 'warning');
+    router.navigate('obras');
+    return;
+  }
+
   let infData = {};
   const isEditing = Boolean(params.id);
 

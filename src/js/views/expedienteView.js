@@ -23,6 +23,12 @@ export function renderExpedienteView(container, router, params = {}) {
     return;
   }
 
+  if (!auth.canAccessObra(obra)) {
+    showToast('Non ten permisos para acceder a este expediente', 'warning');
+    router.navigate('dashboard');
+    return;
+  }
+
   // Ensure active in storage
   db.setActiveObraId(obra.id);
 

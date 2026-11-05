@@ -26,6 +26,12 @@ export function renderInformeEditor(container, router, params = {}) {
   const obraId = (params && params.obraId) || db.getActiveObraId();
   const currentObra = db.getObraById(obraId) || db.getActiveObra();
 
+  if (currentObra && !auth.canAccessObra(currentObra)) {
+    showToast('Non ten permisos para acceder a este expediente', 'warning');
+    router.navigate('dashboard');
+    return;
+  }
+
   const emittedActas = db.getActas(obraId) || [];
 
   let infData;

@@ -465,6 +465,24 @@ if (mergedGroups.length > 0) {
         if (o.agentes.length !== prevAgLen) obrasChanged = true;
       }
 
+      // Asegurar asignación de usuarios ao expediente
+      if (!Array.isArray(o.usuariosAsignados) || o.usuariosAsignados.length === 0) {
+        if (o.expediente === 'XTR-2024-LOTE 2' || o.id === 'obra-castillo-san-felipe') {
+          o.usuariosAsignados = ['usr-admin', 'usr-rosa-vilas', 'usr-sergio-beceiro'];
+        } else {
+          o.usuariosAsignados = ['usr-admin'];
+        }
+        obrasChanged = true;
+      } else if (o.expediente === 'XTR-2024-LOTE 2' || o.id === 'obra-castillo-san-felipe') {
+        const required = ['usr-admin', 'usr-rosa-vilas', 'usr-sergio-beceiro'];
+        required.forEach(req => {
+          if (!o.usuariosAsignados.includes(req)) {
+            o.usuariosAsignados.push(req);
+            obrasChanged = true;
+          }
+        });
+      }
+
       // Normalizar presupuesto a moneda Euro (€) con dos decimales
       if (o.presupuestoAdjudicacion || o.presupuesto) {
         const formatted = formatCurrency(o.presupuestoAdjudicacion || o.presupuesto);
@@ -566,6 +584,22 @@ if (mergedGroups.length > 0) {
     const filteredUsers = users.filter(u => u && !this.isDeleted('usuarios', u.id));
     if (filteredUsers.length !== users.length) {
       this.setCollection(STORAGE_KEYS.USERS, filteredUsers.length > 0 ? filteredUsers : INITIAL_USERS);
+    }
+    // Asegurar existencia de usuarios Rosa_Vilas e Sergio_Beceiro
+    const currentUsers = this.getCollection(STORAGE_KEYS.USERS);
+    let usersNeedSave = false;
+    INITIAL_USERS.forEach(su => {
+      const exists = currentUsers.some(u => 
+        String(u.id) === String(su.id) || 
+        (u.username && u.username.toLowerCase() === su.username.toLowerCase())
+      );
+      if (!exists) {
+        currentUsers.push(su);
+        usersNeedSave = true;
+      }
+    });
+    if (usersNeedSave) {
+      this.setCollection(STORAGE_KEYS.USERS, currentUsers);
     }
   }
 

@@ -22,6 +22,12 @@ export function renderActaEditor(container, router, params = {}) {
   const obraId = (params && params.obraId) || db.getActiveObraId();
   const currentObra = db.getObraById(obraId) || db.getActiveObra();
 
+  if (currentObra && !auth.canAccessObra(currentObra)) {
+    showToast('Non ten permisos para acceder a este expediente', 'warning');
+    router.navigate('dashboard');
+    return;
+  }
+
   let actaData;
   if (isEditing) {
     const existing = isReunion

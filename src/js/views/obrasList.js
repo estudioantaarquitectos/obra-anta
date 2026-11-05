@@ -97,9 +97,10 @@ export function renderObrasList(container, router) {
   let searchQuery = '';
 
   function getFilteredObras() {
-    if (!searchQuery.trim()) return obras;
+    const accessible = obras.filter(o => auth.canAccessObra(o));
+    if (!searchQuery.trim()) return accessible;
     const q = searchQuery.toLowerCase().trim();
-    return obras.filter(o =>
+    return accessible.filter(o =>
       (o.expediente || '').toLowerCase().includes(q) ||
       (o.titulo || '').toLowerCase().includes(q) ||
       (o.situacion || '').toLowerCase().includes(q) ||
@@ -264,9 +265,16 @@ export function renderObrasList(container, router) {
       return `
                     <tr class="obra-table-row">
                       <td style="white-space: nowrap;">
-                        <span class="badge badge-info" style="font-weight: 700; font-family: monospace; font-size: 0.8rem; letter-spacing: 0.02em;">
-                          ${escapeHtml(obra.expediente || 'AVS 03007 25/05')}
-                        </span>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                          <span class="badge badge-info" style="font-weight: 700; font-family: monospace; font-size: 0.8rem; letter-spacing: 0.02em;">
+                            ${escapeHtml(obra.expediente || 'AVS 03007 25/05')}
+                          </span>
+                          ${auth.isAdmin() ? `
+                            <span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 0.72rem; padding: 2px 6px;" title="Usuarios con acceso a este expediente">
+                              👥 ${assignedUsers.length}
+                            </span>
+                          ` : ''}
+                        </div>
                         <div style="font-size: 0.78rem; color: var(--color-success); font-weight: 700; margin-top: 0.25rem;">
                           ${escapeHtml(formatCurrency(obra.presupuestoAdjudicacion || obra.presupuesto || '894.520,00 €'))}
                         </div>

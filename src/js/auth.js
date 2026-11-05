@@ -96,6 +96,31 @@ class AuthService {
    * Check if current user has a specific permission
    * @param {string} permission e.g. 'actas:edit', 'users:manage'
    */
+  /**
+   * Verifica se o usuario actual ten permiso para ver e acceder a unha obra/expediente
+   * @param {Object|string} obra Obxecto de obra ou ID de obra
+   * @returns {boolean}
+   */
+  canAccessObra(obra) {
+    if (!this.currentUser) return false;
+    if (this.isAdmin()) return true; // Admin sempre ten acceso total garantizado a tódalas obras
+
+    const obraObj = typeof obra === 'string' ? db.getObraById(obra) : obra;
+    if (!obraObj) return false;
+
+    const assigned = Array.isArray(obraObj.usuariosAsignados) ? obraObj.usuariosAsignados : [];
+    // Se non hai ningún usuario asignado explicitamente, só o Admin pode acceder
+    if (assigned.length === 0) return false;
+
+    const curId = String(this.currentUser.id || '').toLowerCase();
+    const curUsername = String(this.currentUser.username || '').toLowerCase();
+
+    return assigned.some(u => {
+      const s = String(u).toLowerCase();
+      return s === curId || s === curUsername;
+    });
+  }
+
   can(permission) {
     if (!this.currentUser) return false;
     if (this.isAdmin()) return true; // Admin has all rights

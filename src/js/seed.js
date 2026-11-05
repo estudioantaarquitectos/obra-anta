@@ -80,6 +80,28 @@ export const INITIAL_USERS = [
     email: 'admin@antaobra.gal',
     role: 'admin',
     active: true
+  },
+  {
+    id: 'usr-rosa-vilas',
+    username: 'Rosa_Vilas',
+    password: '0000',
+    name: 'Rosa Vilas Romalde',
+    cargo: 'Arquitecta Directora de Obra (DO)',
+    empresa: 'UTE ANTA-BOG',
+    email: 'anta@coag.es',
+    role: 'direccion_obra',
+    active: true
+  },
+  {
+    id: 'usr-sergio-beceiro',
+    username: 'Sergio_Beceiro',
+    password: '0000',
+    name: 'Sergio Beceiro Lodeiro',
+    cargo: 'Arquitecto Director de Obra (DO)',
+    empresa: 'UTE ANTA-BOG',
+    email: 'anta@coag.es',
+    role: 'direccion_obra',
+    active: true
   }
 ];
 
@@ -210,6 +232,7 @@ export const INITIAL_OBRAS = [
   {
     id: 'obra-castillo-san-felipe',
     expediente: 'XTR-2024-LOTE 2',
+    usuariosAsignados: ['usr-admin', 'usr-rosa-vilas', 'usr-sergio-beceiro'],
     titulo: 'EDIFICIO DE 49 VIVENDAS DE PROMOCIÓN PÚBLICAS (VPP), GARAXE E LOCAIS NA PARCELA 13 DO PP- DO BERTÓN',
     situacion: 'Parcela 13 - Bertón - Ferrol',
     promotor: 'Sociedade de Vivenda Pública de Galicia (VIPUGAL)',
@@ -349,6 +372,7 @@ export const INITIAL_SETTINGS = {
   obraPrincipal: 'EDIFICIO DE 49 VIVENDAS DE PROMOCIÓN PÚBLICAS (VPP), GARAXE E LOCAIS NA PARCELA 13 DO PP- DO BERTÓN',
   situacion: 'Parcela 13 - Bertón - Ferrol',
   expediente: 'XTR-2024-LOTE 2',
+    usuariosAsignados: ['usr-admin', 'usr-rosa-vilas', 'usr-sergio-beceiro'],
   contratista: 'ACCIONA CONSTRUCCION S.L.',
   equipoTecnico: 'Rosa Vilas Romalde e Sergio Beceiro Lodeiro e Baltasar Otero Gómez (DO) / Rafael Vázquez Barros (DEM)',
   coordinadorCSS: 'Raúl Pérez Garrote (CSS)',

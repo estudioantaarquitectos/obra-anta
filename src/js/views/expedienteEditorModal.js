@@ -5,6 +5,7 @@
    ========================================================================== */
 
 import { db } from '../db.js';
+import { auth } from '../auth.js';
 import { modal, showToast } from '../modal.js';
 import { getRolLabel } from './agentes.js';
 import { formatCurrency, parseCurrency } from '../utils/currency.js';
@@ -24,6 +25,7 @@ export const AGENTE_ROLES = [
 
 export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDeleted = null } = {}) {
   const isEditing = Boolean(obraId);
+  const allUsers = db.getUsers();
   const obra = isEditing ? db.getObraById(obraId) : null;
 
   const defaultData = obra || {
@@ -263,6 +265,42 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
       <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">Descripción general de las actuaciones y alcance</label>
         <textarea id="exp-descripcion" class="form-control" rows="2">${escapeHtml(defaultData.descripcion || '')}</textarea>
+      </div>
+
+      <!-- Section 5: Control de Acceso: Usuarios Asignados ao Expediente -->
+      <div style="background: var(--bg-subtle); padding: 1rem 1.25rem; border-radius: var(--radius-sm); border-left: 4px solid #0284c7;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0284c7;">
+            5. Control de Acceso: Usuarios Asignados ao Expediente
+          </h4>
+          <span class="badge badge-info" style="font-size: 0.72rem;">Restrición de Acceso</span>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0 0 0.85rem 0; line-height: 1.4;">
+          Só os usuarios marcados poderán ver e acceder a este expediente. O usuario <strong>Admin</strong> ten sempre acceso total garantizado a todas as obras.
+        </p>
+        
+        <div id="assigned-users-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.65rem;">
+          ${allUsers.map(u => {
+            const isAssigned = (defaultData.usuariosAsignados || []).some(idOrName => 
+              String(idOrName).toLowerCase() === String(u.id).toLowerCase() ||
+              String(idOrName).toLowerCase() === String(u.username).toLowerCase()
+            );
+            const isAdmin = u.role === 'admin' || (u.username || '').toLowerCase() === 'admin';
+            return `
+              <label style="display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.85rem; background: white; border: 1px solid var(--border-light); border-radius: 6px; cursor: pointer; user-select: none;">
+                <input type="checkbox" class="chk-assigned-user" value="${u.id}" ${isAssigned || isAdmin ? 'checked' : ''} ${isAdmin ? 'disabled title="Admin ten acceso total garantizado"' : ''} style="width: 17px; height: 17px; cursor: pointer;" />
+                <div style="min-width: 0;">
+                  <div style="font-weight: 700; font-size: 0.86rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(u.name || u.username)}
+                  </div>
+                  <div style="font-size: 0.73rem; color: var(--text-muted);">
+                    @${escapeHtml(u.username)} • ${escapeHtml(u.cargo || u.role)}
+                  </div>
+                </div>
+              </label>
+            `;
+          }).join('')}
+        </div>
       </div>
 
     </form>
@@ -551,8 +589,16 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
     const formattedPresupuesto = rawPresupuesto ? formatCurrency(rawPresupuesto) : '';
     const numericPresupuesto = rawPresupuesto ? parseCurrency(rawPresupuesto) : 0;
 
+    const checkedUserEls = backdrop.querySelectorAll('.chk-assigned-user:checked');
+    const assignedUserIds = Array.from(checkedUserEls).map(el => el.value);
+    const adminUser = allUsers.find(u => u.role === 'admin' || (u.username || '').toLowerCase() === 'admin');
+    if (adminUser && !assignedUserIds.includes(adminUser.id)) {
+      assignedUserIds.push(adminUser.id);
+    }
+
     const payload = {
       id: defaultData.id,
+      usuariosAsignados: assignedUserIds,
       expediente: backdrop.querySelector('#exp-codigo').value.trim(),
       titulo: backdrop.querySelector('#exp-titulo').value.trim(),
       situacion: backdrop.querySelector('#exp-situacion').value.trim(),
