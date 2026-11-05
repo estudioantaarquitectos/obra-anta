@@ -235,7 +235,7 @@ export async function fetchAllFromSupabase() {
           direccionObra: o.direccion_obra,
           direccionEjecucion: o.direccion_ejecucion,
           coordinadorCSS: o.coordinador_css,
-          agentes: o.agentes || o.datos?.agentes || [],
+          agentes: Array.isArray(o.agentes) ? o.agentes : (Array.isArray(o.datos?.agentes) ? o.datos.agentes : []),
           presupuesto: parseCurrency(rawPres),
           presupuestoAdjudicacion: formatCurrency(rawPres),
           plazoMeses: o.plazo_meses,

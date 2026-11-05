@@ -455,9 +455,8 @@ if (mergedGroups.length > 0) {
     const obras = rawObras.filter(o => o && !this.isDeleted('obras', o.id));
     let obrasChanged = obras.length !== rawObras.length;
     obras.forEach(o => {
-      if (!o.agentes || !Array.isArray(o.agentes) || o.agentes.length === 0) {
-        const seedObra = INITIAL_OBRAS.find(initO => initO.id === o.id) || INITIAL_OBRAS[0];
-        o.agentes = seedObra?.agentes ? JSON.parse(JSON.stringify(seedObra.agentes)) : [];
+      if (!o.agentes || !Array.isArray(o.agentes)) {
+        o.agentes = [];
         obrasChanged = true;
       } else {
         const prevAgLen = o.agentes.length;

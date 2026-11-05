@@ -30,57 +30,32 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
 
   const defaultData = obra || {
     id: `obra-${Date.now()}`,
-    expediente: 'AVS 03007 25/05',
-    titulo: 'Refundido de actuaciones en el castillo de San Felipe, en el marco del plan de recuperación, transformación y resiliencia –financiado por la Unión Europea – Next Generation EU',
-    situacion: 'Castillo de San Felipe, 15591. Concello de Ferrol',
-    promotor: 'Concello de Ferrol / MITECO - Instituto para la Transición Justa',
-    contratista: 'Cabero Edificaciones, S.A.',
-    jefeObra: '—',
-    direccionObra: 'Rosa Vilas Romalde y Sergio Beceiro Lodeiro (DO)',
-    direccionEjecucion: '—',
-    coordinadorCSS: '—',
-    arquitectaMunicipal: 'María José González Novo',
-    arqueologo: 'Joaquín Ferrer Cruz',
-    presupuestoAdjudicacion: '894.520,00 €',
-    financiacion: 'Plan de Recuperación, Transformación y Resiliencia – Financiado por la Unión Europea – Next Generation EU',
-    fechaInicio: '2025-01-15',
-    plazoMeses: 12,
+    expediente: '',
+    titulo: '',
+    situacion: '',
+    promotor: '',
+    contratista: '',
+    jefeObra: '',
+    direccionObra: '',
+    direccionEjecucion: '',
+    coordinadorCSS: '',
+    arquitectaMunicipal: '',
+    arqueologo: '',
+    presupuestoAdjudicacion: '',
+    presupuesto: 0,
+    financiacion: '',
+    fechaInicio: '',
+    plazoMeses: '',
     estado: 'en_ejecucion',
-    descripcion: 'Actuaciones de rehabilitación, consolidación de fábricas de cantería, reposición de carpinterías exteriores de iroko y puesta en valor del Castillo de San Felipe.',
-    agentes: []
+    descripcion: '',
+    agentes: [],
+    usuariosAsignados: []
   };
 
-  // Clone or migrate assigned agentes
-  let assignedAgentes = (defaultData.agentes && Array.isArray(defaultData.agentes) && defaultData.agentes.length > 0)
+  // Clone or migrate assigned agentes (se está baleiro, mantense baleiro sen auto-relleno forzado)
+  let assignedAgentes = (defaultData.agentes && Array.isArray(defaultData.agentes))
     ? JSON.parse(JSON.stringify(defaultData.agentes))
     : [];
-
-  // Fallback: If empty, seed from active default obra or all available DB agents matching roles
-  if (assignedAgentes.length === 0) {
-    const allAgentes = db.getAgentes();
-    if (allAgentes.length > 0) {
-      allAgentes.forEach(ag => {
-        let matchedRol = 'Outro';
-        const ch = (ag.cargoHabitual || '').toUpperCase();
-        if (ch.includes('DIRECTORA DE OBRA') || ch.includes('DIRECTOR DE OBRA') || ch.includes('(DO)')) matchedRol = 'DO';
-        else if (ch.includes('EXECUCIÓN') || ch.includes('EJECUCIÓN') || ch.includes('(DEM)')) matchedRol = 'DEM';
-        else if (ch.includes('SEGURIDADE') || ch.includes('SEGURIDAD') || ch.includes('(CSS)')) matchedRol = 'CSS';
-        else if (ch.includes('JEFE DE OBRA') || ch.includes('XEFE DE OBRA') || ch.includes('(JO)')) matchedRol = 'JO';
-        else if (ch.includes('MUNICIPAL') || ch.includes('CONCELLO')) matchedRol = 'Municipal';
-        else if (ch.includes('ARQUEÓLOG') || ch.includes('PATRIMONIO')) matchedRol = 'Arqueoloxía';
-
-        assignedAgentes.push({
-          agenteId: ag.id,
-          rol: matchedRol,
-          nombre: ag.nombre,
-          cargo: ag.cargoHabitual,
-          entidad: ag.entidad,
-          telefono: ag.telefono,
-          email: ag.email
-        });
-      });
-    }
-  }
 
   const contentHtml = `
     <form id="form-expediente" style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -160,7 +135,7 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
           </div>
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label">Plazo Previsto (Meses)</label>
-            <input type="number" id="exp-plazoMeses" class="form-control" value="${defaultData.plazoMeses || 12}" min="1" max="120" />
+            <input type="number" id="exp-plazoMeses" class="form-control" value="${defaultData.plazoMeses || ''}" placeholder="Meses" min="1" max="120" />
           </div>
         </div>
       </div>
@@ -400,7 +375,7 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
                   </td>
 
                   <td style="padding: 0.6rem 0.85rem; text-align: center;">
-                    <button type="button" class="btn btn-ghost btn-sm btn-remove-agente" data-index="${index}" title="Quitar axente desta obra" style="color: var(--color-danger); padding: 0.25rem 0.4rem;">
+                    <button type="button" class="btn btn-ghost btn-sm btn-remove-agente" data-index="${index}" title="Quitar axente desta obra" style="color: #dc2626; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 4px; padding: 0.25rem 0.5rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                   </td>
@@ -426,18 +401,10 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
       btn.onclick = () => {
         const idx = parseInt(btn.dataset.index, 10);
         if (!isNaN(idx) && assignedAgentes[idx]) {
-          const targetName = assignedAgentes[idx].nombre || 'Axente';
-          modal.confirmDelete({
-            title: 'Confirmar Desasignación de Axente',
-            message: '¿Está seguro de que desexa quitar este axente do expediente de obra?',
-            itemName: targetName,
-            confirmText: 'Quitar da obra',
-            onConfirm: () => {
-              const removed = assignedAgentes.splice(idx, 1);
-              showToast(`Axente "${removed[0]?.nombre || ''}" desasignado da obra`, 'info');
-              renderAssignedAgentesList();
-            }
-          });
+          const removedName = assignedAgentes[idx].nombre || 'Axente';
+          assignedAgentes.splice(idx, 1);
+          renderAssignedAgentesList();
+          showToast(`Axente "${removedName}" quitado da obra`, 'info');
         }
       };
     });
@@ -563,27 +530,27 @@ export function openExpedienteEditorModal({ obraId = null, onSaved = null, onDel
 
     const direccionObraStr = doAgentes.length > 0
       ? doAgentes.map(a => a.nombre).join(' e ') + ' (DO)'
-      : (defaultData.direccionObra || 'Dirección de Obra');
+      : '';
 
     const direccionEjecucionStr = demAgentes.length > 0
       ? demAgentes.map(a => a.nombre).join(' e ') + ' (DEM)'
-      : (defaultData.direccionEjecucion || 'Dirección de Execución');
+      : '';
 
     const coordinadorCSSStr = cssAgentes.length > 0
       ? cssAgentes.map(a => a.nombre).join(', ') + ' (CSS)'
-      : (defaultData.coordinadorCSS || '');
+      : '';
 
     const jefeObraStr = joAgentes.length > 0
       ? joAgentes.map(a => a.nombre).join(', ')
-      : (defaultData.jefeObra || '');
+      : '';
 
     const arquitectaMunicipalStr = munAgentes.length > 0
       ? munAgentes.map(a => a.nombre).join(', ')
-      : (defaultData.arquitectaMunicipal || '');
+      : '';
 
     const arqueologoStr = arqAgentes.length > 0
       ? arqAgentes.map(a => a.nombre).join(', ')
-      : (defaultData.arqueologo || '');
+      : '';
 
     const rawPresupuesto = backdrop.querySelector('#exp-presupuesto').value.trim();
     const formattedPresupuesto = rawPresupuesto ? formatCurrency(rawPresupuesto) : '';

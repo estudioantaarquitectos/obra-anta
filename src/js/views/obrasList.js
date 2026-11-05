@@ -74,8 +74,8 @@ function getObraFacultativos(obra, allAgentes = []) {
     });
   }
 
-  // 2. Fallback: Si no hay agentes en el array o faltan, comprobar los campos de texto legacy
-  if (result.length === 0) {
+  // 2. Fallback: Só se non existe a propiedade obra.agentes (expedientes legados), comprobar os campos de texto legacy
+  if (result.length === 0 && !Array.isArray(obra.agentes)) {
     const doText = (obra.direccionObra || '').toLowerCase();
     const deText = (obra.direccionEjecucion || '').toLowerCase();
     const cssText = (obra.coordinadorCSS || '').toLowerCase();

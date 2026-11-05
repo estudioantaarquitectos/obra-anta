@@ -88,36 +88,36 @@ export function renderExpedienteView(container, router, params = {}) {
           <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
               <span class="badge badge-info" style="font-size: 0.82rem; font-weight: 700; font-family: monospace;">
-                EXPTE: ${obra.expediente || 'AVS 03007 25/05'}
+                EXPTE: ${obra.expediente || '—'}
               </span>
               ${statusBadge}
               <span style="font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                ${obra.situacion || 'Castillo de San Felipe, 15591. Concello de Ferrol'}
+                ${obra.situacion || '—'}
               </span>
             </div>
             
             <div style="font-size: 0.82rem; color: var(--text-muted);">
-              Presupuesto: <strong style="color: var(--color-success);">${formatCurrency(obra.presupuestoAdjudicacion || obra.presupuesto || '894.520,00 €')}</strong>
+              Presupuesto: <strong style="color: var(--color-success);">${obra.presupuestoAdjudicacion || (obra.presupuesto ? formatCurrency(obra.presupuesto) : '—')}</strong>
             </div>
           </div>
 
           <h2 style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin: 0 0 0.5rem 0; line-height: 1.35;">
-            ${obra.titulo}
+            ${obra.titulo || 'Sen título'}
           </h2>
 
           <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; font-size: 0.84rem; color: var(--text-secondary); padding-top: 0.5rem; border-top: 1px solid var(--border-light); margin-top: 0.75rem;">
             <div>
               <span style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Contratista:</span>
-              <strong style="color: var(--text-main); margin-left: 0.25rem;">${obra.contratista || 'Cabero Edificaciones, S.A.'}</strong>
+              <strong style="color: var(--text-main); margin-left: 0.25rem;">${obra.contratista || '—'}</strong>
             </div>
             <div>
               <span style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">DO:</span>
-              <strong style="color: var(--text-main); margin-left: 0.25rem;">${obra.direccionObra || 'Rosa Vilas / Sergio Beceiro'}</strong>
+              <strong style="color: var(--text-main); margin-left: 0.25rem;">${obra.direccionObra || '—'}</strong>
             </div>
             <div>
               <span style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Promotor:</span>
-              <span style="color: var(--text-main); margin-left: 0.25rem;">${obra.promotor || 'Concello de Ferrol / MITECO'}</span>
+              <span style="color: var(--text-main); margin-left: 0.25rem;">${obra.promotor || '—'}</span>
             </div>
           </div>
         </div>
@@ -1229,28 +1229,28 @@ export function renderExpedienteView(container, router, params = {}) {
             </div>
             <div>
               <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Título Oficial</div>
-              <div style="color: var(--text-main); font-weight: 600;">${obra.titulo}</div>
+              <div style="color: var(--text-main); font-weight: 600;">${obra.titulo || '—'}</div>
             </div>
             <div>
               <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Situación / Concello</div>
-              <div style="color: var(--text-secondary);">${obra.situacion || 'Castillo de San Felipe, 15591. Concello de Ferrol'}</div>
+              <div style="color: var(--text-secondary);">${obra.situacion || '—'}</div>
             </div>
             <div>
               <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Entidad Promotora</div>
-              <div style="color: var(--text-secondary);">${obra.promotor || 'Concello de Ferrol / MITECO'}</div>
+              <div style="color: var(--text-secondary);">${obra.promotor || '—'}</div>
             </div>
             <div>
               <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Financiación / Marco</div>
-              <div style="color: var(--text-secondary);">${obra.financiacion || 'Plan de Recuperación, Transformación y Resiliencia – Next Generation EU'}</div>
+              <div style="color: var(--text-secondary);">${obra.financiacion || '—'}</div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
               <div>
                 <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Presupuesto Adjudicación</div>
-                <div style="color: var(--color-success); font-weight: 700;">${formatCurrency(obra.presupuestoAdjudicacion || obra.presupuesto || '894.520,00 €')}</div>
+                <div style="color: var(--color-success); font-weight: 700;">${obra.presupuestoAdjudicacion || (obra.presupuesto ? formatCurrency(obra.presupuesto) : '—')}</div>
               </div>
               <div>
                 <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Plazo Contratado</div>
-                <div style="color: var(--text-main); font-weight: 600;">${obra.plazoMeses || 12} meses</div>
+                <div style="color: var(--text-main); font-weight: 600;">${obra.plazoMeses ? `${obra.plazoMeses} meses` : '—'}</div>
               </div>
             </div>
           </div>
@@ -1264,7 +1264,7 @@ export function renderExpedienteView(container, router, params = {}) {
           <div class="card-body" style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.9rem;">
             <div>
               <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Empresa Contratista Principal</div>
-              <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(obra.contratista || 'Cabero Edificaciones, S.A.')}</div>
+              <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(obra.contratista || '—')}</div>
               ${(!obra.agentes || obra.agentes.length === 0) && obra.jefeObra ? `
                 <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.1rem;">Jefe de Obra: ${escapeHtml(obra.jefeObra)}</div>
               ` : ''}
