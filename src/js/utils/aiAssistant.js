@@ -612,17 +612,38 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
     if (data.apartados && data.apartados.length > 0) {
       previewHtml += `
         <div style="margin-bottom: 0.75rem;">
-          <strong style="color: var(--primary); text-transform: uppercase; font-size: 0.75rem; display: block; margin-bottom: 4px;">Apartados e Cuestións Tratadas (${data.apartados.length}):</strong>
-          ${data.apartados.map((ap, idx) => `
-            <div style="background: #fff; border: 1px solid var(--border-light); border-radius: 4px; padding: 0.6rem 0.8rem; margin-bottom: 0.4rem;">
-              <strong style="color: #0f4761;">${escapeHtml(ap.titulo || `Apartado ${idx + 1}`)}</strong>
-              ${Array.isArray(ap.puntos) && ap.puntos.length > 0 ? `
-                <ul style="margin: 4px 0 0 1.25rem; padding: 0; color: var(--text-secondary);">
-                  ${ap.puntos.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
-                </ul>
-              ` : ''}
-            </div>
-          `).join('')}
+          <strong style="color: var(--primary); text-transform: uppercase; font-size: 0.75rem; display: block; margin-bottom: 6px;">Apartados e Seccións Estruturadas (${data.apartados.length}):</strong>
+          ${data.apartados.map((ap, idx) => {
+            const rawSecs = Array.isArray(ap.secciones) && ap.secciones.length > 0
+              ? ap.secciones
+              : (Array.isArray(ap.puntos) ? ap.puntos : []);
+
+            return `
+              <div style="background: #fff; border: 1px solid var(--border-light); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.6rem;">
+                <div style="color: #0f4761; font-weight: 800; font-size: 0.88rem; text-transform: uppercase; margin-bottom: 0.4rem;">
+                  ${escapeHtml(ap.titulo || `Apartado ${idx + 1}`)}
+                </div>
+                ${rawSecs.length > 0 ? `
+                  <div style="display: flex; flex-direction: column; gap: 6px; padding-left: 0.5rem; border-left: 2px solid var(--border-light);">
+                    ${rawSecs.map((s, sIdx) => {
+                      const t = typeof s === 'object' && s !== null ? (s.titulo || `Sección ${sIdx + 1}`) : (typeof s === 'string' && s.length > 40 ? s.slice(0, 40) + '...' : s);
+                      const txt = typeof s === 'object' && s !== null ? (s.texto || s.contenido || '') : s;
+                      return `
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 10px;">
+                          <div style="font-weight: 700; color: #1e293b; font-size: 0.82rem; margin-bottom: 2px;">
+                            ${idx + 1}.${sIdx + 1}_ ${escapeHtml(t)}
+                          </div>
+                          <div style="font-size: 0.78rem; color: #475569; line-height: 1.4;">
+                            ${escapeHtml(txt)}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
         </div>
       `;
     }
@@ -631,9 +652,12 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
       previewHtml += `
         <div style="margin-bottom: 0.75rem;">
           <strong style="color: #166534; text-transform: uppercase; font-size: 0.75rem; display: block; margin-bottom: 4px;">Acordos e Instrucións (${data.acuerdos.length}):</strong>
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 0.6rem 0.8rem;">
-            <ul style="margin: 0 0 0 1.25rem; padding: 0; color: #166534;">
-              ${data.acuerdos.map(ac => `<li>${escapeHtml(ac)}</li>`).join('')}
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.6rem 0.8rem;">
+            <ul style="margin: 0 0 0 1.25rem; padding: 0; color: #166534; font-size: 0.82rem; line-height: 1.45;">
+              ${data.acuerdos.map(ac => {
+                const txt = typeof ac === 'object' && ac !== null ? (ac.titulo ? `<strong>${escapeHtml(ac.titulo)}:</strong> ` : '') + escapeHtml(ac.texto || '') : escapeHtml(String(ac));
+                return `<li>${txt}</li>`;
+              }).join('')}
             </ul>
           </div>
         </div>
@@ -736,35 +760,52 @@ async function callGeminiStructured({ apiKey, parts, documentType }) {
 function getSystemInstruction(documentType) {
   return `
 Es el asistente de Inteligencia Artificial para arquitectos y direcciones de obra de "ANTA OBRA".
-Tu tarea es analizar el audio dictado, documento adjunto (PDF, DOCX o imagen) o texto libre, y mapear la información al siguiente esquema JSON estricto:
+Tu misión es procesar el dictado de voz, documento adjunto (PDF, DOCX o imagen) o notas, estructurándolos rigurosamente para el documento oficial de obra.
+
+REGLA FUNDAMENTAL DE ESTRUCTURACIÓN DE ACTAS Y REUNIONES DE OBRA:
+Una visita o reunión de obra se compone de APARTADOS generales (ej: "1_ CIMENTACIÓN E ESTRUTURA", "2_ INSTALACIÓNS", "3_ CUBERTA", "4_ SEGURIDADE E SAÚDE").
+Dentro de cada apartado general, existen SECCIONES o temas específicos (ej: 1.1, 1.2...).
+
+⚠️ ATENCIÓN MÁXIMA A LA DIFERENCIA ENTRE "titulo" Y "texto" DE CADA SECCIÓN:
+1. "titulo": TÍTULO BREVE, SINTÉTICO Y CONCISO del tema tratado (ej: "Replanteo da estrutura", "Revisión polo Director de Execución", "Control de cotas", "Permisos de acometida").
+   - DEBE TENER ENTRE 2 Y 6 PALABRAS MÁXIMO.
+   - NUNCA pongas aquí oraciones largas, párrafos explicativos, ni el dictado literal.
+2. "texto": AQUÍ DEBE IR TODO EL CONTENIDO EXPLICATIVO, redacción de las observaciones técnicas, detalles, comprobaciones y hechos dictados (ej: "Realizado o replanteo da estrutura, con especial atención ao control de cotas de excavación e comprobación de niveis de acordo co proxecto de execución...").
+
+Debes responder ÚNICAMENTE con el siguiente esquema JSON estricto:
 
 {
-  "resumo": "Resumen ejecutivo claro y formal de los trabajos realizados, incidencias y estado general (en gallego o castellano técnico)",
+  "resumo": "Resumen ejecutivo formal y claro en gallego o castellano técnico",
   "apartados": [
     {
-      "titulo": "Título de apartado temático (ej: 4.1 CIMENTACIÓN E ESTRUTURA, 4.2 ENVOLVENTE, 4.3 INSTALACIÓNS, etc.)",
-      "puntos": [
-        "Observación o hecho constatado 1...",
-        "Observación o hecho 2..."
+      "titulo": "Título general del apartado en mayúsculas (ej: CIMENTACIÓN E ESTRUTURA, INSTALACIÓNS, CUBERTAS, SEGURIDADE)",
+      "secciones": [
+        {
+          "titulo": "Título breve del tema (ej: Replanteo da estrutura)",
+          "texto": "Párrafo o contenido detallado y completo con las comprobaciones, hechos constatados y observaciones dictadas..."
+        }
       ]
     }
   ],
   "acuerdos": [
-    "Acuerdo, orden de dirección o compromiso adoptado 1...",
-    "Acuerdo 2..."
+    {
+      "titulo": "Título breve del acuerdo u orden (ej: Revisión polo DE)",
+      "texto": "Redacción completa del acuerdo, compromiso o requerimiento..."
+    }
   ],
-  "asistentes": ["Nombre 1 (Cargo/Entidad)", "Nombre 2..."],
-  "titulo": "Título breve para la nota (solo si es nota de obra)",
+  "asistentes": ["Nombre y Apellidos (Cargo/Entidad)"],
+  "titulo": "Título breve (solo si es nota de obra)",
   "categoria": "llamada" | "incidencia" | "orden_direccion" | "recordatorio" (para notas),
   "urgencia": "baja" | "media" | "alta",
   "estado": "Pendiente" | "Resolta"
 }
 
 NORMAS ESPECÍFICAS:
-1. Extrae los datos con rigor técnico de edificación y arquitectura.
-2. Si detectas acuerdos u órdenes con plazo o requerimiento, inclúyelos en el array "acuerdos".
-3. Genera redacción limpia, sin muletillas de voz ni comentarios introductorios, listo para el documento oficial.
-4. Responde ÚNICAMENTE con el objeto JSON válido.
+1. Divide el audio o texto en capítulos constructivos lógicos (apartados).
+2. Dentro de cada capítulo, crea una o más secciones. Sintetiza siempre un "titulo" corto y pon la explicación completa en "texto".
+3. Si el dictado menciona acuerdos u órdenes directas, inclúyelos en "acuerdos" con su "titulo" y "texto".
+4. Redacción en tono técnico, directo, limpio, sin muletillas de voz ("bueno", "vamos a ver", "eh...").
+5. Responde EXCLUSIVAMENTE con el objeto JSON válido.
 `;
 }
 

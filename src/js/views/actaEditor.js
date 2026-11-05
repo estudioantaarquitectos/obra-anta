@@ -1816,19 +1816,74 @@ export function renderActaEditor(container, router, params = {}) {
         onApply: (extracted) => {
           if (!Array.isArray(actaData.apartados)) actaData.apartados = [];
 
-          // 1. Apartados e puntos tratados
+          // Purgar apartados baleiros preexistentes (sen título e sen contido)
+          actaData.apartados = actaData.apartados.filter(ap => {
+            const hasTitle = Boolean((ap.titulo || '').trim());
+            const hasContent = (ap.secciones || []).some(s => Boolean((s.titulo || '').trim()) || Boolean((s.texto || s.contenido || '').trim()));
+            return hasTitle || hasContent;
+          });
+
+          const parseSeccion = (s, sIdx) => {
+            let secTitle = '';
+            let secText = '';
+
+            if (typeof s === 'object' && s !== null) {
+              secTitle = (s.titulo || s.title || '').trim();
+              secText = (s.texto || s.contenido || s.content || '').trim();
+            } else if (typeof s === 'string') {
+              const str = s.trim();
+              const colonMatch = str.match(/^([^:\n]{3,50}):\s*(.+)$/s);
+              const dashMatch = !colonMatch ? str.match(/^([^\n-]{3,45})\s+-\s+(.+)$/s) : null;
+
+              if (colonMatch) {
+                secTitle = colonMatch[1].trim();
+                secText = colonMatch[2].trim();
+              } else if (dashMatch) {
+                secTitle = dashMatch[1].trim();
+                secText = dashMatch[2].trim();
+              } else {
+                const words = str.split(/\s+/);
+                secTitle = words.slice(0, Math.min(5, words.length)).join(' ');
+                if (secTitle.length > 35) secTitle = secTitle.slice(0, 35).replace(/\s+\S*$/, '');
+                secText = str;
+              }
+            }
+
+            if (!secTitle) secTitle = `Tema ${sIdx + 1}`;
+            if (!secText) secText = typeof s === 'string' ? s : secTitle;
+
+            const formattedHtml = secText.includes('<p>') ? secText : `<p>${secText}</p>`;
+
+            return {
+              id: `sec-${Date.now()}-${Math.random().toString(36).substr(2, 4)}-${sIdx}`,
+              titulo: secTitle,
+              texto: formattedHtml,
+              contenido: formattedHtml
+            };
+          };
+
+          // 1. Apartados e seccións temáticas
           if (Array.isArray(extracted.apartados) && extracted.apartados.length > 0) {
             extracted.apartados.forEach((ap, idx) => {
-              const secciones = (Array.isArray(ap.puntos) ? ap.puntos : [ap.puntos || '']).map((pt, pIdx) => ({
-                id: `sec-${Date.now()}-${idx}-${pIdx}`,
-                titulo: (typeof pt === 'string' && pt.length > 60) ? pt.slice(0, 60) + '...' : (typeof pt === 'string' ? pt : 'Punto tratado'),
-                contenido: typeof pt === 'string' ? `<p>${pt}</p>` : ''
-              }));
-              actaData.apartados.push({
-                id: `ap-${Date.now()}-${idx}`,
-                titulo: ap.titulo || (isReunion ? 'CUESTIÓNS TRATADAS NA REUNIÓN' : 'CUESTIÓNS TRATADAS NA VISITA'),
-                secciones
-              });
+              const rawSecs = Array.isArray(ap.secciones) && ap.secciones.length > 0
+                ? ap.secciones
+                : (Array.isArray(ap.puntos) ? ap.puntos : [ap.puntos || '']);
+
+              const secciones = rawSecs.map((s, sIdx) => parseSeccion(s, sIdx));
+              const apTitle = (ap.titulo || (isReunion ? 'CUESTIÓNS TRATADAS NA REUNIÓN' : 'CUESTIÓNS TRATADAS NA VISITA')).trim();
+
+              // Se xa existe un apartado co mesmo título, engadimos as seccións; se non, creamos un novo
+              const existingAp = actaData.apartados.find(a => (a.titulo || '').trim().toLowerCase() === apTitle.toLowerCase());
+              if (existingAp) {
+                if (!Array.isArray(existingAp.secciones)) existingAp.secciones = [];
+                existingAp.secciones.push(...secciones);
+              } else {
+                actaData.apartados.push({
+                  id: `ap-${Date.now()}-${idx}`,
+                  titulo: apTitle,
+                  secciones
+                });
+              }
             });
           } else if (extracted.resumo) {
             actaData.apartados.push({
@@ -1837,22 +1892,28 @@ export function renderActaEditor(container, router, params = {}) {
               secciones: [{
                 id: `sec-${Date.now()}-resumo-1`,
                 titulo: 'Resumo dos traballos e incidencias',
+                texto: `<p>${extracted.resumo}</p>`,
                 contenido: `<p>${extracted.resumo}</p>`
               }]
             });
           }
 
-          // 2. Acordos e compromisos adoptados
+          // 2. Acordos e instrucións adoptadas
           if (Array.isArray(extracted.acuerdos) && extracted.acuerdos.length > 0) {
-            actaData.apartados.push({
-              id: `ap-${Date.now()}-acuerdos`,
-              titulo: isReunion ? 'ACORDOS ADOPTADOS NA REUNIÓN' : 'ORDE E INSTRUCIÓNS DA DIRECCIÓN',
-              secciones: extracted.acuerdos.map((ac, aIdx) => ({
-                id: `sec-${Date.now()}-ac-${aIdx}`,
-                titulo: (typeof ac === 'string' && ac.length > 60) ? ac.slice(0, 60) + '...' : (typeof ac === 'string' ? ac : 'Acordo adoptado'),
-                contenido: typeof ac === 'string' ? `<p>${ac}</p>` : ''
-              }))
-            });
+            const acuerdoSecs = extracted.acuerdos.map((ac, aIdx) => parseSeccion(ac, aIdx));
+            const acuerdosTitle = isReunion ? 'ACORDOS ADOPTADOS NA REUNIÓN' : 'ORDE E INSTRUCIÓNS DA DIRECCIÓN';
+            const existingAcuerdosAp = actaData.apartados.find(a => (a.titulo || '').trim().toLowerCase() === acuerdosTitle.toLowerCase());
+
+            if (existingAcuerdosAp) {
+              if (!Array.isArray(existingAcuerdosAp.secciones)) existingAcuerdosAp.secciones = [];
+              existingAcuerdosAp.secciones.push(...acuerdoSecs);
+            } else {
+              actaData.apartados.push({
+                id: `ap-${Date.now()}-acuerdos`,
+                titulo: acuerdosTitle,
+                secciones: acuerdoSecs
+              });
+            }
           }
 
           // 3. Asistentes mencionados

@@ -1735,7 +1735,12 @@ export function renderInformeEditor(container, router, params = {}) {
           if (Array.isArray(extracted.apartados) && extracted.apartados.length > 0) {
             if (!infData.controlCalidade) infData.controlCalidade = {};
             const curEnsaios = infData.controlCalidade.resumoEnsaios || '';
-            const apartadosHtml = extracted.apartados.map(ap => `<p><strong>${ap.titulo}:</strong> ${(Array.isArray(ap.puntos) ? ap.puntos : [ap.puntos]).join('; ')}</p>`).join('');
+            const apartadosHtml = extracted.apartados.map(ap => {
+              const rawSecs = Array.isArray(ap.secciones) && ap.secciones.length > 0
+                ? ap.secciones.map(s => typeof s === 'object' ? `${s.titulo ? s.titulo + ': ' : ''}${s.texto || ''}` : String(s))
+                : (Array.isArray(ap.puntos) ? ap.puntos : [ap.puntos || '']);
+              return `<p><strong>${ap.titulo}:</strong> ${rawSecs.join('; ')}</p>`;
+            }).join('');
             infData.controlCalidade.resumoEnsaios = curEnsaios ? `${curEnsaios}${apartadosHtml}` : apartadosHtml;
           }
           db.saveInforme(infData);

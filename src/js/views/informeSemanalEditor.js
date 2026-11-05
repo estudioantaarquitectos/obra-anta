@@ -623,7 +623,10 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
           if (Array.isArray(extracted.apartados) && extracted.apartados.length > 0) {
             if (!Array.isArray(infData.relacion)) infData.relacion = [];
             extracted.apartados.forEach(ap => {
-              const textPuntos = Array.isArray(ap.puntos) ? ap.puntos.join(' • ') : (ap.puntos || '');
+              const rawSecs = Array.isArray(ap.secciones) && ap.secciones.length > 0
+                ? ap.secciones.map(s => typeof s === 'object' ? `${s.titulo ? s.titulo + ': ' : ''}${s.texto || ''}` : String(s))
+                : (Array.isArray(ap.puntos) ? ap.puntos : [ap.puntos || '']);
+              const textPuntos = rawSecs.join(' • ');
               infData.relacion.push({
                 numero: infData.relacion.length + 1,
                 tipo: 'Visita / Control',
