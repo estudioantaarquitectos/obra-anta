@@ -154,6 +154,21 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
         </button>
       </div>
 
+      <!-- Selector de Idioma de Redacción -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding: 0.55rem 0.85rem; background: #f8fafc; border: 1px solid var(--border-light); border-radius: 6px; font-size: 0.82rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text-main);">
+          <span>🌐</span>
+          <span>Idioma de redacción:</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <select id="ai-lang-select" class="form-control form-select" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; height: auto; font-weight: 600;">
+            <option value="auto" selected>Como se ha dictado (Orixinal / Español / Galego)</option>
+            <option value="es">Español (Castellano)</option>
+            <option value="gl">Galego</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Area de Contido Dinámico por Pestaña -->
       <div id="ai-tab-content-container">
         
@@ -253,15 +268,18 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
   `;
 
   const footerHtml = `
-    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 0.5rem;">
       <button type="button" class="btn btn-ghost" id="modal-ai-cancel">Cancelar</button>
       
-      <div style="display: flex; gap: 0.5rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
         <button type="button" class="btn btn-primary" id="modal-ai-process-btn" style="background: #7c3aed; border-color: #6d28d9; font-weight: 700; display: flex; align-items: center; gap: 6px;">
           <span>✨ Analizar con IA</span>
         </button>
+        <button type="button" class="btn btn-secondary" id="modal-ai-raw-btn" style="display: none; font-size: 0.82rem; font-weight: 600;" title="Aplicar o texto dictado ou resumido directamente como contido">
+          <span>📄 Aplicar como Texto Directo</span>
+        </button>
         <button type="button" class="btn btn-success" id="modal-ai-apply-btn" style="display: none; font-weight: 700;">
-          <span>${documentType === 'nota' ? '✓ Crear e Gardar Nota' : '✓ Incorporar ao Documento'}</span>
+          <span>${documentType === 'nota' ? '✓ Crear e Gardar Nota' : '✓ Incorporar Estruturado'}</span>
         </button>
       </div>
     </div>
@@ -284,6 +302,7 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
   const tabContainer = backdrop.querySelector('#ai-tab-content-container');
   const processBtn = backdrop.querySelector('#modal-ai-process-btn');
   const applyBtn = backdrop.querySelector('#modal-ai-apply-btn');
+  const rawBtn = backdrop.querySelector('#modal-ai-raw-btn');
   const reanalyzeBtn = backdrop.querySelector('#btn-reanalyze');
   const previewBox = backdrop.querySelector('#ai-preview-content');
 
@@ -514,6 +533,14 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
   processBtn.onclick = async () => {
     stopRecording();
 
+    const langMode = backdrop.querySelector('#ai-lang-select')?.value || 'auto';
+    let langInstruction = 'Conserva estrictamente el idioma en el que se ha dictado o escrito (generalmente español de España, o gallego si se ha hablado en gallego). NUNCA traduzcas el contenido ni fuerces otro idioma.';
+    if (langMode === 'es') {
+      langInstruction = 'Redacta toda la respuesta, títulos y texto explicativo en ESPAÑOL (Castellano de España).';
+    } else if (langMode === 'gl') {
+      langInstruction = 'Redacta toda a resposta, títulos e contido explicativo en GALEGO.';
+    }
+
     let parts = [];
 
     if (currentTab === 'voice') {
@@ -528,7 +555,7 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
         }
       });
       parts.push({
-        text: `Analiza esta gravación de audio para o seguinte tipo de documento: ${documentType.toUpperCase()}. Extrae a información en galego estruturada con fidelidade técnica.`
+        text: `Analiza esta grabación de audio para el tipo de documento: ${documentType.toUpperCase()}. ${langInstruction}`
       });
     } else if (currentTab === 'file') {
       if (!uploadedFilePayload) {
@@ -546,7 +573,7 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
         });
       }
       parts.push({
-        text: `Analiza o documento adxunto (${uploadedFilePayload.filename}) para un documento de tipo: ${documentType.toUpperCase()}. Extrae a información estructurada para ANTA OBRA.`
+        text: `Analiza el documento adjunto (${uploadedFilePayload.filename}) para el tipo de documento: ${documentType.toUpperCase()}. ${langInstruction}`
       });
     } else if (currentTab === 'text') {
       const txt = backdrop.querySelector('#ai-free-text')?.value.trim();
@@ -556,7 +583,7 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
       }
       parts.push({ text: txt });
       parts.push({
-        text: `Analiza estas notas de texto e adapta a información á estrutura de: ${documentType.toUpperCase()}.`
+        text: `Analiza estas notas de texto para el tipo de documento: ${documentType.toUpperCase()}. ${langInstruction}`
       });
     }
 
@@ -565,12 +592,14 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
     resultsBox.style.display = 'none';
     loadingBox.style.display = 'block';
     processBtn.style.display = 'none';
+    if (rawBtn) rawBtn.style.display = 'none';
 
     try {
       const structured = await callGeminiStructured({
         apiKey,
         parts,
-        documentType
+        documentType,
+        langInstruction
       });
 
       extractedResult = structured;
@@ -579,10 +608,12 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
       loadingBox.style.display = 'none';
       resultsBox.style.display = 'block';
       applyBtn.style.display = 'block';
+      if (rawBtn && documentType !== 'nota') rawBtn.style.display = 'block';
     } catch (err) {
       loadingBox.style.display = 'none';
       tabContainer.style.display = 'block';
       processBtn.style.display = 'block';
+      if (rawBtn) rawBtn.style.display = 'none';
       showToast('Erro procesando con Gemini: ' + err.message, 'error');
     }
   };
@@ -590,6 +621,7 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
   reanalyzeBtn.onclick = () => {
     resultsBox.style.display = 'none';
     applyBtn.style.display = 'none';
+    if (rawBtn) rawBtn.style.display = 'none';
     tabContainer.style.display = 'block';
     processBtn.style.display = 'block';
   };
@@ -689,7 +721,7 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
     previewBox.innerHTML = previewHtml || `<div style="text-align: center; color: var(--text-muted); padding: 1rem;">Non se detectaron apartados específicos. Pode revisar o texto extraído.</div>`;
   }
 
-  // 4. APLICAR AO DOCUMENTO
+  // 4. APLICAR AO DOCUMENTO (ESTRUTURADO)
   applyBtn.onclick = () => {
     if (!extractedResult) return;
     if (typeof onApply === 'function') {
@@ -698,13 +730,48 @@ export function openAiAssistantModal({ documentType = 'acta', currentData = {}, 
       close();
     }
   };
+
+  // 5. APLICAR COMO TEXTO DIRECTO
+  if (rawBtn) {
+    rawBtn.onclick = () => {
+      if (!extractedResult) return;
+      if (typeof onApply === 'function') {
+        let fullText = '';
+        if (extractedResult.resumo) {
+          fullText += extractedResult.resumo + '\n\n';
+        }
+        if (Array.isArray(extractedResult.apartados)) {
+          extractedResult.apartados.forEach(ap => {
+            const rawSecs = Array.isArray(ap.secciones) && ap.secciones.length > 0
+              ? ap.secciones
+              : (Array.isArray(ap.puntos) ? ap.puntos : []);
+            rawSecs.forEach(s => {
+              const txt = typeof s === 'object' && s !== null ? (s.texto || s.contenido || s.titulo || '') : String(s || '');
+              if (txt && !fullText.includes(txt)) fullText += txt + '\n\n';
+            });
+          });
+        }
+        if (!fullText.trim() && extractedResult.rawText) {
+          fullText = extractedResult.rawText;
+        }
+
+        onApply({
+          ...extractedResult,
+          isRawTextMode: true,
+          rawFullText: fullText.trim()
+        });
+        showToast('Texto directo incorporado ao documento', 'success');
+        close();
+      }
+    };
+  }
 }
 
 /**
  * Chamada á API de Gemini con selección automática de modelo de respaldo
  */
-async function callGeminiStructured({ apiKey, parts, documentType }) {
-  const systemInstructionText = getSystemInstruction(documentType);
+async function callGeminiStructured({ apiKey, parts, documentType, langInstruction = '' }) {
+  const systemInstructionText = getSystemInstruction(documentType, langInstruction);
 
   const payload = {
     contents: [{ parts }],
@@ -757,10 +824,13 @@ async function callGeminiStructured({ apiKey, parts, documentType }) {
 /**
  * Prompt de sistema especializado segundo o tipo de documento
  */
-function getSystemInstruction(documentType) {
+function getSystemInstruction(documentType, langInstruction = '') {
   return `
 Es el asistente de Inteligencia Artificial para arquitectos y direcciones de obra de "ANTA OBRA".
 Tu misión es procesar el dictado de voz, documento adjunto (PDF, DOCX o imagen) o notas, estructurándolos rigurosamente para el documento oficial de obra.
+
+IDIOMA Y REDACCIÓN:
+${langInstruction || 'Conserva estrictamente el idioma en el que se ha dictado o escrito (generalmente español de España, o gallego si se ha hablado en gallego). NUNCA traduzcas el contenido ni fuerces otro idioma.'}
 
 REGLA FUNDAMENTAL DE ESTRUCTURACIÓN DE ACTAS Y REUNIONES DE OBRA:
 Una visita o reunión de obra se compone de APARTADOS generales (ej: "1_ CIMENTACIÓN E ESTRUTURA", "2_ INSTALACIÓNS", "3_ CUBERTA", "4_ SEGURIDADE E SAÚDE").

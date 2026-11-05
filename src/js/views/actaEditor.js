@@ -1810,18 +1810,83 @@ export function renderActaEditor(container, router, params = {}) {
 
     // Asistente IA (Voz e Documentos)
     const handleAiActa = () => {
+      collectFormData();
       openAiAssistantModal({
         documentType: isReunion ? 'reunion' : 'acta',
         currentData: actaData,
         onApply: (extracted) => {
           if (!Array.isArray(actaData.apartados)) actaData.apartados = [];
 
-          // Purgar apartados baleiros preexistentes (sen título e sen contido)
+          // Modo 1: Aplicación como Texto Directo (dictado íntegro sin despiezar)
+          if (extracted && extracted.isRawTextMode && extracted.rawFullText) {
+            const paragraphs = extracted.rawFullText
+              .split(/\n\s*\n/)
+              .map(p => p.trim())
+              .filter(Boolean)
+              .map(p => `<p>${escapeHtml(p)}</p>`)
+              .join('');
+
+            const targetTitle = isReunion ? 'NOTAS E TEMAS TRATADOS NA REUNIÓN' : 'NOTAS E DICTADO DA VISITA';
+            let targetAp = actaData.apartados.find(a => cleanNumberPrefix(a.titulo || '').toLowerCase() === cleanNumberPrefix(targetTitle).toLowerCase());
+
+            const newSec = {
+              id: `sec-${Date.now()}-raw`,
+              titulo: 'Texto dictado e notas xerais',
+              texto: paragraphs,
+              contenido: paragraphs
+            };
+
+            if (targetAp) {
+              if (!Array.isArray(targetAp.secciones)) targetAp.secciones = [];
+              // Purgar seccións baleiras
+              targetAp.secciones = targetAp.secciones.filter(s => Boolean((s.titulo || '').trim()) || Boolean((s.texto || s.contenido || '').trim()));
+              targetAp.secciones.push(newSec);
+            } else {
+              // Se só hai apartados completamente baleiros, reutilizamos o primeiro
+              const firstEmpty = actaData.apartados.length === 1 && (!actaData.apartados[0].secciones || actaData.apartados[0].secciones.length === 0 || actaData.apartados[0].secciones.every(s => !Boolean((s.titulo || '').trim()) && !Boolean((s.texto || s.contenido || '').trim())));
+              if (firstEmpty) {
+                actaData.apartados[0].titulo = targetTitle;
+                actaData.apartados[0].secciones = [newSec];
+              } else {
+                actaData.apartados.push({
+                  id: `ap-${Date.now()}-raw`,
+                  titulo: targetTitle,
+                  secciones: [newSec]
+                });
+              }
+            }
+
+            if (isReunion) {
+              db.saveReunion(actaData);
+            } else {
+              db.saveActa(actaData);
+            }
+            window.__antaEditorDirty = true;
+            showToast('📄 Texto directo incorporado ao documento con éxito', 'success');
+            render();
+            return;
+          }
+
+          // Modo 2: Estruturado (Apartados e Seccións)
+          // Purgar apartados preexistentes que estean completamente baleiros
           actaData.apartados = actaData.apartados.filter(ap => {
-            const hasTitle = Boolean((ap.titulo || '').trim());
+            const hasCustomTitle = Boolean((cleanNumberPrefix(ap.titulo || '')).trim());
             const hasContent = (ap.secciones || []).some(s => Boolean((s.titulo || '').trim()) || Boolean((s.texto || s.contenido || '').trim()));
-            return hasTitle || hasContent;
+            return hasCustomTitle && hasContent;
           });
+
+          const extractShortTitle = (text) => {
+            if (!text) return 'Observacións';
+            const clean = text.replace(/^[0-9]+[._\s-]+/, '').trim();
+            const colonMatch = clean.match(/^([^:\n]{3,40}):/);
+            if (colonMatch) return colonMatch[1].trim().replace(/[,.:;]+$/, '');
+            const dashMatch = clean.match(/^([^\n-]{3,35})\s+-/);
+            if (dashMatch) return dashMatch[1].trim().replace(/[,.:;]+$/, '');
+            const words = clean.split(/\s+/).filter(Boolean);
+            let firstWords = words.slice(0, Math.min(5, words.length)).join(' ');
+            if (firstWords.length > 35) firstWords = firstWords.slice(0, 35).replace(/\s+\S*$/, '');
+            return firstWords.trim().replace(/[,.:;]+$/, '') || 'Observacións';
+          };
 
           const parseSeccion = (s, sIdx) => {
             let secTitle = '';
@@ -1830,10 +1895,19 @@ export function renderActaEditor(container, router, params = {}) {
             if (typeof s === 'object' && s !== null) {
               secTitle = (s.titulo || s.title || '').trim();
               secText = (s.texto || s.contenido || s.content || '').trim();
+
+              // Se o título ten máis de 38 caracteres ou non hai texto explicativo, extraemos título curto e pasamos o texto a contido
+              if (secTitle.length > 38 && !secText) {
+                secText = secTitle;
+                secTitle = extractShortTitle(secTitle);
+              } else if (secTitle.length > 42) {
+                if (!secText) secText = secTitle;
+                secTitle = extractShortTitle(secTitle);
+              }
             } else if (typeof s === 'string') {
               const str = s.trim();
-              const colonMatch = str.match(/^([^:\n]{3,50}):\s*(.+)$/s);
-              const dashMatch = !colonMatch ? str.match(/^([^\n-]{3,45})\s+-\s+(.+)$/s) : null;
+              const colonMatch = str.match(/^([^:\n]{3,45}):\s*(.+)$/s);
+              const dashMatch = !colonMatch ? str.match(/^([^\n-]{3,40})\s+-\s+(.+)$/s) : null;
 
               if (colonMatch) {
                 secTitle = colonMatch[1].trim();
@@ -1842,9 +1916,7 @@ export function renderActaEditor(container, router, params = {}) {
                 secTitle = dashMatch[1].trim();
                 secText = dashMatch[2].trim();
               } else {
-                const words = str.split(/\s+/);
-                secTitle = words.slice(0, Math.min(5, words.length)).join(' ');
-                if (secTitle.length > 35) secTitle = secTitle.slice(0, 35).replace(/\s+\S*$/, '');
+                secTitle = extractShortTitle(str);
                 secText = str;
               }
             }
@@ -1856,7 +1928,7 @@ export function renderActaEditor(container, router, params = {}) {
 
             return {
               id: `sec-${Date.now()}-${Math.random().toString(36).substr(2, 4)}-${sIdx}`,
-              titulo: secTitle,
+              titulo: cleanNumberPrefix(secTitle),
               texto: formattedHtml,
               contenido: formattedHtml
             };
@@ -1872,10 +1944,12 @@ export function renderActaEditor(container, router, params = {}) {
               const secciones = rawSecs.map((s, sIdx) => parseSeccion(s, sIdx));
               const apTitle = (ap.titulo || (isReunion ? 'CUESTIÓNS TRATADAS NA REUNIÓN' : 'CUESTIÓNS TRATADAS NA VISITA')).trim();
 
-              // Se xa existe un apartado co mesmo título, engadimos as seccións; se non, creamos un novo
-              const existingAp = actaData.apartados.find(a => (a.titulo || '').trim().toLowerCase() === apTitle.toLowerCase());
+              // Se xa existe un apartado co mesmo título, engadimos as seccións purgadas; se non, creamos un novo
+              const existingAp = actaData.apartados.find(a => cleanNumberPrefix(a.titulo || '').trim().toLowerCase() === cleanNumberPrefix(apTitle).trim().toLowerCase());
               if (existingAp) {
                 if (!Array.isArray(existingAp.secciones)) existingAp.secciones = [];
+                // Purgar seccións baleiras dummy
+                existingAp.secciones = existingAp.secciones.filter(s => Boolean((s.titulo || '').trim()) || Boolean((s.texto || s.contenido || '').trim()));
                 existingAp.secciones.push(...secciones);
               } else {
                 actaData.apartados.push({
@@ -1902,10 +1976,11 @@ export function renderActaEditor(container, router, params = {}) {
           if (Array.isArray(extracted.acuerdos) && extracted.acuerdos.length > 0) {
             const acuerdoSecs = extracted.acuerdos.map((ac, aIdx) => parseSeccion(ac, aIdx));
             const acuerdosTitle = isReunion ? 'ACORDOS ADOPTADOS NA REUNIÓN' : 'ORDE E INSTRUCIÓNS DA DIRECCIÓN';
-            const existingAcuerdosAp = actaData.apartados.find(a => (a.titulo || '').trim().toLowerCase() === acuerdosTitle.toLowerCase());
+            const existingAcuerdosAp = actaData.apartados.find(a => cleanNumberPrefix(a.titulo || '').trim().toLowerCase() === cleanNumberPrefix(acuerdosTitle).trim().toLowerCase());
 
             if (existingAcuerdosAp) {
               if (!Array.isArray(existingAcuerdosAp.secciones)) existingAcuerdosAp.secciones = [];
+              existingAcuerdosAp.secciones = existingAcuerdosAp.secciones.filter(s => Boolean((s.titulo || '').trim()) || Boolean((s.texto || s.contenido || '').trim()));
               existingAcuerdosAp.secciones.push(...acuerdoSecs);
             } else {
               actaData.apartados.push({
@@ -1941,6 +2016,7 @@ export function renderActaEditor(container, router, params = {}) {
           } else {
             db.saveActa(actaData);
           }
+          window.__antaEditorDirty = true;
           showToast('✨ Contido incorporado con éxito polo Asistente IA!', 'success');
           render();
         }

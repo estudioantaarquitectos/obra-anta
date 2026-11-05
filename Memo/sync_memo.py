@@ -120,6 +120,10 @@ def sync_memo():
     for num in sorted(existing_convs.keys()):
         output += existing_convs[num] + '\n\n'
 
+    # Sanitize secrets to prevent GitHub Secret Scanning blocks
+    output = re.sub(r'AQ\.[A-Za-z0-9_-]+', '[REDACTED_API_KEY]', output)
+    output = re.sub(r'AIza[0-9A-Za-z-_]{35}', '[REDACTED_API_KEY]', output)
+
     with open(memo_file, 'w', encoding='utf-8') as f:
         f.write(output)
 
