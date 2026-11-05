@@ -102,6 +102,9 @@ class AuthService {
    * @returns {boolean}
    */
   canAccessObra(obra) {
+    if (!this.currentUser) {
+      this.loadSession();
+    }
     if (!this.currentUser) return false;
     if (this.isAdmin()) return true; // Admin sempre ten acceso total garantizado a tódalas obras
 

@@ -1106,11 +1106,13 @@ export function renderExpedienteView(container, router, params = {}) {
                         ${renderUserModifierHtml(nota.modificadoPor || nota.autor, nota.fechaModificacion || nota.fecha)}
                       </td>
                       <td style="text-align: center;">
-                        ${(nota.estado || 'Pendiente').toLowerCase() === 'resolta' ? `
-                          <span class="badge badge-success" style="font-size: 0.78rem; white-space: nowrap;"><span class="status-dot status-dot-green"></span> Resolta</span>
-                        ` : `
-                          <span class="badge badge-warning" style="font-size: 0.78rem; white-space: nowrap;"><span class="status-dot status-dot-yellow"></span> Pendiente</span>
-                        `}
+                        <button class="btn-ghost btn-toggle-nota-estado" data-id="${nota.id}" title="Premer para alternar estado (Pendiente / Resolta)" style="border: none; background: transparent; cursor: pointer; padding: 2px;">
+                          ${(nota.estado || 'Pendiente').toLowerCase() === 'resolta' ? `
+                            <span class="badge badge-success" style="font-size: 0.78rem; white-space: nowrap;"><span class="status-dot status-dot-green"></span> Resolta</span>
+                          ` : `
+                            <span class="badge badge-warning" style="font-size: 0.78rem; white-space: nowrap;"><span class="status-dot status-dot-yellow"></span> Pendiente</span>
+                          `}
+                        </button>
                       </td>
                       <td class="col-actions">
                         <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.35rem;">
@@ -1868,6 +1870,19 @@ export function renderExpedienteView(container, router, params = {}) {
         if (nota) {
           printNota(nota, obra);
         }
+      };
+    });
+
+    container.querySelectorAll('.btn-toggle-nota-estado').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const nota = db.getNotaById(btn.dataset.id);
+        if (!nota) return;
+        const currentEstado = (nota.estado || 'Pendiente').toLowerCase();
+        const newEstado = currentEstado === 'resolta' ? 'Pendiente' : 'Resolta';
+        db.saveNota({ ...nota, estado: newEstado });
+        showToast(`Estado da nota nº ${nota.numero || ''} cambiado a "${newEstado}"`, 'info');
+        render();
       };
     });
 

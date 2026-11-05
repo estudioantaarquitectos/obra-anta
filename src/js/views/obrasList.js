@@ -252,6 +252,7 @@ export function renderObrasList(container, router) {
       const reunionesCount = db.getReuniones(obra.id).length;
       const informesCount = db.getInformes(obra.id).length;
       const notasCount = db.getNotas(obra.id).length;
+      const assignedUsers = Array.isArray(obra.usuariosAsignados) ? obra.usuariosAsignados : [];
 
       let statusBadge = `<span class="badge badge-success" style="font-size: 0.76rem; padding: 0.25rem 0.5rem; white-space: nowrap;"><span class="status-dot status-dot-green"></span> En execución</span>`;
       if (obra.estado === 'con_desviacions') {
