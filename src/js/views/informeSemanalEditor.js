@@ -467,6 +467,7 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
     const data = collectFormData();
     try {
       db.saveInforme(data);
+      window.__antaEditorDirty = false;
       showToast('Informe semanal gardado correctamente', 'success');
       if (returnToList) {
         router.navigate('expediente', { id: currentObra.id, tab: 'informes-semanais' });
@@ -804,6 +805,23 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
         showToast('Anexo eliminado', 'info');
       };
     });
+
+    // Rexistro global para gardar dende a navegación se hai cambios pendentes
+    window.__antaSaveCurrentEditor = async () => {
+      const data = collectFormData();
+      db.saveInforme(data);
+      window.__antaEditorDirty = false;
+      showToast('Informe semanal gardado correctamente', 'success');
+      return true;
+    };
+
+    // Monitorización de cambios no documento para activar o aviso de perda de datos
+    container.addEventListener('input', () => {
+      window.__antaEditorDirty = true;
+    });
+    container.addEventListener('change', () => {
+      window.__antaEditorDirty = true;
+    });
   }
 
   function handlePdfFiles(fileList) {
@@ -831,6 +849,7 @@ export function renderInformeSemanalEditor(container, router, params = {}) {
     });
   }
 
+  window.__antaEditorDirty = false;
   render();
 }
 

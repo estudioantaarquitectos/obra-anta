@@ -26,6 +26,109 @@ function attachBackdropDismiss(backdrop, cleanup, allowBackdropDismiss = true) {
 
 export const modal = {
   /**
+   * Confirmation dialog for UNSAVED CHANGES when navigating away from an editor
+   */
+  confirmUnsavedChanges({
+    title = 'Documento non gardado',
+    message = 'Tes cambios sen gardar no documento. Se continúas sen gardar, perderás a información modificada.',
+    saveText = 'Guardar e continuar',
+    stayText = 'Volver',
+    discardText = 'Descartar cambios e saír',
+    onSaveAndContinue,
+    onStay,
+    onDiscardAndContinue
+  } = {}) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop active';
+    const zIndex = 250 + (modalStack.length + 1) * 20;
+    backdrop.style.zIndex = zIndex;
+    backdrop.innerHTML = `
+      <div class="modal-window modal-window-sm" style="max-width: 520px; text-align: left;">
+        <div class="modal-header" style="border-bottom: 1px solid #fed7aa; background: #fff7ed;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background: #ffedd5; color: #ea580c; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <div>
+              <div class="modal-title" style="color: #9a3412; font-size: 1.15rem; font-weight: 700;">${title}</div>
+              <div style="font-size: 0.78rem; color: #c2410c; margin-top: 1px;">Aviso de modificacións pendentes</div>
+            </div>
+          </div>
+          <button class="modal-close-btn" id="modal-unsaved-close-x" title="Volver ao editor">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem 1.25rem 1.25rem;">
+          <p style="margin: 0; color: #334155; font-size: 0.95rem; line-height: 1.5;">${message}</p>
+        </div>
+        <div class="modal-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.25rem; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-wrap: wrap;">
+          <div>
+            ${onDiscardAndContinue ? `
+              <button type="button" class="btn btn-ghost btn-sm" id="modal-unsaved-discard-btn" style="color: #ef4444; font-size: 0.8rem; text-decoration: underline;" title="Saír sen gardar os cambios">
+                ${discardText}
+              </button>
+            ` : ''}
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <button type="button" class="btn btn-secondary" id="modal-unsaved-stay-btn" style="min-width: 90px; font-weight: 600;">
+              ${stayText}
+            </button>
+            <button type="button" class="btn btn-primary" id="modal-unsaved-save-btn" style="min-width: 170px; font-weight: 700; background: #0284c7; border-color: #0284c7;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span>${saveText}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    modalStack.push(backdrop);
+
+    const cleanup = () => {
+      backdrop.classList.remove('active');
+      setTimeout(() => backdrop.remove(), 200);
+      modalStack = modalStack.filter(m => m !== backdrop);
+    };
+
+    backdrop.querySelector('#modal-unsaved-close-x').onclick = () => {
+      cleanup();
+      if (typeof onStay === 'function') onStay();
+    };
+
+    backdrop.querySelector('#modal-unsaved-stay-btn').onclick = () => {
+      cleanup();
+      if (typeof onStay === 'function') onStay();
+    };
+
+    backdrop.querySelector('#modal-unsaved-save-btn').onclick = async () => {
+      const saveBtn = backdrop.querySelector('#modal-unsaved-save-btn');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<span>Gardando...</span>`;
+      try {
+        if (typeof onSaveAndContinue === 'function') {
+          await onSaveAndContinue();
+        }
+        cleanup();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = `<span>${saveText}</span>`;
+      }
+    };
+
+    const discardBtn = backdrop.querySelector('#modal-unsaved-discard-btn');
+    if (discardBtn) {
+      discardBtn.onclick = () => {
+        cleanup();
+        if (typeof onDiscardAndContinue === 'function') onDiscardAndContinue();
+      };
+    }
+
+    attachBackdropDismiss(backdrop, () => {
+      cleanup();
+      if (typeof onStay === 'function') onStay();
+    }, false);
+  },
+
+  /**
    * Confirmation dialog for SAVING (always requested by user specification)
    */
   confirmSave({ title = 'Confirmar Guardado', message = '¿Desea guardar los cambios realizados en el documento?', details = '', confirmText = 'Confirmar y Guardar', cancelText = 'Revisar / Cancelar', onConfirm }) {

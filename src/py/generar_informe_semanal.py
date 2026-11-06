@@ -14,6 +14,7 @@ import json
 import shutil
 import base64
 import re
+import html
 import tempfile
 import argparse
 import subprocess
@@ -89,7 +90,7 @@ def safe_read_docx_bytes(path):
 
 
 def set_cell_clean_value(cell, text, bold=False, font_size_pt=8.5, color_rgb=None, align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
-    """Establece texto limpio en una celda preservando estilos."""
+    """Establece texto limpio en una celda preservando estilos y eliminando &nbsp;."""
     cell.text = ""
     p = cell.paragraphs[0]
     p.alignment = align
@@ -97,7 +98,9 @@ def set_cell_clean_value(cell, text, bold=False, font_size_pt=8.5, color_rgb=Non
     p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.left_indent = Pt(0)
     p.paragraph_format.right_indent = Pt(0)
-    r = p.add_run(str(text if text is not None else '—'))
+    raw_str = str(text if text is not None else '—')
+    cleaned = html.unescape(html.unescape(raw_str)).replace('\xa0', ' ').replace('&nbsp;', ' ')
+    r = p.add_run(cleaned)
     r.font.name = 'Arial'
     r.font.size = Pt(font_size_pt)
     r.bold = bold

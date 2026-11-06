@@ -2055,6 +2055,26 @@ export function renderActaEditor(container, router, params = {}) {
     if (btnSaveAndBack) {
       btnSaveAndBack.onclick = () => handleSaveActa(true);
     }
+
+    // Rexistro global para gardar dende a navegación se hai cambios pendentes
+    window.__antaSaveCurrentEditor = async () => {
+      const data = collectFormData();
+      if (!data.numero || isNaN(data.numero)) data.numero = 1;
+      if (!data.fecha) data.fecha = new Date().toISOString().split('T')[0];
+      const res = isReunion ? db.saveReunion(data) : db.saveActa(data);
+      if (res === false) return false;
+      window.__antaEditorDirty = false;
+      showToast(`${isReunion ? 'Reunión semanal' : 'Visita de Obra'} nº ${data.numero} gardada con éxito`, 'success');
+      return true;
+    };
+
+    // Monitorización de cambios no documento para activar o aviso de perda de datos
+    container.addEventListener('input', () => {
+      window.__antaEditorDirty = true;
+    });
+    container.addEventListener('change', () => {
+      window.__antaEditorDirty = true;
+    });
   }
 
   // Initial render

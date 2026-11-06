@@ -15,6 +15,7 @@ import json
 import shutil
 import base64
 import re
+import html
 import tempfile
 import argparse
 
@@ -46,6 +47,33 @@ def format_date_es(date_str):
         return date_str
     except Exception:
         return date_str
+
+
+def clean_html_and_entities(raw_text):
+    """
+    Elimina etiquetas HTML y decodifica entidades (&nbsp;, &amp;, etc.),
+    garantizando que nunca aparezcan literales como &nbsp; en el documento DOCX o PDF.
+    """
+    if not raw_text:
+        return ""
+    t = str(raw_text)
+    t = re.sub(r'<\s*br\s*/?\s*>', '\n', t, flags=re.IGNORECASE)
+    t = re.sub(r'</\s*(p|div|li|tr|h[1-6])\s*>', '\n', t, flags=re.IGNORECASE)
+    t = re.sub(r'<[^>]+>', '', t)
+    # Doble decodificación para entidades doblemente codificadas (&amp;nbsp;)
+    t = html.unescape(t)
+    t = html.unescape(t)
+    t = t.replace('\xa0', ' ').replace('&nbsp;', ' ')
+    lines = [re.sub(r'[ \t]+', ' ', l).strip() for l in t.split('\n')]
+    return '\n'.join([l for l in lines if l])
+
+
+def clean_title_str(raw_title):
+    if not raw_title:
+        return ""
+    t = clean_html_and_entities(raw_title)
+    t = re.sub(r'^\d+(\.\d+)*[_.\s-]+', '', t).strip()
+    return t
 
 
 def format_date_long_es(date_str):
@@ -124,7 +152,8 @@ def set_cell_clean_value(cell, text, bold=False, color_rgb=None, font_size_pt=8.
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.left_indent = Pt(left_pt)
-    r = p.add_run(str(text or '—'))
+    clean_val = clean_html_and_entities(str(text if text is not None and text != '' else '—'))
+    r = p.add_run(clean_val or '—')
     r.font.name = 'Arial'
     r.font.size = Pt(font_size_pt)
     if bold:
@@ -222,12 +251,12 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
         for b in s._sectPr.xpath('./w:pgBorders'):
             s._sectPr.remove(b)
 
-    co = acta_data.get('currentObra') or acta_data.get('obra') or {}
-    obra_titulo = co.get('titulo') or acta_data.get('obraTitulo') or 'PROXECTO DE OBRA'
-    expte = co.get('expediente') or acta_data.get('expediente') or 'EXPTE-001'
-    situacion = acta_data.get('situacion') or co.get('situacion') or '—'
-    contratista = acta_data.get('contratista') or co.get('contratista') or '—'
-    raw_do = acta_data.get('doClean') or co.get('direccionObra') or acta_data.get('direccionObra') or ''
+    co = acta_data.get('currentObra') if isinstance(acta_data.get('currentObra'), dict) else (acta_data.get('obra') if isinstance(acta_data.get('obra'), dict) else {})
+    obra_titulo = (co.get('titulo') if isinstance(co, dict) else None) or acta_data.get('obraTitulo') or (acta_data.get('obra') if isinstance(acta_data.get('obra'), str) else None) or 'PROXECTO DE OBRA'
+    expte = (co.get('expediente') if isinstance(co, dict) else None) or acta_data.get('expediente') or 'EXPTE-001'
+    situacion = acta_data.get('situacion') or (co.get('situacion') if isinstance(co, dict) else None) or '—'
+    contratista = acta_data.get('contratista') or (co.get('contratista') if isinstance(co, dict) else None) or '—'
+    raw_do = acta_data.get('doClean') or (co.get('direccionObra') if isinstance(co, dict) else None) or acta_data.get('direccionObra') or ''
     do_clean = raw_do.split(' / ')[0].strip() if ' / ' in raw_do else (raw_do or '—')
     de_clean = acta_data.get('deClean') or co.get('direccionEjecucion') or acta_data.get('direccionEjecucion') or (raw_do.split(' / ')[1].strip() if ' / ' in raw_do else '—')
     css_str = acta_data.get('coordinadorCSSStr') or co.get('coordinadorCSS') or acta_data.get('coordinadorCSS') or '—'
@@ -390,28 +419,30 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
 
         if apartados:
             for ap in apartados:
-                clean_title = re.sub(r'^\d+(\.\d+)*[_.\s-]+', '', ap.get('titulo', 'Apartado')).strip()
-                firmas_p.insert_paragraph_before(clean_title, style=style_h2)
+                clean_title = clean_title_str(ap.get('titulo', 'Apartado'))
+                if clean_title:
+                    firmas_p.insert_paragraph_before(clean_title, style=style_h2)
                 for sec_item in ap.get('secciones', []):
-                    sec_title = re.sub(r'^\d+(\.\d+)*[_.\s-]+', '', sec_item.get('titulo', '')).strip()
+                    sec_title = clean_title_str(sec_item.get('titulo', ''))
                     if sec_title:
                         firmas_p.insert_paragraph_before(sec_title, style=style_h3)
                     txt = sec_item.get('texto', '')
                     if txt:
-                        clean_txt = re.sub(r'<\s*br\s*/?\s*>', '\n', txt, flags=re.IGNORECASE)
-                        clean_txt = re.sub(r'</\s*(p|div|li)\s*>', '\n', clean_txt, flags=re.IGNORECASE)
-                        clean_txt = re.sub(r'<[^>]+>', '', clean_txt)
+                        clean_txt = clean_html_and_entities(txt)
                         for ln in [ln.strip() for ln in clean_txt.split('\n') if ln.strip()]:
                             firmas_p.insert_paragraph_before(ln, style='Normal')
         elif cuestiones:
             for c in cuestiones:
-                clean_sub = re.sub(r'^\d+(\.\d+)*[_.\s-]+', '', c.get('subtitulo', 'Tema tratado')).strip()
-                firmas_p.insert_paragraph_before(clean_sub, style=style_h2)
+                clean_sub = clean_title_str(c.get('subtitulo', 'Tema tratado'))
+                if clean_sub:
+                    firmas_p.insert_paragraph_before(clean_sub, style=style_h2)
                 puntos = c.get('puntos', [])
                 if isinstance(puntos, str):
-                    puntos = [p.strip() for p in puntos.split('\n') if p.strip()]
+                    puntos = [p.strip() for p in clean_html_and_entities(puntos).split('\n') if p.strip()]
                 for pt in puntos:
-                    firmas_p.insert_paragraph_before(f"• {pt}", style='Normal')
+                    clean_pt = clean_html_and_entities(pt)
+                    if clean_pt:
+                        firmas_p.insert_paragraph_before(f"• {clean_pt}", style='Normal')
         else:
             p_emp = firmas_p.insert_paragraph_before("Non se rexistraron cuestións específicas nesta visita.", style='Normal')
             if p_emp.runs:
@@ -520,7 +551,10 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                 for c_i in range(2):
                     f_idx = i + c_i
                     c_cell = row_f.cells[c_i]
-                    set_cell_shading(c_cell, "FAFAFA")
+                    # Limpiar cualquier sombreado de la celda para que quede totalmente blanco
+                    tcPr = c_cell._tc.get_or_add_tcPr()
+                    for s in list(tcPr.findall(qn('w:shd'))):
+                        tcPr.remove(s)
                     set_cell_margins(c_cell, 80, 80, 80, 80)
                     if f_idx < len(fotos):
                         foto = fotos[f_idx]
@@ -532,6 +566,16 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                                 p_im.add_run().add_picture(img_path, width=Inches(3.1))
                             except Exception as e_im:
                                 sys.stderr.write(f"Aviso al insertar foto {f_idx}: {e_im}\n")
+
+                        f_desc = (foto.get('descripcion') or foto.get('comentario') or foto.get('pie') or '').strip()
+                        f_desc = clean_html_and_entities(f_desc)
+                        if f_desc.lower() in [
+                            'imaxe da visita de obra', 'imaxe da obra', 'sen descrición', 'sen descricion',
+                            'sen descrición adicional', 'sen descricion adicional', 'sen comentarios',
+                            'no hay comentarios', 'sin comentarios', '—', '-'
+                        ]:
+                            f_desc = ''
+
                         p_lbl = c_cell.add_paragraph()
                         p_lbl.paragraph_format.space_before = Pt(4)
                         p_lbl.paragraph_format.space_after = Pt(2)
@@ -542,9 +586,10 @@ def generar_acta_desde_plantilla(acta_data, output_docx, output_pdf=None, planti
                         if foto.get('fecha'):
                             r_fdate = p_lbl.add_run(f"[{format_date_es(foto.get('fecha'))}] ")
                             r_fdate.font.size = Pt(8)
-                        r_fdesc = p_lbl.add_run(foto.get('descripcion') or 'Imaxe da visita de obra')
-                        r_fdesc.font.size = Pt(8)
-                        r_fdesc.font.color.rgb = RGBColor(51, 65, 85)
+                        if f_desc:
+                            r_fdesc = p_lbl.add_run(f_desc)
+                            r_fdesc.font.size = Pt(8)
+                            r_fdesc.font.color.rgb = RGBColor(51, 65, 85)
 
     # ==========================================================================
     # 7. ANEXO DOCUMENTOS PDF ADXUNTOS

@@ -1113,13 +1113,23 @@ export async function buildModernActaDocx(acta) {
           })
         );
       }
+      const desc1 = stripHtml(f1.descripcion || '');
+      const isFiller1 = /^(imaxe da obra|imaxe da visita de obra|sen descrición|sen descricion|sen comentarios|no hay comentarios|sin comentarios|—|-)$/i.test(desc1.trim());
+      const cleanDesc1 = isFiller1 ? '' : desc1.trim();
+
+      const caption1Runs = [
+        new TextRun({ text: `Foto ${i + 1} `, bold: true, size: 13, color: COLOR_PRIMARY }),
+      ];
+      if (f1.fecha) {
+        caption1Runs.push(new TextRun({ text: `[${formatDate(f1.fecha)}] `, size: 12, color: COLOR_MUTED }));
+      }
+      if (cleanDesc1) {
+        caption1Runs.push(new TextRun({ text: cleanDesc1, size: 13 }));
+      }
+
       cell1Children.push(
         new Paragraph({
-          children: [
-            new TextRun({ text: `Foto ${i + 1} `, bold: true, size: 13, color: COLOR_PRIMARY }),
-            new TextRun({ text: f1.fecha ? `[${formatDate(f1.fecha)}] ` : '', size: 12, color: COLOR_MUTED }),
-            new TextRun({ text: f1.descripcion || 'Imaxe da obra', size: 13 }),
-          ],
+          children: caption1Runs,
           alignment: AlignmentType.CENTER,
           spacing: { after: 30 },
         })
@@ -1141,13 +1151,24 @@ export async function buildModernActaDocx(acta) {
             })
           );
         }
+
+        const desc2 = stripHtml(f2.descripcion || '');
+        const isFiller2 = /^(imaxe da obra|imaxe da visita de obra|sen descrición|sen descricion|sen comentarios|no hay comentarios|sin comentarios|—|-)$/i.test(desc2.trim());
+        const cleanDesc2 = isFiller2 ? '' : desc2.trim();
+
+        const caption2Runs = [
+          new TextRun({ text: `Foto ${i + 2} `, bold: true, size: 13, color: COLOR_PRIMARY }),
+        ];
+        if (f2.fecha) {
+          caption2Runs.push(new TextRun({ text: `[${formatDate(f2.fecha)}] `, size: 12, color: COLOR_MUTED }));
+        }
+        if (cleanDesc2) {
+          caption2Runs.push(new TextRun({ text: cleanDesc2, size: 13 }));
+        }
+
         cell2Children.push(
           new Paragraph({
-            children: [
-              new TextRun({ text: `Foto ${i + 2} `, bold: true, size: 13, color: COLOR_PRIMARY }),
-              new TextRun({ text: f2.fecha ? `[${formatDate(f2.fecha)}] ` : '', size: 12, color: COLOR_MUTED }),
-              new TextRun({ text: f2.descripcion || 'Imaxe da obra', size: 13 }),
-            ],
+            children: caption2Runs,
             alignment: AlignmentType.CENTER,
             spacing: { after: 30 },
           })
@@ -1158,11 +1179,11 @@ export async function buildModernActaDocx(acta) {
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
           borders: {
-            top: { style: BorderStyle.SINGLE, size: 2, color: 'E2E8F0' },
-            bottom: { style: BorderStyle.SINGLE, size: 2, color: 'E2E8F0' },
-            left: { style: BorderStyle.SINGLE, size: 2, color: 'E2E8F0' },
-            right: { style: BorderStyle.SINGLE, size: 2, color: 'E2E8F0' },
-            insideVertical: { style: BorderStyle.SINGLE, size: 2, color: 'E2E8F0' },
+            top: { style: BorderStyle.NONE },
+            bottom: { style: BorderStyle.NONE },
+            left: { style: BorderStyle.NONE },
+            right: { style: BorderStyle.NONE },
+            insideVertical: { style: BorderStyle.NONE },
             insideHorizontal: { style: BorderStyle.NONE },
           },
           rows: [
@@ -1170,13 +1191,11 @@ export async function buildModernActaDocx(acta) {
               children: [
                 new TableCell({
                   width: { size: 50, type: WidthType.PERCENTAGE },
-                  shading: { fill: 'FAFAFA' },
                   margins: { top: 30, bottom: 30, left: 30, right: 30 },
                   children: cell1Children,
                 }),
                 new TableCell({
                   width: { size: 50, type: WidthType.PERCENTAGE },
-                  shading: { fill: 'FAFAFA' },
                   margins: { top: 30, bottom: 30, left: 30, right: 30 },
                   children: cell2Children.length > 0 ? cell2Children : [new Paragraph({})],
                 }),
@@ -1828,7 +1847,7 @@ export async function buildInformeDocx(inf) {
           children: [
             new TextRun({ text: `Imaxe ${idx + 1} `, bold: true, size: 17, color: COLOR_PRIMARY }),
             new TextRun({
-              text: `${foto.data ? `[${formatDate(foto.data)}] ` : ''}${foto.descripcion || 'Sen descrición'}`,
+              text: `${foto.data ? `[${formatDate(foto.data)}] ` : ''}${stripHtml(foto.descripcion || '')}`,
               size: 16,
               color: COLOR_MUTED,
             }),

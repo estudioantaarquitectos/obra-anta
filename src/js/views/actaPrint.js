@@ -372,8 +372,8 @@ export function renderActaPrint(container, router, params = {}) {
                       <img src="${foto.url}" alt="Foto ${idx + 1}" loading="lazy" />
                     </div>
                     <div class="acta-photo-caption">
-                      <span class="acta-photo-badge">Foto ${idx + 1} [${formatDate(foto.fecha || acta.fecha)}]</span>
-                      <span>${escapeHtml(foto.descripcion || 'Sen descrición adicional')}</span>
+                      <span class="acta-photo-badge">Foto ${idx + 1}${foto.fecha || acta.fecha ? ` [${formatDate(foto.fecha || acta.fecha)}]` : ''}</span>
+                      ${foto.descripcion && foto.descripcion.trim() ? `<span>${escapeHtml(foto.descripcion.trim())}</span>` : ''}
                     </div>
                   </div>
                 `).join('')}

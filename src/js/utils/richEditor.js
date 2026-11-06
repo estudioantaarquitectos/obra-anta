@@ -25,15 +25,21 @@ export function stripHtml(html) {
   let str = String(html)
     .replace(/<br\s*[\/]?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
     .replace(/<\/li>/gi, '\n')
     .replace(/<li>/gi, '• ')
     .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;nbsp;/gi, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\u00A0/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'");
+    .replace(/&#039;/g, "'")
+    .replace(/&apos;/g, "'");
+  // Second pass in case of residual encoded spaces
+  str = str.replace(/&nbsp;/gi, ' ').replace(/\u00A0/g, ' ');
   return str.trim();
 }
 

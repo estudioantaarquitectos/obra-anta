@@ -18,7 +18,7 @@ import { renderNotas } from './views/notas.js';
 import { renderUsuarios } from './views/usuarios.js';
 import { renderAgentes } from './views/agentes.js';
 import { renderSettings } from './views/settings.js';
-import { modal } from './modal.js';
+import { modal, showToast } from './modal.js';
 import { isSupabaseConfigured } from './supabaseClient.js';
 import logoImg from '../../LOGO_200px.png';
 
@@ -55,6 +55,14 @@ class AppRouter {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         this.triggerBackgroundSync();
+      }
+    });
+    window.addEventListener('beforeunload', (e) => {
+      const isEditorRoute = ['acta-editor', 'reunion-editor', 'informe-editor', 'informe-semanal-editor'].includes(this.currentRoute);
+      if (isEditorRoute && window.__antaEditorDirty) {
+        e.preventDefault();
+        e.returnValue = 'Tes cambios sen gardar no documento.';
+        return 'Tes cambios sen gardar no documento.';
       }
     });
   }
@@ -121,7 +129,7 @@ class AppRouter {
   }
 
   navigate(route, params = {}, options = {}) {
-    const { replace = false, skipHistory = false } = options;
+    const { replace = false, skipHistory = false, force = false } = options;
 
     // Check auth
     if (!auth.isAuthenticated() && route !== 'login') {
@@ -130,6 +138,48 @@ class AppRouter {
     } else if (auth.isAuthenticated() && route === 'login') {
       route = 'dashboard';
       params = {};
+    }
+
+    // Interceptar se o usuario está nun editor con cambios pendentes de gardar
+    const isEditorRoute = ['acta-editor', 'reunion-editor', 'informe-editor', 'informe-semanal-editor'].includes(this.currentRoute);
+    const isTargetSame = this.currentRoute === route && JSON.stringify(this.currentParams) === JSON.stringify(params);
+
+    if (!force && isEditorRoute && !isTargetSame && window.__antaEditorDirty) {
+      modal.confirmUnsavedChanges({
+        title: 'Documento non gardado',
+        message: 'Tes cambios sen gardar neste documento. Se saes da páxina ou fas clic noutra sección perderás a información modificada.',
+        saveText: 'Guardar e continuar',
+        stayText: 'Volver',
+        discardText: 'Descartar cambios e saír',
+        onSaveAndContinue: async () => {
+          if (typeof window.__antaSaveCurrentEditor === 'function') {
+            try {
+              const res = await window.__antaSaveCurrentEditor();
+              if (res !== false) {
+                window.__antaEditorDirty = false;
+                this.navigate(route, params, { ...options, force: true });
+              }
+            } catch (err) {
+              console.error('Error ao gardar dende aviso:', err);
+              showToast('Erro ao gardar documento', 'error');
+            }
+          } else {
+            window.__antaEditorDirty = false;
+            this.navigate(route, params, { ...options, force: true });
+          }
+        },
+        onStay: () => {
+          const currentHash = this.serializeRouteToHash(this.currentRoute, this.currentParams);
+          if (window.location.hash !== currentHash) {
+            window.history.replaceState({ route: this.currentRoute, params: this.currentParams }, '', currentHash);
+          }
+        },
+        onDiscardAndContinue: () => {
+          window.__antaEditorDirty = false;
+          this.navigate(route, params, { ...options, force: true });
+        }
+      });
+      return;
     }
 
     this.currentRoute = route;
@@ -156,12 +206,6 @@ class AppRouter {
   }
 
   handlePopState(e) {
-    try {
-      if (modal && typeof modal.close === 'function') {
-        modal.close();
-      }
-    } catch (_) {}
-
     let route, params;
     if (e && e.state && e.state.route) {
       route = e.state.route;
@@ -172,7 +216,43 @@ class AppRouter {
       params = parsed.params;
     }
 
-    this.navigate(route, params, { skipHistory: true });
+    const isEditorRoute = ['acta-editor', 'reunion-editor', 'informe-editor', 'informe-semanal-editor'].includes(this.currentRoute);
+    const isTargetSame = this.currentRoute === route && JSON.stringify(this.currentParams) === JSON.stringify(params);
+
+    if (isEditorRoute && !isTargetSame && window.__antaEditorDirty) {
+      // Manter a URL no editor actual e amosar o modal
+      const curHash = this.serializeRouteToHash(this.currentRoute, this.currentParams);
+      window.history.pushState({ route: this.currentRoute, params: this.currentParams }, '', curHash);
+
+      modal.confirmUnsavedChanges({
+        title: 'Documento non gardado',
+        message: 'Tes cambios sen gardar neste documento. Se continúas perderás a información introducida.',
+        saveText: 'Guardar e continuar',
+        stayText: 'Volver',
+        discardText: 'Descartar cambios e saír',
+        onSaveAndContinue: async () => {
+          if (typeof window.__antaSaveCurrentEditor === 'function') {
+            await window.__antaSaveCurrentEditor();
+          }
+          window.__antaEditorDirty = false;
+          this.navigate(route, params, { skipHistory: true, force: true });
+        },
+        onStay: () => {},
+        onDiscardAndContinue: () => {
+          window.__antaEditorDirty = false;
+          this.navigate(route, params, { skipHistory: true, force: true });
+        }
+      });
+      return;
+    }
+
+    try {
+      if (modal && typeof modal.close === 'function') {
+        modal.close();
+      }
+    } catch (_) {}
+
+    this.navigate(route, params, { skipHistory: true, force: true });
   }
 
   back(fallbackRoute = 'dashboard', fallbackParams = {}) {

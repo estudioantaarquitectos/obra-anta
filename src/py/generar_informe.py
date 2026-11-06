@@ -11,6 +11,7 @@ preservando al 100% sus 13 tablas nativas, bordes, alturas de fila y estilos.
 import sys
 import os
 import re
+import html
 import json
 import base64
 import shutil
@@ -80,8 +81,10 @@ def strip_html_to_text(html_str):
     text = re.sub(r'</li>', '\n', text, flags=re.I)
     text = re.sub(r'<li[^>]*>', '• ', text, flags=re.I)
     text = re.sub(r'<[^>]+>', '', text)
-    # Limpiar entidades HTML comunes
-    text = text.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+    # Limpiar entidades HTML y &nbsp;
+    text = html.unescape(text)
+    text = html.unescape(text)
+    text = text.replace('\xa0', ' ').replace('&nbsp;', ' ')
     lines = [l.strip() for l in text.split('\n')]
     # Eliminar líneas vacías consecutivas
     result = []
@@ -686,6 +689,10 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                 f_left = fotos[i]
                 c_left = r.cells[0]
                 c_left.text = ""
+                # Quitar sombreado gris de la celda
+                tcPr_l = c_left._tc.get_or_add_tcPr()
+                for s in list(tcPr_l.findall(qn('w:shd'))):
+                    tcPr_l.remove(s)
                 p_l = c_left.paragraphs[0]
                 p_l.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 p_l.paragraph_format.space_before = Pt(3)
@@ -717,7 +724,14 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                 p_cap.paragraph_format.space_before = Pt(2)
                 p_cap.paragraph_format.space_after = Pt(4)
                 f_date = format_date_es(f_left.get('data') or f_left.get('fecha') or data_inf)
-                f_desc = (f_left.get('descripcion') or f_left.get('desc') or '').strip()
+                f_desc = strip_html_to_text(f_left.get('descripcion') or f_left.get('desc') or f_left.get('comentario') or '')
+                if f_desc.lower() in [
+                    'imaxe da visita de obra', 'imaxe da obra', 'sen descrición', 'sen descricion',
+                    'sen descrición adicional', 'sen descricion adicional', 'sen comentarios',
+                    'no hay comentarios', 'sin comentarios', '—', '-'
+                ]:
+                    f_desc = ''
+
                 r_num = p_cap.add_run(f"Foto {i + 1} [{f_date}] ")
                 r_num.bold = True
                 r_num.font.size = Pt(8.5)
@@ -730,6 +744,11 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                 # Foto derecha (i + 1) si existe
                 c_right = r.cells[1]
                 c_right.text = ""
+                # Quitar sombreado gris de la celda derecha
+                tcPr_r = c_right._tc.get_or_add_tcPr()
+                for s in list(tcPr_r.findall(qn('w:shd'))):
+                    tcPr_r.remove(s)
+
                 if i + 1 < len(fotos):
                     f_right = fotos[i + 1]
                     p_r = c_right.paragraphs[0]
@@ -763,7 +782,14 @@ def generar_informe_desde_plantilla(informe_data, output_docx, output_pdf=None, 
                     p_cap_r.paragraph_format.space_before = Pt(2)
                     p_cap_r.paragraph_format.space_after = Pt(4)
                     f_date_r = format_date_es(f_right.get('data') or f_right.get('fecha') or data_inf)
-                    f_desc_r = (f_right.get('descripcion') or f_right.get('desc') or '').strip()
+                    f_desc_r = strip_html_to_text(f_right.get('descripcion') or f_right.get('desc') or f_right.get('comentario') or '')
+                    if f_desc_r.lower() in [
+                        'imaxe da visita de obra', 'imaxe da obra', 'sen descrición', 'sen descricion',
+                        'sen descrición adicional', 'sen descricion adicional', 'sen comentarios',
+                        'no hay comentarios', 'sin comentarios', '—', '-'
+                    ]:
+                        f_desc_r = ''
+
                     r_num_r = p_cap_r.add_run(f"Foto {i + 2} [{f_date_r}] ")
                     r_num_r.bold = True
                     r_num_r.font.size = Pt(8.5)

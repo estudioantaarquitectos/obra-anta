@@ -1765,8 +1765,29 @@ export function renderInformeEditor(container, router, params = {}) {
     if (btnSaveAndBack) {
       btnSaveAndBack.onclick = () => handleSaveInforme(true);
     }
+
+    // Rexistro global para gardar dende a navegación se hai cambios pendentes
+    window.__antaSaveCurrentEditor = async () => {
+      const data = collectData();
+      if (!data.obraId && currentObra) data.obraId = currentObra.id;
+      if (!data.numero || isNaN(data.numero)) data.numero = 1;
+      const saved = db.saveInforme(data);
+      if (saved === false) return false;
+      window.__antaEditorDirty = false;
+      showToast('Informe gardado con éxito', 'success');
+      return true;
+    };
+
+    // Monitorización de cambios no documento para activar o aviso de perda de datos
+    container.addEventListener('input', () => {
+      window.__antaEditorDirty = true;
+    });
+    container.addEventListener('change', () => {
+      window.__antaEditorDirty = true;
+    });
   }
 
+  window.__antaEditorDirty = false;
   render();
 }
 
