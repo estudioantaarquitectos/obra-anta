@@ -17,7 +17,32 @@ export function renderNotas(container, router) {
   const canEdit = auth.can('notas:edit');
   const canDelete = auth.can('notas:delete');
 
+  let notasSearchQuery = '';
+  let notasSortKey = 'date';
+  let notasSortOrder = 'desc';
+
   function render() {
+    let filteredNotas = notas;
+    if (notasSearchQuery.trim()) {
+      const q = notasSearchQuery.toLowerCase().trim();
+      filteredNotas = filteredNotas.filter(n => {
+        const txt = [n.numero ? `nota nº ${n.numero}` : '', n.titulo, n.contenido, n.autor, n.categoria, n.urgencia, n.estado, n.fecha].filter(Boolean).join(' ').toLowerCase();
+        return txt.includes(q);
+      });
+    }
+    filteredNotas = [...filteredNotas].sort((a, b) => {
+      let cmp = 0;
+      if (notasSortKey === 'estado') {
+        cmp = String(a.estado || '').localeCompare(String(b.estado || ''));
+        if (cmp === 0) cmp = String(b.fecha || '').localeCompare(String(a.fecha || ''));
+      } else {
+        const dateA = a.fecha || '';
+        const dateB = b.fecha || '';
+        if (dateA && dateB && dateA !== dateB) cmp = dateA.localeCompare(dateB);
+        else cmp = (Number(a.numero) || 0) - (Number(b.numero) || 0);
+      }
+      return notasSortOrder === 'desc' ? -cmp : cmp;
+    });
     container.innerHTML = `
       <div class="content-wrapper">
         
@@ -37,7 +62,21 @@ export function renderNotas(container, router) {
             </p>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <!-- Buscador de notas -->
+            <div class="search-box-wrapper" style="max-width: 320px;">
+              <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="global-notas-search" class="form-control search-input" placeholder="Buscar por contido, autor..." value="${escapeHtml(notasSearchQuery)}" />
+              ${notasSearchQuery ? `<button id="clear-global-notas-search" class="clear-search-btn" title="Limpar busca">✕</button>` : ''}
+            </div>
+
+            <!-- Botóns de ordenación -->
+            <div style="display: inline-flex; align-items: center; gap: 4px;">
+              <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Orde:</span>
+              <button class="btn ${notasSortKey === 'date' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-sort-global-notas" data-key="date" title="Ordenar por Data">${notasSortKey === 'date' ? (notasSortOrder === 'asc' ? 'Data ▲' : 'Data ▼') : 'Data'}</button>
+              <button class="btn ${notasSortKey === 'estado' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-sort-global-notas" data-key="estado" title="Ordenar por Estado">${notasSortKey === 'estado' ? (notasSortOrder === 'asc' ? 'Estado ▲' : 'Estado ▼') : 'Estado'}</button>
+            </div>
+
             ${canCreate ? `
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 ${isAiEnabled() ? renderAiButtonHtml('Nova Nota con IA (Voz / Doc)', 'btn-ai-create-nota-global', 'btn btn-secondary') : ''}
@@ -51,7 +90,7 @@ export function renderNotas(container, router) {
         </div>
 
         <!-- Notes Grid -->
-        ${notas.length === 0 ? `
+        ${filteredNotas.length === 0 ? `
           <div class="empty-state">
             <div class="empty-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
@@ -62,7 +101,7 @@ export function renderNotas(container, router) {
           </div>
         ` : `
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem;">
-            ${notas.map(nota => {
+            ${filteredNotas.map(nota => {
               let urgBadge = `<span class="badge badge-neutral">Baja</span>`;
               if (nota.urgencia === 'alta') {
                 urgBadge = `<span class="badge badge-danger">Urxente</span>`;
@@ -331,6 +370,37 @@ export function renderNotas(container, router) {
   }
 
   function wireEvents() {
+    const searchInput = container.querySelector('#global-notas-search');
+    if (searchInput) {
+      searchInput.oninput = (e) => {
+        notasSearchQuery = e.target.value;
+        render();
+        const next = container.querySelector('#global-notas-search');
+        if (next) {
+          next.focus();
+          next.setSelectionRange(notasSearchQuery.length, notasSearchQuery.length);
+        }
+      };
+    }
+    const clearBtn = container.querySelector('#clear-global-notas-search');
+    if (clearBtn) {
+      clearBtn.onclick = () => {
+        notasSearchQuery = '';
+        render();
+      };
+    }
+    container.querySelectorAll('.btn-sort-global-notas').forEach(btn => {
+      btn.onclick = () => {
+        const key = btn.dataset.key;
+        if (notasSortKey === key) {
+          notasSortOrder = notasSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          notasSortKey = key;
+          notasSortOrder = (key === 'estado') ? 'asc' : 'desc';
+        }
+        render();
+      };
+    });
     container.querySelectorAll('.btn-print-nota').forEach(btn => {
       btn.onclick = () => {
         const id = btn.dataset.id;

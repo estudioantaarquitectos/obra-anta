@@ -1,3 +1,63 @@
+export function generateDocumentFilename(doc = {}, format = 'docx') {
+  const isReunion = doc.tipo === 'reunion' || doc.tipoDocumento === 'reunion' || doc.esReunion === true;
+  const isSemanal = doc.tipo === 'semanal' || doc.tipoDocumento === 'informe_semanal' || doc.tipoDocumento === 'semanal';
+  const isMensual = doc.tipo === 'mensual' || doc.tipoDocumento === 'informe' || doc.tipoDocumento === 'informe_mensual' || (doc.datosXerais && !isSemanal);
+
+  let titulo = 'Documento';
+  let tipo = 'Presencial';
+
+  if (isReunion) {
+    titulo = 'Reunion';
+    tipo = doc.tipoModalidad || doc.modalidad || doc.tipoReunion || 'Presencial';
+  } else if (isSemanal) {
+    titulo = 'Informe';
+    tipo = 'Semanal';
+  } else if (isMensual) {
+    titulo = 'Informe';
+    tipo = 'Mensual';
+  } else {
+    titulo = 'Visita';
+    tipo = doc.tipoModalidad || doc.tipoVisita || doc.tipo || 'Presencial';
+  }
+
+  // Normalize tipo (e.g. On-line, Presencial, Hibrida, etc.)
+  const tipoStr = String(tipo).trim();
+  if (/virtual|online|on-line|remota|videoconf/i.test(tipoStr)) {
+    tipo = 'On-line';
+  } else if (/h[ií]brid/i.test(tipoStr)) {
+    tipo = 'Hibrida';
+  } else if (/presencial/i.test(tipoStr)) {
+    tipo = 'Presencial';
+  } else if (/ordinaria/i.test(tipoStr)) {
+    tipo = 'Ordinaria';
+  } else if (/extraordinaria/i.test(tipoStr)) {
+    tipo = 'Extraordinaria';
+  } else if (/semanal/i.test(tipoStr)) {
+    tipo = 'Semanal';
+  } else if (/mensual/i.test(tipoStr)) {
+    tipo = 'Mensual';
+  } else {
+    tipo = tipoStr.split(/[\s(]/)[0].replace(/[^\w-]/g, '') || 'Presencial';
+  }
+
+  // Numero padded to at least 2 digits (e.g. '02')
+  const num = parseInt(doc.numero, 10);
+  const numStr = isNaN(num) ? '01' : String(num).padStart(2, '0');
+
+  // Fecha (inversa): YYYYMMDD
+  const rawDate = doc.fecha || doc.datosXerais?.dataInforme || '';
+  let dateStr = String(rawDate).replace(/[^\d]/g, '');
+  if (!dateStr || dateStr.length < 8) {
+    dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  } else if (dateStr.length > 8) {
+    dateStr = dateStr.slice(0, 8);
+  }
+
+  const ext = format.toLowerCase().replace('.', '');
+  // Format: Titulo_tipo_numero_fecha (inversa)
+  return `${titulo}_${tipo}_${numStr}_${dateStr}.${ext}`;
+}
+
 /* ==========================================================================
    ANTA OBRA - Official Document Export to Microsoft Word (.docx)
    Supports:
@@ -325,11 +385,7 @@ export async function exportActaToDocx(acta) {
   showExportOverlay('docx');
   try {
     const { db } = await import('./db.js');
-    const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
-    const numStr = String(acta.numero || (isReunion ? 'reunion' : 'visita')).padStart(2, '0');
-    const dateStr = (acta.fecha || '').replace(/-/g, '');
-    const prefix = isReunion ? 'Reunion_Obra' : 'Visita_Obra';
-    const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.docx`;
+    const filename = generateDocumentFilename(acta, 'docx');
 
     const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
     const currentObra = acta.currentObra || (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
@@ -416,11 +472,7 @@ export async function exportActaToPdf(acta) {
   showExportOverlay('pdf');
   try {
     const { db } = await import('./db.js');
-    const isReunion = acta.tipo === 'reunion' || acta.tipoDocumento === 'reunion' || acta.esReunion === true;
-    const numStr = String(acta.numero || (isReunion ? 'reunion' : 'visita')).padStart(2, '0');
-    const dateStr = (acta.fecha || '').replace(/-/g, '');
-    const prefix = isReunion ? 'Reunion_Obra' : 'Visita_Obra';
-    const filename = `${prefix}_${numStr}_${dateStr || 'doc'}.pdf`;
+    const filename = generateDocumentFilename(acta, 'pdf');
 
     const obraId = acta.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
     const currentObra = acta.currentObra || (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
@@ -2007,15 +2059,7 @@ export async function exportInformeToDocx(inf) {
   showExportOverlay('docx');
   try {
     const { db } = await import('./db.js');
-    const numStr = inf.numero ? `N${inf.numero}_` : '';
-    const rawName = inf.datosXerais?.mesInformado || inf.numero || 'seguimento';
-    const cleanName = String(rawName)
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .replace(/_+/g, '_')
-      .slice(0, 30);
-    const tipoPrefix = (inf.tipo === 'semanal' || inf.tipo === 'informe_semanal') ? 'Informe_Semanal' : 'Informe_Mensual';
-    const filename = `${tipoPrefix}_${numStr}${cleanName || 'DT05'}.docx`;
+    const filename = generateDocumentFilename(inf, 'docx');
 
     const obraId = inf.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
     const currentObra = (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};
@@ -2112,15 +2156,7 @@ export async function exportInformeCompletoPdf(inf) {
   showExportOverlay('pdf');
   try {
     const { db } = await import('./db.js');
-    const numStr = inf.numero ? `N${inf.numero}_` : '';
-    const rawName = inf.datosXerais?.mesInformado || inf.numero || 'seguimento';
-    const cleanName = String(rawName)
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .replace(/_+/g, '_')
-      .slice(0, 30);
-    const tipoPrefix = (inf.tipo === 'semanal' || inf.tipo === 'informe_semanal') ? 'Informe_Semanal' : 'Informe_Mensual';
-    const filename = `${tipoPrefix}_Completo_${numStr}${cleanName || 'DT05'}.pdf`;
+    const filename = generateDocumentFilename(inf, 'pdf');
 
     const obraId = inf.obraId || (typeof db !== 'undefined' && db.getActiveObraId ? db.getActiveObraId() : null);
     const currentObra = (typeof db !== 'undefined' && db.getObraById ? (db.getObraById(obraId) || db.getActiveObra()) : null) || {};

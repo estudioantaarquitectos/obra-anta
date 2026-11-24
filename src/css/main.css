@@ -464,6 +464,22 @@ img, svg {
   box-sizing: border-box;
 }
 
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.sortable-header:hover {
+  color: var(--primary) !important;
+}
+
+.sort-icon-indicator {
+  display: inline-flex;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
 .acta-accordion-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-light);

@@ -114,9 +114,34 @@ async def export_acta(request: Request):
             or acta_payload.get("esReunion") is True
         ) if isinstance(acta_payload, dict) else False
 
+        doc_titulo = "Reunion" if es_reunion else "Visita"
+        doc_tipo = (acta_payload.get("tipoModalidad") or acta_payload.get("tipoReunion") or acta_payload.get("tipoVisita") or "Presencial") if isinstance(acta_payload, dict) else "Presencial"
+        doc_tipo_str = str(doc_tipo).lower()
+        if any(w in doc_tipo_str for w in ["virtual", "online", "on-line", "remota", "videoconf"]):
+            doc_tipo_clean = "On-line"
+        elif "hibrid" in doc_tipo_str:
+            doc_tipo_clean = "Hibrida"
+        elif "presencial" in doc_tipo_str:
+            doc_tipo_clean = "Presencial"
+        else:
+            doc_tipo_clean = re.sub(r'[^\w-]', '', str(doc_tipo).split()[0]) if str(doc_tipo).split() else "Presencial"
+            if not doc_tipo_clean: doc_tipo_clean = "Presencial"
+
+        num_val = acta_payload.get("numero", 1) if isinstance(acta_payload, dict) else 1
+        try:
+            num_str = f"{int(num_val):02d}"
+        except Exception:
+            num_str = "01"
+
+        fecha_val = str(acta_payload.get("fecha", "")).replace("-", "") if isinstance(acta_payload, dict) else ""
+        if len(fecha_val) < 8:
+            fecha_val = time.strftime("%Y%m%d")
+        else:
+            fecha_val = fecha_val[:8]
+
         doc_prefix = "Reunion_Obra" if es_reunion else "Visita_Obra"
-        num = acta_payload.get("numero", "S_N") if isinstance(acta_payload, dict) else "S_N"
-        default_name = f"{doc_prefix}_N{num}.{fmt}"
+        num = num_str
+        default_name = f"{doc_titulo}_{doc_tipo_clean}_{num_str}_{fecha_val}.{fmt}"
         req_filename = (data.get("filename") if isinstance(data, dict) else None) or default_name
         out_docx = os.path.join(tmp_dir, f"{doc_prefix}_N{num}.docx")
         out_pdf = os.path.join(tmp_dir, f"{doc_prefix}_N{num}.pdf")
@@ -196,8 +221,22 @@ async def export_informe(request: Request):
             if t == "semanal" or td in ["informe_semanal", "semanal"]:
                 is_semanal = True
 
+        doc_titulo = "Informe"
+        doc_tipo_clean = "Semanal" if is_semanal else "Mensual"
+        num_val = informe_payload.get("numero", 1) if isinstance(informe_payload, dict) else 1
+        try:
+            num_str = f"{int(num_val):02d}"
+        except Exception:
+            num_str = "01"
+
+        fecha_val = str(informe_payload.get("fecha", "") or (informe_payload.get("datosXerais", {}) or {}).get("dataInforme", "")).replace("-", "") if isinstance(informe_payload, dict) else ""
+        if len(fecha_val) < 8:
+            fecha_val = time.strftime("%Y%m%d")
+        else:
+            fecha_val = fecha_val[:8]
+
         prefix = "Informe_Semanal" if is_semanal else "Informe_Mensual"
-        default_name = f"{prefix}_{int(time.time()*1000)}.{fmt}"
+        default_name = f"{doc_titulo}_{doc_tipo_clean}_{num_str}_{fecha_val}.{fmt}"
         req_filename = (data.get("filename") if isinstance(data, dict) else None) or default_name
         out_docx = os.path.join(tmp_dir, f"{prefix}_{int(time.time()*1000)}.docx")
         out_pdf = os.path.join(tmp_dir, f"{prefix}_{int(time.time()*1000)}.pdf")

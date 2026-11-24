@@ -34,13 +34,156 @@ export function renderExpedienteView(container, router, params = {}) {
 
   let activeTab = params.tab || 'actas'; // 'actas' | 'reuniones' | 'informes-semanais' | 'informes' | 'notas' | 'ficha'
   let actasSearchQuery = '';
+  let actasSortKey = 'date'; // 'date' | 'estado'
+  let actasSortOrder = 'desc'; // 'desc' | 'asc'
   let selectedActas = new Set();
   let expandedActas = new Set();
+
   let reunionesSearchQuery = '';
+  let reunionesSortKey = 'date';
+  let reunionesSortOrder = 'desc';
   let expandedReuniones = new Set();
+
+  let informesSemanaisSearchQuery = '';
+  let informesSemanaisSortKey = 'date';
+  let informesSemanaisSortOrder = 'desc';
+
+  let informesSearchQuery = '';
+  let informesSortKey = 'date';
+  let informesSortOrder = 'desc';
+
+  let notasSearchQuery = '';
+  let notasSortKey = 'date';
+  let notasSortOrder = 'desc';
   let notasCategoryFilter = 'todas';
   let notasViewMode = 'rows'; // 'rows' | 'cards'
 
+  function getActaSearchableContent(a) {
+    if (!a) return '';
+    const parts = [
+      a.numero ? `acta nº ${a.numero} visita nº ${a.numero} reunion nº ${a.numero}` : '',
+      a.fecha || '',
+      a.hora || '',
+      a.lugar || '',
+      a.estado || '',
+      a.tipoModalidad || '',
+      a.tipoVisita || '',
+      a.observaciones || '',
+      typeof a.acuerdos === 'string' ? a.acuerdos : (Array.isArray(a.acuerdos) ? a.acuerdos.join(' ') : '')
+    ];
+    if (Array.isArray(a.asistentes)) {
+      a.asistentes.forEach(as => {
+        parts.push(as.nombre || '', as.cargo || '', as.entidad || as.empresa || '');
+      });
+    }
+    if (Array.isArray(a.apartados)) {
+      a.apartados.forEach(ap => {
+        parts.push(ap.titulo || '');
+        if (Array.isArray(ap.secciones)) {
+          ap.secciones.forEach(sec => {
+            parts.push(sec.titulo || '', sec.subtitulo || '', sec.texto || '');
+            if (Array.isArray(sec.puntos)) parts.push(sec.puntos.join(' '));
+          });
+        }
+      });
+    }
+    if (Array.isArray(a.cuestionesTratadas)) {
+      a.cuestionesTratadas.forEach(c => {
+        parts.push(c.subtitulo || '');
+        if (Array.isArray(c.puntos)) parts.push(c.puntos.join(' '));
+        else if (c.puntos) parts.push(c.puntos);
+      });
+    }
+    if (Array.isArray(a.fotos)) {
+      a.fotos.forEach(f => parts.push(f.pie || '', f.descripcion || ''));
+    }
+    return parts.filter(Boolean).join(' ').toLowerCase();
+  }
+
+  function getInformeSemanalSearchableContent(inf) {
+    if (!inf) return '';
+    const parts = [
+      inf.numero ? `informe nº ${inf.numero} semanal nº ${inf.numero}` : '',
+      inf.fecha || '',
+      inf.estado || '',
+      inf.observaciones || '',
+      inf.resumen || ''
+    ];
+    if (Array.isArray(inf.relacion)) {
+      inf.relacion.forEach(r => {
+        parts.push(r.titulo || '', r.fecha || '', r.tipo || '', r.resumen || '');
+      });
+    }
+    return parts.filter(Boolean).join(' ').toLowerCase();
+  }
+
+  function getInformeMensualSearchableContent(inf) {
+    if (!inf) return '';
+    const parts = [
+      inf.numero ? `informe nº ${inf.numero} mensual nº ${inf.numero}` : '',
+      inf.datosXerais?.mesInformado || '',
+      inf.datosXerais?.dataInforme || '',
+      inf.datosXerais?.contratista || '',
+      inf.datosXerais?.expediente || '',
+      inf.resumoExecutivo?.estadoXeral || '',
+      inf.resumoExecutivo?.comentarios || '',
+      inf.resumoExecutivo?.actuacionsDestacadas || '',
+      inf.conclusions || '',
+      inf.observaciones || ''
+    ];
+    if (inf.controlEconomico?.comentarios) parts.push(inf.controlEconomico.comentarios);
+    if (inf.controlPrazos?.comentarios) parts.push(inf.controlPrazos.comentarios);
+    if (inf.controlCalidade?.comentarios) parts.push(inf.controlCalidade.comentarios);
+    if (Array.isArray(inf.modificacions)) {
+      inf.modificacions.forEach(m => parts.push(m.titulo || '', m.descripcion || ''));
+    }
+    return parts.filter(Boolean).join(' ').toLowerCase();
+  }
+
+  function getNotaSearchableContent(nota) {
+    if (!nota) return '';
+    return [
+      nota.numero ? `nota nº ${nota.numero}` : '',
+      nota.titulo || '',
+      nota.contenido || '',
+      nota.autor || '',
+      nota.categoria || '',
+      nota.urgencia || '',
+      nota.estado || '',
+      nota.fecha || ''
+    ].filter(Boolean).join(' ').toLowerCase();
+  }
+
+  function sortDocumentList(list, sortKey, sortOrder, docType = 'acta') {
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'estado') {
+        const getEst = (doc) => {
+          if (docType === 'informe-mensual') return doc.resumoExecutivo?.estadoXeral || doc.estado || '';
+          return doc.estado || '';
+        };
+        const estA = String(getEst(a)).toLowerCase();
+        const estB = String(getEst(b)).toLowerCase();
+        cmp = estA.localeCompare(estB);
+        if (cmp === 0) {
+          const dateA = a.fecha || a.datosXerais?.dataInforme || '';
+          const dateB = b.fecha || b.datosXerais?.dataInforme || '';
+          cmp = dateB.localeCompare(dateA);
+        }
+      } else {
+        const dateA = a.fecha || a.datosXerais?.dataInforme || '';
+        const dateB = b.fecha || b.datosXerais?.dataInforme || '';
+        if (dateA && dateB && dateA !== dateB) {
+          cmp = dateA.localeCompare(dateB);
+        } else {
+          const numA = Number(a.numero) || 0;
+          const numB = Number(b.numero) || 0;
+          cmp = numA - numB;
+        }
+      }
+      return sortOrder === 'desc' ? -cmp : cmp;
+    });
+  }
   function render() {
     obra = db.getObraById(obraId) || db.getActiveObra();
     const actas = db.getActas(obra.id);
@@ -188,13 +331,9 @@ export function renderExpedienteView(container, router, params = {}) {
     let filteredActas = actas;
     if (actasSearchQuery.trim()) {
       const q = actasSearchQuery.toLowerCase().trim();
-      filteredActas = actas.filter(a => 
-        String(a.numero).includes(q) ||
-        String(a.fecha).includes(q) ||
-        (a.cuestionesTratadas || []).some(c => (c.subtitulo || '').toLowerCase().includes(q) || (c.puntos || []).some(p => p.toLowerCase().includes(q))) ||
-        (a.asistentes || []).some(as => (as.nombre || '').toLowerCase().includes(q) || (as.cargo || '').toLowerCase().includes(q))
-      );
+      filteredActas = actas.filter(a => getActaSearchableContent(a).includes(q));
     }
+    filteredActas = sortDocumentList(filteredActas, actasSortKey, actasSortOrder, 'acta');
 
     return `
       <div>
@@ -242,10 +381,16 @@ export function renderExpedienteView(container, router, params = {}) {
         ` : `
           <!-- Header de Lista de Actas -->
           <div class="actas-list-header">
-            <div>Visita de Obra / Data</div>
+            <div class="sortable-header btn-sort-actas" data-key="date" title="Ordenar por Visita de Obra / Data" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;">
+              <span>Visita de Obra / Data</span>
+              <span class="sort-icon-indicator" style="font-size: 0.75rem; color: var(--primary);">${actasSortKey === 'date' ? (actasSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+            </div>
             <div style="padding: 0 0.75rem;">Asistentes</div>
             <div>Última Edición</div>
-            <div style="text-align: center;">Estado</div>
+            <div class="sortable-header btn-sort-actas" data-key="estado" title="Ordenar por Estado" style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <span>Estado</span>
+              <span class="sort-icon-indicator" style="font-size: 0.75rem; color: var(--primary);">${actasSortKey === 'estado' ? (actasSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+            </div>
             <div style="text-align: right; padding-right: 32px;">Accións</div>
           </div>
 
@@ -466,15 +611,9 @@ export function renderExpedienteView(container, router, params = {}) {
     let filteredReuniones = reuniones;
     if (reunionesSearchQuery.trim()) {
       const q = reunionesSearchQuery.toLowerCase().trim();
-      filteredReuniones = reuniones.filter(r => 
-        String(r.numero).includes(q) ||
-        (r.fecha && r.fecha.toLowerCase().includes(q)) ||
-        (r.lugar && r.lugar.toLowerCase().includes(q)) ||
-        (r.tipoModalidad && r.tipoModalidad.toLowerCase().includes(q)) ||
-        (r.apartados && r.apartados.some(ap => (ap.titulo && ap.titulo.toLowerCase().includes(q)) || (ap.secciones && ap.secciones.some(s => (s.titulo && s.titulo.toLowerCase().includes(q)))))) ||
-        (r.asistentes && r.asistentes.some(as => (as.nombre && as.nombre.toLowerCase().includes(q)) || (as.cargo && as.cargo.toLowerCase().includes(q))))
-      );
+      filteredReuniones = reuniones.filter(r => getActaSearchableContent(r).includes(q));
     }
+    filteredReuniones = sortDocumentList(filteredReuniones, reunionesSortKey, reunionesSortOrder, 'reunion');
 
     return `
       <div>
@@ -520,10 +659,16 @@ export function renderExpedienteView(container, router, params = {}) {
         ` : `
           <!-- Header de Lista de Reunións -->
           <div class="actas-list-header">
-            <div>Reunión semanal / Data</div>
+            <div class="sortable-header btn-sort-reuniones" data-key="date" title="Ordenar por Reunión semanal / Data" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;">
+              <span>Reunión semanal / Data</span>
+              <span class="sort-icon-indicator" style="font-size: 0.75rem; color: var(--primary);">${reunionesSortKey === 'date' ? (reunionesSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+            </div>
             <div style="padding: 0 0.75rem;">Asistentes</div>
             <div>Última Edición</div>
-            <div style="text-align: center;">Estado</div>
+            <div class="sortable-header btn-sort-reuniones" data-key="estado" title="Ordenar por Estado" style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <span>Estado</span>
+              <span class="sort-icon-indicator" style="font-size: 0.75rem; color: var(--primary);">${reunionesSortKey === 'estado' ? (reunionesSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+            </div>
             <div style="text-align: right; padding-right: 32px;">Accións</div>
           </div>
 
@@ -723,16 +868,30 @@ export function renderExpedienteView(container, router, params = {}) {
 
     /* ----------------- TAB: INFORMES SEMANAIS ----------------- */
   function renderInformesSemanaisSection({ obra, informesSemanais, canCreateInforme }) {
+    let filteredInformesSemanais = informesSemanais;
+    if (informesSemanaisSearchQuery.trim()) {
+      const q = informesSemanaisSearchQuery.toLowerCase().trim();
+      filteredInformesSemanais = informesSemanais.filter(inf => getInformeSemanalSearchableContent(inf).includes(q));
+    }
+    filteredInformesSemanais = sortDocumentList(filteredInformesSemanais, informesSemanaisSortKey, informesSemanaisSortOrder, 'informe-semanal');
+
     return `
       <div>
         <div class="dashboard-toolbar" style="margin-bottom: 1.25rem;">
-          <div>
-            <span style="font-weight: 700; color: var(--text-main); font-size: 1.05rem;">
-              Informes Semanais de Obra
-            </span>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">
-              Relación semanal de visitas e reunións de obra segundo plantilla oficial institucional.
-            </div>
+          <div class="search-box-wrapper" style="max-width: 440px;">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input 
+              type="text" 
+              id="informes-semanais-search-input" 
+              class="form-control search-input" 
+              placeholder="Buscar por contido, Nº, data ou relación..." 
+              value="${escapeHtml(informesSemanaisSearchQuery)}"
+            />
+            ${informesSemanaisSearchQuery ? `
+              <button id="clear-informes-semanais-search" class="clear-search-btn" title="Limpar busca">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            ` : ''}
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -745,14 +904,14 @@ export function renderExpedienteView(container, router, params = {}) {
           </div>
         </div>
 
-        ${informesSemanais.length === 0 ? `
+        ${filteredInformesSemanais.length === 0 ? `
           <div class="empty-state">
             <div class="empty-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L19 7.5V19a2 2 0 0 1-2 2z"/></svg>
             </div>
-            <div class="empty-title">Non hai informes semanais nesta obra</div>
-            <div class="empty-desc">Cree o primeiro informe semanal para relacionar as visitas e reunións celebradas na semana.</div>
-            ${canCreateInforme ? `
+            <div class="empty-title">Non hai informes semanais</div>
+            <div class="empty-desc">${informesSemanaisSearchQuery ? `Ningún informe semanal coincide con "${informesSemanaisSearchQuery}".` : 'Cree o primeiro informe semanal para relacionar as visitas e reunións celebradas na semana.'}</div>
+            ${canCreateInforme && !informesSemanaisSearchQuery ? `
               <button class="btn btn-primary" id="btn-empty-create-informe-semanal">Crear Primeiro Informe semanal</button>
             ` : ''}
           </div>
@@ -761,15 +920,21 @@ export function renderExpedienteView(container, router, params = {}) {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 140px;">Nº Informe</th>
+                  <th class="sortable-header btn-sort-informes-semanais" data-key="date" style="width: 150px; cursor: pointer; user-select: none;">
+                    <span>Nº Informe / Data</span>
+                    <span style="font-size: 0.75rem; margin-left: 4px; color: var(--primary);">${informesSemanaisSortKey === 'date' ? (informesSemanaisSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+                  </th>
                   <th style="width: 130px;">Data Emisión</th>
                   <th>Relación de Visitas e Reunións</th>
-                  <th style="width: 120px;">Estado</th>
+                  <th class="sortable-header btn-sort-informes-semanais" data-key="estado" style="width: 120px; cursor: pointer; user-select: none;">
+                    <span>Estado</span>
+                    <span style="font-size: 0.75rem; margin-left: 4px; color: var(--primary);">${informesSemanaisSortKey === 'estado' ? (informesSemanaisSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+                  </th>
                   <th class="col-actions">Accións</th>
                 </tr>
               </thead>
               <tbody>
-                ${informesSemanais.map(inf => {
+                ${filteredInformesSemanais.map(inf => {
                   const est = inf.estado || 'borrador';
                   let statusBadge = `<span class="badge badge-neutral">Borrador</span>`;
                   if (est === 'emitido') {
@@ -838,16 +1003,30 @@ export function renderExpedienteView(container, router, params = {}) {
 
 /* ----------------- TAB 2: INFORMES MENSUALES DT-05 ----------------- */
   function renderInformesSection({ obra, informes, canCreateInforme }) {
+    let filteredInformes = informes;
+    if (informesSearchQuery.trim()) {
+      const q = informesSearchQuery.toLowerCase().trim();
+      filteredInformes = informes.filter(inf => getInformeMensualSearchableContent(inf).includes(q));
+    }
+    filteredInformes = sortDocumentList(filteredInformes, informesSortKey, informesSortOrder, 'informe-mensual');
+
     return `
       <div>
         <div class="dashboard-toolbar" style="margin-bottom: 1.25rem;">
-          <div>
-            <span style="font-weight: 700; color: var(--text-main); font-size: 1.05rem;">
-              Informes de Seguimento Mensual
-            </span>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">
-              Achegados coa certificación periódica conforme ao prego e directrices institucionais.
-            </div>
+          <div class="search-box-wrapper" style="max-width: 440px;">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input 
+              type="text" 
+              id="informes-search-input" 
+              class="form-control search-input" 
+              placeholder="Buscar por contido, Nº, mes ou datos..." 
+              value="${escapeHtml(informesSearchQuery)}"
+            />
+            ${informesSearchQuery ? `
+              <button id="clear-informes-search" class="clear-search-btn" title="Limpar busca">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            ` : ''}
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -860,14 +1039,14 @@ export function renderExpedienteView(container, router, params = {}) {
           </div>
         </div>
 
-        ${informes.length === 0 ? `
+        ${filteredInformes.length === 0 ? `
           <div class="empty-state">
             <div class="empty-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 16.5-3.5z"></path></svg>
             </div>
-            <div class="empty-title">Non hai informes mensuais nesta obra</div>
-            <div class="empty-desc">Xere o primeiro informe mensual de seguimento para enviar xunto coa certificación.</div>
-            ${canCreateInforme ? `
+            <div class="empty-title">Non hai informes mensuais</div>
+            <div class="empty-desc">${informesSearchQuery ? `Ningún informe mensual coincide con "${informesSearchQuery}".` : 'Xere o primeiro informe mensual de seguimento para enviar xunto coa certificación.'}</div>
+            ${canCreateInforme && !informesSearchQuery ? `
               <button class="btn btn-primary" id="btn-empty-create-informe">Crear Primeiro Informe mensual</button>
             ` : ''}
           </div>
@@ -876,17 +1055,23 @@ export function renderExpedienteView(container, router, params = {}) {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 130px;">Nº Informe</th>
+                  <th class="sortable-header btn-sort-informes" data-key="date" style="width: 140px; cursor: pointer; user-select: none;">
+                    <span>Nº Informe / Data</span>
+                    <span style="font-size: 0.75rem; margin-left: 4px; color: var(--primary);">${informesSortKey === 'date' ? (informesSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+                  </th>
                   <th style="width: 160px;">Período / Mes</th>
                   <th style="width: 150px;">Avance Executado</th>
-                  <th style="width: 130px;">Estado Xeral</th>
+                  <th class="sortable-header btn-sort-informes" data-key="estado" style="width: 140px; cursor: pointer; user-select: none;">
+                    <span>Estado Xeral</span>
+                    <span style="font-size: 0.75rem; margin-left: 4px; color: var(--primary);">${informesSortKey === 'estado' ? (informesSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+                  </th>
                   <th style="width: 160px;">Última Edición</th>
                   <th style="width: 105px;">Data Emisión</th>
                   <th class="col-actions">Accións</th>
                 </tr>
               </thead>
               <tbody>
-                ${informes.map(inf => {
+                ${filteredInformes.map(inf => {
                   const est = inf.resumoExecutivo?.estadoXeral || 'en_prazo';
                   let statusBadge = `<span class="badge badge-success"><span class="status-dot status-dot-green"></span> En prazo</span>`;
                   if (est === 'con_desviacions') {
@@ -993,12 +1178,35 @@ export function renderExpedienteView(container, router, params = {}) {
       filteredNotas = notas.filter(n => n.categoria === notasCategoryFilter);
     }
 
+    if (notasSearchQuery.trim()) {
+      const q = notasSearchQuery.toLowerCase().trim();
+      filteredNotas = filteredNotas.filter(n => getNotaSearchableContent(n).includes(q));
+    }
+    filteredNotas = sortDocumentList(filteredNotas, notasSortKey, notasSortOrder, 'nota');
+
     const countPendientes = notas.filter(n => (n.estado || 'Pendiente').toLowerCase() === 'pendiente').length;
     const countResoltes = notas.filter(n => (n.estado || '').toLowerCase() === 'resolta').length;
 
     return `
       <div>
+        <!-- Toolbar con buscador e filtros para Notas -->
         <div class="dashboard-toolbar" style="margin-bottom: 1.25rem;">
+          <div class="search-box-wrapper" style="max-width: 380px;">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input 
+              type="text" 
+              id="notas-search-input" 
+              class="form-control search-input" 
+              placeholder="Buscar por contido, título, autor..." 
+              value="${escapeHtml(notasSearchQuery)}"
+            />
+            ${notasSearchQuery ? `
+              <button id="clear-notas-search" class="clear-search-btn" title="Limpar busca">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            ` : ''}
+          </div>
+
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Filtrar:</span>
             <button class="btn ${notasCategoryFilter === 'todas' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="todas">Todas (${notas.length})</button>
@@ -1011,6 +1219,13 @@ export function renderExpedienteView(container, router, params = {}) {
             <button class="btn ${notasCategoryFilter === 'llamada' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="llamada">Chamadas</button>
             <button class="btn ${notasCategoryFilter === 'incidencia' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="incidencia">Incidencias</button>
             <button class="btn ${notasCategoryFilter === 'recordatorio' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-filter-nota" data-cat="recordatorio">Recordatorios</button>
+
+            <!-- Quick Sort Toggle for Notas -->
+            <div style="display: inline-flex; align-items: center; gap: 4px; margin-left: 0.5rem; padding-left: 0.5rem; border-left: 1px solid var(--border-light);">
+              <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Orde:</span>
+              <button class="btn ${notasSortKey === 'date' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-sort-notas" data-key="date" title="Ordenar por Data">${notasSortKey === 'date' ? (notasSortOrder === 'asc' ? 'Data ▲' : 'Data ▼') : 'Data'}</button>
+              <button class="btn ${notasSortKey === 'estado' ? 'btn-primary' : 'btn-secondary'} btn-sm btn-sort-notas" data-key="estado" title="Ordenar por Estado">${notasSortKey === 'estado' ? (notasSortOrder === 'asc' ? 'Estado ▲' : 'Estado ▼') : 'Estado'}</button>
+            </div>
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -1053,13 +1268,19 @@ export function renderExpedienteView(container, router, params = {}) {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 130px;">Nota / Data</th>
+                  <th class="sortable-header btn-sort-notas" data-key="date" style="width: 140px; cursor: pointer; user-select: none;">
+                    <span>Nota / Data</span>
+                    <span style="font-size: 0.75rem; margin-left: 4px; color: var(--primary);">${notasSortKey === 'date' ? (notasSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+                  </th>
                   <th style="width: 130px;">Categoría</th>
                   <th style="width: 95px;">Urxencia</th>
                   <th>Título e Contido</th>
                   <th style="width: 130px;">Autor</th>
                   <th style="width: 150px;">Última Edición</th>
-                  <th style="width: 110px; text-align: center;">Estado</th>
+                  <th class="sortable-header btn-sort-notas" data-key="estado" style="width: 110px; text-align: center; cursor: pointer; user-select: none;">
+                    <span>Estado</span>
+                    <span style="font-size: 0.75rem; margin-left: 4px; color: var(--primary);">${notasSortKey === 'estado' ? (notasSortOrder === 'asc' ? '▲' : '▼') : '<span style="opacity:0.35">▲▼</span>'}</span>
+                  </th>
                   <th class="col-actions" style="width: 290px; text-align: right;">Accións</th>
                 </tr>
               </thead>
@@ -1368,6 +1589,21 @@ export function renderExpedienteView(container, router, params = {}) {
       };
     });
 
+    // --- Wire Sorting for Actas ---
+    container.querySelectorAll('.btn-sort-actas').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const key = btn.dataset.key;
+        if (actasSortKey === key) {
+          actasSortOrder = actasSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          actasSortKey = key;
+          actasSortOrder = (key === 'estado') ? 'asc' : 'desc';
+        }
+        render();
+      };
+    });
+
     // --- Wire Tab 1 (Actas) ---
     const searchActas = container.querySelector('#search-actas-input');
     if (searchActas) {
@@ -1526,6 +1762,40 @@ export function renderExpedienteView(container, router, params = {}) {
       };
     });
 
+    // --- Wire Search & Sort for Informes Semanais ---
+    const searchInfSem = container.querySelector('#informes-semanais-search-input');
+    if (searchInfSem) {
+      searchInfSem.oninput = (e) => {
+        informesSemanaisSearchQuery = e.target.value;
+        render();
+        const next = container.querySelector('#informes-semanais-search-input');
+        if (next) {
+          next.focus();
+          next.setSelectionRange(informesSemanaisSearchQuery.length, informesSemanaisSearchQuery.length);
+        }
+      };
+    }
+    const clearInfSem = container.querySelector('#clear-informes-semanais-search');
+    if (clearInfSem) {
+      clearInfSem.onclick = () => {
+        informesSemanaisSearchQuery = '';
+        render();
+      };
+    }
+    container.querySelectorAll('.btn-sort-informes-semanais').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const key = btn.dataset.key;
+        if (informesSemanaisSortKey === key) {
+          informesSemanaisSortOrder = informesSemanaisSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          informesSemanaisSortKey = key;
+          informesSemanaisSortOrder = (key === 'estado') ? 'asc' : 'desc';
+        }
+        render();
+      };
+    });
+
     // --- Wire Informes Semanais ---
     const btnCreateSemanal = container.querySelector('#btn-create-informe-semanal') || container.querySelector('#btn-empty-create-informe-semanal');
     if (btnCreateSemanal) {
@@ -1577,6 +1847,39 @@ export function renderExpedienteView(container, router, params = {}) {
     if (createInfBtn) {
       createInfBtn.onclick = () => router.navigate('informe-editor', { obraId: obra.id });
     }
+
+    const searchInfMen = container.querySelector('#informes-search-input');
+    if (searchInfMen) {
+      searchInfMen.oninput = (e) => {
+        informesSearchQuery = e.target.value;
+        render();
+        const next = container.querySelector('#informes-search-input');
+        if (next) {
+          next.focus();
+          next.setSelectionRange(informesSearchQuery.length, informesSearchQuery.length);
+        }
+      };
+    }
+    const clearInfMen = container.querySelector('#clear-informes-search');
+    if (clearInfMen) {
+      clearInfMen.onclick = () => {
+        informesSearchQuery = '';
+        render();
+      };
+    }
+    container.querySelectorAll('.btn-sort-informes').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const key = btn.dataset.key;
+        if (informesSortKey === key) {
+          informesSortOrder = informesSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          informesSortKey = key;
+          informesSortOrder = (key === 'estado') ? 'asc' : 'desc';
+        }
+        render();
+      };
+    });
 
     const emptyCreateInf = container.querySelector('#btn-empty-create-informe');
     if (emptyCreateInf) {
@@ -1685,6 +1988,21 @@ export function renderExpedienteView(container, router, params = {}) {
             router.navigate('informe-editor', { id: newInf.id, obraId: obra.id });
           }
         });
+      };
+    });
+
+    // --- Wire Sorting for Reunións ---
+    container.querySelectorAll('.btn-sort-reuniones').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const key = btn.dataset.key;
+        if (reunionesSortKey === key) {
+          reunionesSortOrder = reunionesSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          reunionesSortKey = key;
+          reunionesSortOrder = (key === 'estado') ? 'asc' : 'desc';
+        }
+        render();
       };
     });
 
@@ -2084,6 +2402,39 @@ export function renderExpedienteView(container, router, params = {}) {
         });
       };
     };
+
+    const searchNotas = container.querySelector('#notas-search-input');
+    if (searchNotas) {
+      searchNotas.oninput = (e) => {
+        notasSearchQuery = e.target.value;
+        render();
+        const next = container.querySelector('#notas-search-input');
+        if (next) {
+          next.focus();
+          next.setSelectionRange(notasSearchQuery.length, notasSearchQuery.length);
+        }
+      };
+    }
+    const clearNotas = container.querySelector('#clear-notas-search');
+    if (clearNotas) {
+      clearNotas.onclick = () => {
+        notasSearchQuery = '';
+        render();
+      };
+    }
+    container.querySelectorAll('.btn-sort-notas').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const key = btn.dataset.key;
+        if (notasSortKey === key) {
+          notasSortOrder = notasSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          notasSortKey = key;
+          notasSortOrder = (key === 'estado') ? 'asc' : 'desc';
+        }
+        render();
+      };
+    });
 
     const btnAiCreateNotaTab = container.querySelector('#btn-ai-create-nota-tab');
     if (btnAiCreateNotaTab) {
